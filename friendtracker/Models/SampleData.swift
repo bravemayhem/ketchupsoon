@@ -5,27 +5,32 @@ struct SampleData {
         Friend(
             name: "James Wilson",
             frequency: "Quarterly catch-up",
-            lastHangoutWeeks: 6
+            lastHangoutWeeks: 6,
+            phoneNumber: "+1234567890"
         ),
         Friend(
             name: "Alex Smith",
             frequency: "Weekly check-in",
-            lastHangoutWeeks: 4
+            lastHangoutWeeks: 4,
+            phoneNumber: "+1234567891"
         ),
         Friend(
             name: "Sarah Johnson",
             frequency: "Monthly catch-up",
-            lastHangoutWeeks: 2
+            lastHangoutWeeks: 2,
+            phoneNumber: "+1234567892"
         ),
         Friend(
             name: "Mike Chen",
             frequency: "Weekly check-in",
-            lastHangoutWeeks: 1
+            lastHangoutWeeks: 1,
+            phoneNumber: "+1234567893"
         ),
         Friend(
             name: "Emma Davis",
             frequency: "Monthly catch-up",
-            lastHangoutWeeks: 5
+            lastHangoutWeeks: 5,
+            phoneNumber: "+1234567894"
         )
     ]
     

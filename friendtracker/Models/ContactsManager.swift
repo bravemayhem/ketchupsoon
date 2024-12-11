@@ -15,7 +15,11 @@ class ContactsManager: ObservableObject {
     
     func fetchContacts() -> [CNContact] {
         let store = CNContactStore()
-        let keys = [CNContactGivenNameKey, CNContactFamilyNameKey] as [CNKeyDescriptor]
+        let keys = [
+            CNContactGivenNameKey,
+            CNContactFamilyNameKey,
+            CNContactPhoneNumbersKey
+        ] as [CNKeyDescriptor]
         let request = CNContactFetchRequest(keysToFetch: keys)
         var contacts = [CNContact]()
         

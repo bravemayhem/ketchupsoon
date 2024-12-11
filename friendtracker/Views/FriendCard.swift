@@ -68,6 +68,7 @@ struct FriendCard: View {
     FriendCard(friend: Friend(
         name: "John Doe",
         frequency: "Weekly check-in",
-        lastHangoutWeeks: 2
+        lastHangoutWeeks: 2,
+        phoneNumber: "+1234567890"
     ))
 } 

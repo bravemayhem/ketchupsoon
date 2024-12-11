@@ -52,7 +52,8 @@ struct ContactPickerView: View {
                 Friend(
                     name: "\(contact.givenName) \(contact.familyName)".trimmingCharacters(in: .whitespaces),
                     frequency: "Monthly catch-up",
-                    lastHangoutWeeks: 0
+                    lastHangoutWeeks: 0,
+                    phoneNumber: contact.phoneNumbers.first?.value.stringValue
                 )
             }
         friends.append(contentsOf: newFriends)

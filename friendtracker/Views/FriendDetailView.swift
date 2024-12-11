@@ -1,8 +1,11 @@
 import SwiftUI
+import MessageUI
 
 struct FriendDetailView: View {
     let friend: Friend
     @Environment(\.dismiss) private var dismiss
+    @State private var showingMessageSheet = false
+    @State private var messageResult: MessageComposeResult?
     
     var body: some View {
         NavigationView {
@@ -40,7 +43,9 @@ struct FriendDetailView: View {
                     
                     HStack(spacing: 16) {
                         Button(action: {
-                            // Handle message action
+                            if MFMessageComposeViewController.canSendText() {
+                                showingMessageSheet = true
+                            }
                         }) {
                             HStack {
                                 Image(systemName: "message.fill")
@@ -49,8 +54,15 @@ struct FriendDetailView: View {
                             .padding()
                             .frame(maxWidth: .infinity)
                             .background(Color.blue.opacity(0.1))
-                            .foregroundColor(.blue)
+                            .foregroundColor(friend.phoneNumber != nil ? .blue : .gray)
                             .cornerRadius(8)
+                        }
+                        .disabled(friend.phoneNumber == nil)
+                        .sheet(isPresented: $showingMessageSheet) {
+                            MessageComposeView(
+                                recipient: friend.phoneNumber ?? "",
+                                result: $messageResult
+                            )
                         }
                         
                         NavigationLink(destination: SchedulerView(selectedFriend: friend)) {
@@ -79,6 +91,38 @@ struct FriendDetailView: View {
                     }
                 }
             }
+        }
+    }
+}
+
+struct MessageComposeView: UIViewControllerRepresentable {
+    let recipient: String
+    @Binding var result: MessageComposeResult?
+    @Environment(\.dismiss) private var dismiss
+    
+    func makeUIViewController(context: Context) -> MFMessageComposeViewController {
+        let controller = MFMessageComposeViewController()
+        controller.recipients = [recipient]
+        controller.messageComposeDelegate = context.coordinator
+        return controller
+    }
+    
+    func updateUIViewController(_ uiViewController: MFMessageComposeViewController, context: Context) {}
+    
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+    
+    class Coordinator: NSObject, MFMessageComposeViewControllerDelegate {
+        let parent: MessageComposeView
+        
+        init(_ parent: MessageComposeView) {
+            self.parent = parent
+        }
+        
+        func messageComposeViewController(_ controller: MFMessageComposeViewController, didFinishWith result: MessageComposeResult) {
+            parent.result = result
+            controller.dismiss(animated: true)
         }
     }
 } 
