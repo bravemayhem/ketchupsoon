@@ -1,0 +1,64 @@
+import Foundation
+
+struct SampleData {
+    static let friends: [Friend] = [
+        Friend(
+            name: "James Wilson",
+            frequency: "Quarterly catch-up",
+            lastHangoutWeeks: 6
+        ),
+        Friend(
+            name: "Alex Smith",
+            frequency: "Weekly check-in",
+            lastHangoutWeeks: 4
+        ),
+        Friend(
+            name: "Sarah Johnson",
+            frequency: "Monthly catch-up",
+            lastHangoutWeeks: 2
+        ),
+        Friend(
+            name: "Mike Chen",
+            frequency: "Weekly check-in",
+            lastHangoutWeeks: 1
+        ),
+        Friend(
+            name: "Emma Davis",
+            frequency: "Monthly catch-up",
+            lastHangoutWeeks: 5
+        )
+    ]
+    
+    static let activities: [ActivitySuggestion] = [
+        ActivitySuggestion(
+            title: "Coffee catch-up",
+            category: .general,
+            duration: 3600, // 1 hour
+            weatherDependent: false
+        ),
+        ActivitySuggestion(
+            title: "Hiking nearby trail",
+            category: .outdoor,
+            duration: 7200, // 2 hours
+            weatherDependent: true
+        ),
+        ActivitySuggestion(
+            title: "Try new ramen place",
+            category: .dinner,
+            duration: 5400, // 1.5 hours
+            weatherDependent: false
+        ),
+        ActivitySuggestion(
+            title: "Beach day",
+            category: .outdoor,
+            duration: 14400, // 4 hours
+            weatherDependent: true
+        ),
+        ActivitySuggestion(
+            title: "Board game night",
+            category: .general,
+            duration: 10800, // 3 hours
+            weatherDependent: false
+        )
+    ]
+} 
