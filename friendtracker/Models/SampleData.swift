@@ -4,7 +4,7 @@ struct SampleData {
     static let friends: [Friend] = [
         Friend(
             id: UUID(),
-            name: "James Wilson",
+            name: "Aleah Goldstein",
             frequency: "Quarterly catch-up",
             lastHangoutWeeks: 6,
             phoneNumber: "+1234567890",
