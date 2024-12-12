@@ -63,11 +63,19 @@ private struct FriendsContent: View {
             return friend.name.lowercased().contains(searchText.lowercased())
         }
         
-        switch selectedFilter {
-        case .all: return filtered
-        case .innerCircle: return filtered.filter { $0.isInnerCircle }
-        case .local: return filtered.filter { $0.isLocal }
-        case .longDistance: return filtered.filter { !$0.isLocal }
+        let filteredByCategory = switch selectedFilter {
+        case .all: filtered
+        case .innerCircle: filtered.filter { $0.isInnerCircle }
+        case .local: filtered.filter { $0.isLocal }
+        case .longDistance: filtered.filter { !$0.isLocal }
+        }
+        
+        // Sort by overdue status first, then by lastHangoutWeeks
+        return filteredByCategory.sorted { friend1, friend2 in
+            if friend1.isOverdue != friend2.isOverdue {
+                return friend1.isOverdue && !friend2.isOverdue
+            }
+            return friend1.lastHangoutWeeks > friend2.lastHangoutWeeks
         }
     }
     
