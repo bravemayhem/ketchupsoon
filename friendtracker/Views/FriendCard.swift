@@ -100,9 +100,12 @@ private struct OverdueTag: View {
 
 #Preview {
     FriendCard(friend: Friend(
+        id: UUID(),
         name: "John Doe",
         frequency: "Weekly check-in",
         lastHangoutWeeks: 2,
-        phoneNumber: "+1234567890"
+        phoneNumber: "+1234567890",
+        isInnerCircle: true,
+        isLocal: true
     ))
 } 

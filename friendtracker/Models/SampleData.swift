@@ -3,34 +3,49 @@ import Foundation
 struct SampleData {
     static let friends: [Friend] = [
         Friend(
+            id: UUID(),
             name: "James Wilson",
             frequency: "Quarterly catch-up",
             lastHangoutWeeks: 6,
-            phoneNumber: "+1234567890"
+            phoneNumber: "+1234567890",
+            isInnerCircle: true,
+            isLocal: false
         ),
         Friend(
+            id: UUID(),
             name: "Alex Smith",
             frequency: "Weekly check-in",
             lastHangoutWeeks: 4,
-            phoneNumber: "+1234567891"
+            phoneNumber: "+1234567891",
+            isInnerCircle: true,
+            isLocal: true
         ),
         Friend(
+            id: UUID(),
             name: "Sarah Johnson",
             frequency: "Monthly catch-up",
             lastHangoutWeeks: 2,
-            phoneNumber: "+1234567892"
+            phoneNumber: "+1234567892",
+            isInnerCircle: false,
+            isLocal: true
         ),
         Friend(
+            id: UUID(),
             name: "Mike Chen",
             frequency: "Weekly check-in",
             lastHangoutWeeks: 1,
-            phoneNumber: "+1234567893"
+            phoneNumber: "+1234567893",
+            isInnerCircle: false,
+            isLocal: true
         ),
         Friend(
+            id: UUID(),
             name: "Emma Davis",
             frequency: "Monthly catch-up",
             lastHangoutWeeks: 5,
-            phoneNumber: "+1234567894"
+            phoneNumber: "+1234567894",
+            isInnerCircle: true,
+            isLocal: false
         )
     ]
     

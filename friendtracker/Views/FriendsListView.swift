@@ -31,6 +31,9 @@ struct FriendsListView: View {
                     }
                 }
             }
+            .sheet(isPresented: $showingAddFriend) {
+                ContactPickerView(friends: $friends)
+            }
         }
     }
 }
@@ -38,30 +41,111 @@ struct FriendsListView: View {
 private struct FriendsContent: View {
     let friends: [Friend]
     @Binding var showingAddFriend: Bool
+    @State private var searchText = ""
+    @State private var selectedFilter = FriendFilter.all
     
-    private var hangoutsThisMonth: Int {
-        // Calculate this based on your data
-        return 5
+    enum FriendFilter: Hashable {
+        case all, innerCircle, local, longDistance
+        
+        var title: String {
+            switch self {
+            case .all: return "all friends"
+            case .innerCircle: return "inner circle"
+            case .local: return "local"
+            case .longDistance: return "long distance"
+            }
+        }
     }
     
-    private var currentMood: Int {
-        // Calculate this based on your data
-        return 4
+    private var filteredFriends: [Friend] {
+        let filtered = friends.filter { friend in
+            if searchText.isEmpty { return true }
+            return friend.name.lowercased().contains(searchText.lowercased())
+        }
+        
+        switch selectedFilter {
+        case .all: return filtered
+        case .innerCircle: return filtered.filter { $0.isInnerCircle }
+        case .local: return filtered.filter { $0.isLocal }
+        case .longDistance: return filtered.filter { !$0.isLocal }
+        }
     }
     
     var body: some View {
         ScrollView {
             VStack(spacing: 24) {
                 StatsHeader(
-                    hangoutsThisMonth: hangoutsThisMonth,
-                    currentMood: currentMood
+                    hangoutsThisMonth: 5,  // TODO: Calculate this
+                    currentMood: 4         // TODO: Calculate this
                 )
                 
-                FriendsList(friends: friends)
+                SearchAndFilterView(
+                    searchText: $searchText,
+                    selectedFilter: $selectedFilter
+                )
+                
+                FriendsList(friends: filteredFriends)
             }
             .padding()
         }
         .background(Theme.background)
+    }
+}
+
+private struct SearchAndFilterView: View {
+    @Binding var searchText: String
+    @Binding var selectedFilter: FriendsContent.FriendFilter
+    
+    var body: some View {
+        VStack(spacing: 12) {
+            // Search Bar
+            HStack {
+                Image(systemName: "magnifyingglass")
+                    .foregroundColor(Theme.secondaryText)
+                TextField("search for friends", text: $searchText)
+                    .font(.system(size: 16, weight: .medium))
+            }
+            .padding()
+            .background(NeoBrutalistBackground())
+            
+            // Filter Tabs
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 12) {
+                    ForEach([
+                        FriendsContent.FriendFilter.all,
+                        .innerCircle,
+                        .local,
+                        .longDistance
+                    ], id: \.self) { filter in
+                        FilterTab(
+                            title: filter.title,
+                            isSelected: filter == selectedFilter
+                        )
+                        .onTapGesture {
+                            selectedFilter = filter
+                        }
+                    }
+                }
+                .padding(.horizontal)
+            }
+        }
+    }
+}
+
+private struct FilterTab: View {
+    let title: String
+    let isSelected: Bool
+    
+    var body: some View {
+        Text(title)
+            .font(.system(size: 16, weight: .medium))
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .background(
+                NeoBrutalistBackground()
+                    .opacity(isSelected ? 1 : 0.5)
+            )
+            .foregroundColor(isSelected ? Theme.primary : Theme.secondaryText)
     }
 }
 

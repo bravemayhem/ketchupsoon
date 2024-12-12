@@ -49,14 +49,21 @@ struct ContactPickerView: View {
         let newFriends = contacts
             .filter { selectedContacts.contains($0.identifier) }
             .map { contact in
-                Friend(
-                    name: "\(contact.givenName) \(contact.familyName)".trimmingCharacters(in: .whitespaces),
-                    frequency: "Monthly catch-up",
-                    lastHangoutWeeks: 0,
-                    phoneNumber: contact.phoneNumbers.first?.value.stringValue
-                )
+                createFriend(from: contact)
             }
         friends.append(contentsOf: newFriends)
+    }
+    
+    private func createFriend(from contact: CNContact) -> Friend {
+        Friend(
+            id: UUID(),
+            name: "\(contact.givenName) \(contact.familyName)".trimmingCharacters(in: .whitespaces),
+            frequency: "Monthly catch-up",
+            lastHangoutWeeks: 0,
+            phoneNumber: contact.phoneNumbers.first?.value.stringValue,
+            isInnerCircle: false,
+            isLocal: true
+        )
     }
 }
 

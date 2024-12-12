@@ -1,11 +1,14 @@
 import Foundation
 
 struct Friend: Identifiable {
-    let id = UUID()
+    let id: UUID
     let name: String
     let frequency: String
     let lastHangoutWeeks: Int
     let phoneNumber: String?
+    let isInnerCircle: Bool
+    let isLocal: Bool
+    
     var isOverdue: Bool {
         switch frequency {
         case "Weekly check-in":
