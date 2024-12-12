@@ -4,10 +4,21 @@ struct FriendsListView: View {
     @State private var friends = SampleData.friends
     @State private var showingAddFriend = false
     
+    var sortedFriends: [Friend] {
+        friends.sorted { friend1, friend2 in
+            // Sort overdue friends first
+            if friend1.isOverdue != friend2.isOverdue {
+                return friend1.isOverdue
+            }
+            // For friends with same overdue status, sort by weeks since last hangout
+            return friend1.lastHangoutWeeks > friend2.lastHangoutWeeks
+        }
+    }
+    
     var body: some View {
         NavigationView {
             FriendsContent(
-                friends: friends,
+                friends: sortedFriends,
                 showingAddFriend: $showingAddFriend
             )
             .navigationBarTitleDisplayMode(.inline)
