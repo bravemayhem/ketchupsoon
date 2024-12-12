@@ -5,62 +5,96 @@ struct FriendCard: View {
     @State private var showingDetail = false
     
     var body: some View {
-        Button(action: {
+        CardButton(
+            friend: friend,
+            showingDetail: $showingDetail
+        )
+    }
+}
+
+// Simplified button component
+private struct CardButton: View {
+    let friend: Friend
+    @Binding var showingDetail: Bool
+    
+    var body: some View {
+        Button {
             showingDetail = true
-        }) {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack {
-                    Text(friend.name)
-                        .font(.system(size: 22, weight: .regular, design: .default))
-                        .foregroundColor(Theme.primaryText)
-                    Spacer()
-                    if friend.isOverdue {
-                        Text("overdue")
-                            .font(.system(size: 13, weight: .medium, design: .default))
-                            .foregroundColor(Theme.error)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 6)
-                            .background(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .fill(Theme.error.opacity(0.2))
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 8)
-                                            .stroke(Theme.error.opacity(0.5), lineWidth: 1.5)
-                                    )
-                            )
-                            .shadow(color: Theme.error.opacity(0.3), radius: 4, x: 0, y: 0)
-                    }
-                }
-                
-                Text(friend.frequency)
-                    .font(.system(size: 16, weight: .regular, design: .default))
-                    .foregroundColor(Theme.secondaryText)
-                
-                Text("\(friend.lastHangoutWeeks) weeks since last hangout")
-                    .font(.system(size: 14, weight: .regular, design: .default))
-                    .foregroundColor(Theme.secondaryText.opacity(0.8))
-            }
-            .padding(16)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(Theme.cardBackground)
-                    .shadow(
-                        color: Color.black.opacity(Theme.shadowOpacity),
-                        radius: 8,
-                        x: 0,
-                        y: 4
-                    )
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .stroke(Theme.cardBorder, lineWidth: 0.5)
-            )
+        } label: {
+            CardContent(friend: friend)
         }
-        .buttonStyle(PlainButtonStyle())
+        .buttonStyle(.plain)
         .sheet(isPresented: $showingDetail) {
             FriendDetailView(friend: friend)
         }
+    }
+}
+
+// Simplified content component
+private struct CardContent: View {
+    let friend: Friend
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HeaderRow(friend: friend)
+            InfoRows(friend: friend)
+        }
+        .padding(20)
+        .background(NeoBrutalistBackground())
+        .padding(.horizontal)
+    }
+}
+
+// Header row component
+private struct HeaderRow: View {
+    let friend: Friend
+    
+    var body: some View {
+        HStack {
+            Text(friend.name)
+                .font(.system(size: 24, weight: .bold))
+                .foregroundColor(Theme.primaryText)
+            Spacer()
+            if friend.isOverdue {
+                OverdueTag()
+            }
+        }
+    }
+}
+
+// Info rows component
+private struct InfoRows: View {
+    let friend: Friend
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(friend.frequency)
+                .font(.system(size: 18, weight: .medium))
+                .foregroundColor(Theme.secondaryText)
+            
+            Text("\(friend.lastHangoutWeeks) weeks since last hangout")
+                .font(.system(size: 16, weight: .regular))
+                .foregroundColor(Theme.secondaryText)
+        }
+    }
+}
+
+// Overdue tag component
+private struct OverdueTag: View {
+    var body: some View {
+        Text("overdue")
+            .font(.system(size: 14, weight: .bold))
+            .foregroundColor(.white)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(
+                Rectangle()
+                    .fill(Theme.primary)
+                    .overlay(
+                        Rectangle()
+                            .stroke(Color.black, lineWidth: 2)
+                    )
+            )
     }
 }
 

@@ -7,88 +7,60 @@ struct Theme {
     
     static var current: Mode = .dark // Default theme
     
-    // Main colors
+    // Main colors - Using provided neobrutalist palette
     static var background: Color {
         switch current {
-        case .dark: return Color(hex: "000000")
-        case .light: return Color(hex: "F2F2F7")
+        case .dark: return Color(hex: "FCFFDA") // Soft yellow background
+        case .light: return Color(hex: "FCFFDA") // Same for light mode
         }
     }
     
     static var secondaryBackground: Color {
         switch current {
-        case .dark: return Color(hex: "1C1C1E")
-        case .light: return Color(hex: "FFFFFF")
+        case .dark: return Color(hex: "B8FF9F") // Mint green
+        case .light: return Color(hex: "B8FF9F")
         }
     }
     
     static var cardBackground: Color {
         switch current {
-        case .dark: return Color(hex: "2C2C2E")
-        case .light: return Color(hex: "FFFFFF")
+        case .dark: return Color(hex: "B8FF9F") // Mint green cards
+        case .light: return Color(hex: "B8FF9F")
         }
     }
     
-    // Accent colors - same for both themes
-    static let primary = Color(hex: "4CD964") // Mint green accent
-    static let secondary = Color(hex: "5856D6") // Purple accent
+    // Accent colors - Using white sparingly and keeping coral
+    static let primary = Color(hex: "FF6B6B") // Vibrant coral for important elements
+    static let secondary = Color(hex: "FFFFFF") // Pure white for special highlights
     
-    // Text colors
+    // Text colors - High contrast
     static var primaryText: Color {
         switch current {
-        case .dark: return .white
-        case .light: return Color(hex: "000000")
+        case .dark: return Color.black // Black text for contrast
+        case .light: return Color.black
         }
     }
     
     static var secondaryText: Color {
         switch current {
-        case .dark: return Color(hex: "AEAEB2")
-        case .light: return Color(hex: "6C6C70")
+        case .dark: return Color(hex: "2D2D2D") // Dark gray text
+        case .light: return Color(hex: "2D2D2D")
         }
     }
     
-    // Status colors - slightly adjusted for light theme
-    static var success: Color {
-        switch current {
-        case .dark: return Color(hex: "34C759")
-        case .light: return Color(hex: "30B650")
-        }
-    }
-    
-    static var warning: Color {
-        switch current {
-        case .dark: return Color(hex: "FF9F0A")
-        case .light: return Color(hex: "F58300")
-        }
-    }
-    
-    static var error: Color {
-        switch current {
-        case .dark: return Color(hex: "FF453A")
-        case .light: return Color(hex: "FF3B30")
-        }
-    }
-    
-    // Card border color - only visible in light mode
+    // Card border and shadow properties for neobrutalism
     static var cardBorder: Color {
-        switch current {
-        case .dark: return Color.white.opacity(0.1)
-        case .light: return Color(hex: "E5E5EA")
-        }
+        return Color.black // Always black border for neobrutalism
     }
     
-    // Shadow opacity
+    // Shadow opacity - Stronger for neobrutalism
     static var shadowOpacity: Double {
-        switch current {
-        case .dark: return 0.3
-        case .light: return 0.1
-        }
+        return 1.0 // Full opacity for brutal look
     }
     
-    // Helper method for hex colors
-    static func color(hex: String) -> Color {
-        Color(hex: hex)
+    // Shadow offset for neobrutalism
+    static var shadowOffset: CGPoint {
+        return CGPoint(x: 4, y: 4) // Distinct offset for brutal look
     }
 }
 
