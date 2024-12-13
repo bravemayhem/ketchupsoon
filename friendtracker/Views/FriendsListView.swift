@@ -173,6 +173,9 @@ private struct FilterTab: View {
 private struct StatsHeader: View {
     let hangoutsThisMonth: Int
     let currentMood: Int
+    @State private var monthlyGoal: Int = 6
+    @State private var hasReachedGoal = false
+    @State private var showingCelebration = false
     
     private var currentMonthYear: String {
         let dateFormatter = DateFormatter()
@@ -180,50 +183,149 @@ private struct StatsHeader: View {
         return dateFormatter.string(from: Date())
     }
     
-    var body: some View {
-        VStack(spacing: 16) {
-            // Month indicator and stats container
-            VStack(spacing: 16) {
-                // Month indicator
-                Text(currentMonthYear)
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundColor(Theme.primaryText)
-                
-                // Stats row
-                HStack(spacing: 12) {
-                    StatCard(
-                        value: "\(hangoutsThisMonth)",
-                        label: "Hangs"
-                    )
-                    
-                    StatCard(
-                        value: "83%",
-                        label: "Progress"
-                    )
-                    
-                    StatCard(
-                        value: "6",
-                        label: "Goal"
-                    )
+    private var progressText: String {
+        if hangoutsThisMonth >= monthlyGoal {
+            return "🎉"  // Just show the emoji when goal is met
+        } else {
+            let percentage = min(Int((Double(hangoutsThisMonth) / Double(monthlyGoal)) * 100), 100)
+            return "\(percentage)%"
+        }
+    }
+    
+    private func checkGoalStatus() {
+        let hasReachedGoalNow = hangoutsThisMonth >= monthlyGoal
+        if hasReachedGoalNow && !hasReachedGoal {
+            hasReachedGoal = true
+            showingCelebration = true
+            let impact = UIImpactFeedbackGenerator(style: .medium)
+            impact.impactOccurred()
+            
+            // Hide celebration after 2 seconds
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                withAnimation {
+                    showingCelebration = false
                 }
             }
-            .padding(20)
-            .background(NeoBrutalistBackground())
+        } else if !hasReachedGoalNow {
+            hasReachedGoal = false
+            showingCelebration = false
         }
-        .padding(.horizontal)
+    }
+    
+    var body: some View {
+        ZStack {
+            VStack(spacing: 16) {
+                // Month indicator and stats container
+                VStack(spacing: 16) {
+                    // Month indicator
+                    Text(currentMonthYear)
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundColor(Theme.primaryText)
+                    
+                    // Stats row
+                    HStack(spacing: 12) {
+                        StatCard(
+                            value: "\(hangoutsThisMonth)",
+                            label: "Hangs"
+                        )
+                        
+                        StatCard(
+                            value: progressText,
+                            label: "Progress",
+                            isProgressCard: true,
+                            isGoalMet: hangoutsThisMonth >= monthlyGoal
+                        )
+                        
+                        StatCard(
+                            value: "\(monthlyGoal)",
+                            label: "Goal",
+                            isGoal: true,
+                            goalValue: $monthlyGoal
+                        )
+                    }
+                }
+                .padding(20)
+            }
+            .padding(.horizontal)
+            
+            // Celebration popup
+            if showingCelebration {
+                VStack {
+                    Text("Goal met! 🎉")
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 12)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(Theme.primary)
+                                .shadow(color: Color.black.opacity(0.15), radius: 8, x: 0, y: 4)
+                        )
+                }
+                .transition(.move(edge: .top).combined(with: .opacity))
+                .animation(.spring(response: 0.3, dampingFraction: 0.7), value: showingCelebration)
+                .zIndex(1)
+            }
+        }
+        .onAppear {
+            checkGoalStatus()
+        }
+        .onChange(of: hangoutsThisMonth) { _, _ in
+            checkGoalStatus()
+        }
+        .onChange(of: monthlyGoal) { _, _ in
+            checkGoalStatus()
+        }
     }
 }
 
 private struct StatCard: View {
     let value: String
     let label: String
+    var isGoal: Bool = false
+    var isProgressCard: Bool = false
+    var isGoalMet: Bool = false
+    var goalValue: Binding<Int>? = nil
+    @State private var showingGoalAdjuster = false
     
     var body: some View {
         VStack(alignment: .leading) {
-            Text(value)
-                .font(.system(size: 28, weight: .bold))
-                .foregroundColor(Theme.primary)
-                .frame(maxWidth: .infinity, alignment: .leading)
+            HStack {
+                if isProgressCard && isGoalMet {
+                    Text(value)
+                        .font(.system(size: 28, weight: .bold))
+                        .foregroundColor(Theme.primary)
+                        .frame(maxWidth: .infinity, alignment: .center) // Center the emoji
+                        .frame(height: 34)
+                } else {
+                    Text(value)
+                        .font(.system(size: 28, weight: .bold))
+                        .foregroundColor(Theme.primary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                        .frame(height: 34)
+                        .frame(maxWidth: isGoal ? nil : .infinity, alignment: .leading)
+                }
+                
+                if isGoal {
+                    Button(action: {
+                        let impact = UIImpactFeedbackGenerator(style: .light)
+                        impact.impactOccurred()
+                        showingGoalAdjuster = true
+                    }) {
+                        Image(systemName: "chevron.up.chevron.down")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(Theme.secondaryText)
+                            .padding(8)
+                            .background(
+                                RoundedRectangle(cornerRadius: 6)
+                                    .fill(Theme.secondaryBackground)
+                                    .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 1)
+                            )
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity)
             
             Text(label)
                 .font(.system(size: 14, weight: .medium))
@@ -235,6 +337,66 @@ private struct StatCard: View {
             RoundedRectangle(cornerRadius: 8)
                 .fill(Theme.secondaryBackground)
         )
+        .sheet(isPresented: $showingGoalAdjuster) {
+            if let goalBinding = goalValue {
+                GoalAdjusterSheet(goalValue: goalBinding)
+            }
+        }
+    }
+}
+
+private struct GoalAdjusterSheet: View {
+    @Environment(\.dismiss) var dismiss
+    @Binding var goalValue: Int
+    
+    var body: some View {
+        NavigationView {
+            VStack(spacing: 24) {
+                Text("Monthly Hangout Goal")
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundColor(Theme.primaryText)
+                
+                // Stepper with value display
+                HStack(spacing: 20) {
+                    Button(action: { if goalValue > 1 { goalValue -= 1 } }) {
+                        Image(systemName: "minus")
+                            .font(.system(size: 20, weight: .semibold))
+                            .foregroundColor(Theme.primary)
+                            .frame(width: 44, height: 44)
+                            .background(Theme.secondaryBackground)
+                            .clipShape(Circle())
+                    }
+                    
+                    Text("\(goalValue)")
+                        .font(.system(size: 34, weight: .bold))
+                        .foregroundColor(Theme.primaryText)
+                        .frame(minWidth: 60)
+                    
+                    Button(action: { if goalValue < 31 { goalValue += 1 } }) {
+                        Image(systemName: "plus")
+                            .font(.system(size: 20, weight: .semibold))
+                            .foregroundColor(Theme.primary)
+                            .frame(width: 44, height: 44)
+                            .background(Theme.secondaryBackground)
+                            .clipShape(Circle())
+                    }
+                }
+                .padding(.vertical, 20)
+                
+                Text("Set how many times you want to hang out with friends each month")
+                    .font(.system(size: 16))
+                    .foregroundColor(Theme.secondaryText)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal)
+            }
+            .padding()
+            .navigationBarItems(
+                trailing: Button("Done") {
+                    dismiss()
+                }
+                .font(.system(size: 17, weight: .semibold))
+            )
+        }
     }
 }
 
