@@ -8,25 +8,44 @@
 import SwiftUI
 
 struct ContentView: View {
-    @AppStorage("isDarkMode") private var isDarkMode = true
+    @AppStorage("isDarkMode") private var isDarkMode = false
     @StateObject private var themeManager = ThemeManager.shared
     
     init() {
         // Configure navigation bar appearance
         let navBarAppearance = UINavigationBarAppearance()
         navBarAppearance.configureWithOpaqueBackground()
-        navBarAppearance.backgroundColor = UIColor(themeManager.currentTheme.background)
+        navBarAppearance.backgroundColor = UIColor(Color(hex: "#F2F7F5"))
         navBarAppearance.shadowColor = .clear
         
         navBarAppearance.largeTitleTextAttributes = [
-            .foregroundColor: UIColor(themeManager.currentTheme.primaryText),
+            .foregroundColor: UIColor(Color(hex: "#2F3B35")),
             .font: UIFont.systemFont(ofSize: 34, weight: .bold)
         ]
         
         navBarAppearance.titleTextAttributes = [
-            .foregroundColor: UIColor(themeManager.currentTheme.primaryText),
+            .foregroundColor: UIColor(Color(hex: "#2F3B35")),
             .font: UIFont.systemFont(ofSize: 17, weight: .semibold)
         ]
+        
+        // Configure tab bar appearance
+        let tabBarAppearance = UITabBarAppearance()
+        tabBarAppearance.configureWithOpaqueBackground()
+        tabBarAppearance.backgroundColor = UIColor(Color(hex: "#F2F7F5"))
+        
+        // Update tab bar item colors
+        tabBarAppearance.stackedLayoutAppearance.normal.iconColor = UIColor(Color(hex: "#6B7C73"))
+        tabBarAppearance.stackedLayoutAppearance.normal.titleTextAttributes = [
+            .foregroundColor: UIColor(Color(hex: "#6B7C73"))
+        ]
+        
+        tabBarAppearance.stackedLayoutAppearance.selected.iconColor = UIColor(Color(hex: "#4CAF90"))
+        tabBarAppearance.stackedLayoutAppearance.selected.titleTextAttributes = [
+            .foregroundColor: UIColor(Color(hex: "#4CAF90"))
+        ]
+        
+        UITabBar.appearance().standardAppearance = tabBarAppearance
+        UITabBar.appearance().scrollEdgeAppearance = tabBarAppearance
         
         UINavigationBar.appearance().standardAppearance = navBarAppearance
         UINavigationBar.appearance().scrollEdgeAppearance = navBarAppearance
@@ -55,7 +74,7 @@ struct ContentView: View {
                     Label("Profile", systemImage: "person.circle")
                 }
         }
-        .accentColor(themeManager.currentTheme.primary)
+        .tint(Theme.primary)
         .preferredColorScheme(isDarkMode ? .dark : .light)
         .onChange(of: isDarkMode) { oldValue, newValue in
             themeManager.toggleTheme(isDark: newValue)
