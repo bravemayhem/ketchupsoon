@@ -5,99 +5,175 @@ struct FriendDetailView: View {
     let friend: Friend
     @Environment(\.dismiss) private var dismiss
     @State private var showingMessageSheet = false
-    @State private var messageResult: MessageComposeResult?
     
     var body: some View {
         NavigationView {
-            VStack(alignment: .leading, spacing: 20) {
-                // Last Hangout Section
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Last Hangout")
-                        .font(.headline)
-                    
-                    HStack {
-                        Image(systemName: "calendar")
-                            .foregroundColor(.blue)
-                        Text("\(friend.lastHangoutWeeks) weeks ago")
-                            .foregroundColor(friend.isOverdue ? .red : .primary)
-                    }
-                }
-                .padding()
-                .background(Color(.systemGray6))
-                .cornerRadius(12)
-                
-                // Availability Section (placeholder)
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Availability")
-                        .font(.headline)
-                    Text("Wednesday evenings")
-                }
-                .padding()
-                .background(Color(.systemGray6))
-                .cornerRadius(12)
-                
-                // Quick Actions
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Quick Actions")
-                        .font(.headline)
-                    
-                    HStack(spacing: 16) {
-                        Button(action: {
-                            if MFMessageComposeViewController.canSendText() {
-                                showingMessageSheet = true
-                            }
-                        }) {
-                            HStack {
-                                Image(systemName: "message.fill")
-                                Text("Send Message")
-                            }
-                            .padding()
-                            .frame(maxWidth: .infinity)
-                            .background(Color.blue.opacity(0.1))
-                            .foregroundColor(friend.phoneNumber != nil ? .blue : .gray)
-                            .cornerRadius(8)
-                        }
-                        .disabled(friend.phoneNumber == nil)
-                        .sheet(isPresented: $showingMessageSheet) {
-                            MessageComposeView(
-                                recipient: friend.phoneNumber ?? "",
-                                result: $messageResult
-                            )
-                        }
+            ScrollView {
+                VStack(spacing: 24) {
+                    // Header Section
+                    VStack(spacing: 16) {
+                        ProfileImage(friend: friend)
+                            .frame(width: 96, height: 96)
                         
-                        NavigationLink(destination: SchedulerView(selectedFriend: friend)) {
-                            HStack {
-                                Image(systemName: "calendar")
-                                Text("Schedule")
+                        Text(friend.name)
+                            .font(.system(size: 24, weight: .bold))
+                            .foregroundColor(Theme.primaryText)
+                    }
+                    .padding(.vertical)
+                    
+                    // Status Cards
+                    HStack(spacing: 12) {
+                        // Last Hangout Card
+                        StatusCard(
+                            icon: "clock",
+                            title: "Last Hangout",
+                            value: "\(friend.lastHangoutWeeks) weeks ago"
+                        )
+                        
+                        // Frequency Card
+                        StatusCard(
+                            icon: "calendar",
+                            title: "Frequency",
+                            value: friend.frequency
+                        )
+                    }
+                    .padding(.horizontal)
+                    
+                    // Quick Actions
+                    VStack(alignment: .leading, spacing: 16) {
+                        Text("Quick Actions")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundColor(Theme.primaryText)
+                        
+                        VStack(spacing: 12) {
+                            // Message Button
+                            QuickActionButton(
+                                icon: "message.fill",
+                                title: "Send Message",
+                                isEnabled: friend.phoneNumber != nil
+                            ) {
+                                if MFMessageComposeViewController.canSendText() {
+                                    showingMessageSheet = true
+                                }
                             }
-                            .padding()
-                            .frame(maxWidth: .infinity)
-                            .background(Color.blue)
-                            .foregroundColor(.white)
-                            .cornerRadius(8)
+                            
+                            // Log Hangout Button
+                            QuickActionButton(
+                                icon: "person.2.fill",
+                                title: "Log Hangout",
+                                style: .primary
+                            ) {
+                                // Handle hangout logging
+                            }
+                            
+                            // Schedule Button
+                            QuickActionButton(
+                                icon: "calendar.badge.plus",
+                                title: "Schedule Next Hangout"
+                            ) {
+                                // Handle scheduling
+                            }
                         }
                     }
+                    .padding()
+                    .background(Theme.cardBackground)
+                    .cornerRadius(12)
+                    .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 1)
+                    .padding(.horizontal)
                 }
-                
-                Spacer()
             }
-            .padding()
-            .navigationTitle(friend.name)
+            .background(Theme.background.ignoresSafeArea())
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Done") {
                         dismiss()
                     }
+                    .font(.system(size: 17, weight: .semibold))
                 }
             }
+        }
+        .sheet(isPresented: $showingMessageSheet) {
+            MessageComposeView(recipient: friend.phoneNumber ?? "")
         }
     }
 }
 
-struct MessageComposeView: UIViewControllerRepresentable {
+private struct StatusCard: View {
+    let icon: String
+    let title: String
+    let value: String
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.system(size: 14))
+                Text(title)
+                    .font(.system(size: 14))
+            }
+            .foregroundColor(Theme.secondaryText)
+            
+            Text(value)
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundColor(Theme.primaryText)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding()
+        .background(Theme.cardBackground)
+        .cornerRadius(12)
+        .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 1)
+    }
+}
+
+private struct QuickActionButton: View {
+    let icon: String
+    let title: String
+    var isEnabled: Bool = true
+    var style: ButtonStyle = .secondary
+    let action: () -> Void
+    
+    enum ButtonStyle {
+        case primary, secondary
+        
+        var backgroundColor: Color {
+            switch self {
+            case .primary: return Theme.primary
+            case .secondary: return Theme.cardBackground
+            }
+        }
+        
+        var foregroundColor: Color {
+            switch self {
+            case .primary: return .white
+            case .secondary: return Theme.primary
+            }
+        }
+    }
+    
+    var body: some View {
+        Button(action: action) {
+            HStack {
+                Image(systemName: icon)
+                Text(title)
+                    .font(.system(size: 16, weight: .medium))
+            }
+            .frame(maxWidth: .infinity)
+            .padding()
+            .background(
+                style == .primary ? 
+                    style.backgroundColor : 
+                    style.backgroundColor.opacity(0.1)
+            )
+            .foregroundColor(isEnabled ? style.foregroundColor : .gray)
+            .cornerRadius(8)
+        }
+        .disabled(!isEnabled)
+    }
+}
+
+private struct MessageComposeView: UIViewControllerRepresentable {
     let recipient: String
-    @Binding var result: MessageComposeResult?
     @Environment(\.dismiss) private var dismiss
     
     func makeUIViewController(context: Context) -> MFMessageComposeViewController {
@@ -110,19 +186,22 @@ struct MessageComposeView: UIViewControllerRepresentable {
     func updateUIViewController(_ uiViewController: MFMessageComposeViewController, context: Context) {}
     
     func makeCoordinator() -> Coordinator {
-        Coordinator(self)
+        Coordinator(dismiss: dismiss)
     }
     
     class Coordinator: NSObject, MFMessageComposeViewControllerDelegate {
-        let parent: MessageComposeView
+        let dismiss: DismissAction
         
-        init(_ parent: MessageComposeView) {
-            self.parent = parent
+        init(dismiss: DismissAction) {
+            self.dismiss = dismiss
         }
         
         func messageComposeViewController(_ controller: MFMessageComposeViewController, didFinishWith result: MessageComposeResult) {
-            parent.result = result
-            controller.dismiss(animated: true)
+            dismiss()
         }
     }
+}
+
+#Preview {
+    FriendDetailView(friend: SampleData.friends[0])
 } 
