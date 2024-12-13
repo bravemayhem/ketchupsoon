@@ -9,27 +9,25 @@ import SwiftUI
 
 struct ContentView: View {
     @AppStorage("isDarkMode") private var isDarkMode = true
+    @StateObject private var themeManager = ThemeManager.shared
     
     init() {
         // Configure navigation bar appearance
         let navBarAppearance = UINavigationBarAppearance()
         navBarAppearance.configureWithOpaqueBackground()
-        navBarAppearance.backgroundColor = UIColor(Theme.background)
-        navBarAppearance.shadowColor = .clear // Remove the separator line
+        navBarAppearance.backgroundColor = UIColor(themeManager.currentTheme.background)
+        navBarAppearance.shadowColor = .clear
         
-        // Large title text attributes
         navBarAppearance.largeTitleTextAttributes = [
-            .foregroundColor: UIColor(Theme.primaryText),
+            .foregroundColor: UIColor(themeManager.currentTheme.primaryText),
             .font: UIFont.systemFont(ofSize: 34, weight: .bold)
         ]
         
-        // Standard title text attributes
         navBarAppearance.titleTextAttributes = [
-            .foregroundColor: UIColor(Theme.primaryText),
+            .foregroundColor: UIColor(themeManager.currentTheme.primaryText),
             .font: UIFont.systemFont(ofSize: 17, weight: .semibold)
         ]
         
-        // Apply the appearance globally
         UINavigationBar.appearance().standardAppearance = navBarAppearance
         UINavigationBar.appearance().scrollEdgeAppearance = navBarAppearance
         UINavigationBar.appearance().compactAppearance = navBarAppearance
@@ -57,21 +55,13 @@ struct ContentView: View {
                     Label("Profile", systemImage: "person.circle")
                 }
         }
-        .accentColor(Theme.primary)
+        .accentColor(themeManager.currentTheme.primary)
         .preferredColorScheme(isDarkMode ? .dark : .light)
-        .onChange(of: isDarkMode) {
-            Theme.current = isDarkMode ? .dark : .light
+        .onChange(of: isDarkMode) { oldValue, newValue in
+            themeManager.toggleTheme(isDark: newValue)
         }
         .onAppear {
-            Theme.current = isDarkMode ? .dark : .light
-            
-            // Style the tab bar
-            let appearance = UITabBarAppearance()
-            appearance.backgroundEffect = UIBlurEffect(style: .systemUltraThinMaterial)
-            appearance.backgroundColor = UIColor(Theme.secondaryBackground)
-            
-            UITabBar.appearance().standardAppearance = appearance
-            UITabBar.appearance().scrollEdgeAppearance = appearance
+            themeManager.toggleTheme(isDark: isDarkMode)
         }
     }
 }

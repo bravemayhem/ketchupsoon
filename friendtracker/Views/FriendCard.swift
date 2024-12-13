@@ -83,17 +83,13 @@ private struct InfoRows: View {
 private struct OverdueTag: View {
     var body: some View {
         Text("overdue")
-            .font(.system(size: 14, weight: .bold))
+            .font(.system(size: 14, weight: .medium))
             .foregroundColor(.white)
             .padding(.horizontal, 12)
-            .padding(.vertical, 8)
+            .padding(.vertical, 6)
             .background(
-                Rectangle()
-                    .fill(Color(hex: "#FF6B6B"))
-                    .overlay(
-                        Rectangle()
-                            .stroke(Color.black, lineWidth: 2)
-                    )
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(Color(hex: "#EF4444"))
             )
     }
 }

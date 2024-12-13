@@ -7,60 +7,69 @@ struct Theme {
     
     static var current: Mode = .dark // Default theme
     
-    // Main colors - Using provided neobrutalist palette
+    // Background colors - More subtle gradients
     static var background: Color {
         switch current {
-        case .dark: return Color(hex: "#f9f5f2") // Warm yellow background
-        case .light: return Color(hex: "#f9f5f2") // Same for light mode
+        case .dark: return Color(hex: "#020817") // Darker, richer background
+        case .light: return Color(hex: "#FFFFFF") // Clean white
         }
     }
     
     static var secondaryBackground: Color {
         switch current {
-        case .dark: return Color(hex: "#f9f5f2") // Light yellow
-        case .light: return Color(hex: "#f9f5f2")
+        case .dark: return Color(hex: "#1E293B") // Slate 800
+        case .light: return Color(hex: "#F8FAFC") // Slate 50
         }
     }
     
     static var cardBackground: Color {
         switch current {
-        case .dark: return Color(hex: "#f2edd5") // Light yellow for cards
-        case .light: return Color(hex: "#f2edd5")
+        case .dark: return Color(hex: "#0F172A") // Slate 900
+        case .light: return Color(hex: "#FFFFFF") // White
         }
     }
     
-    // Accent colors - Using white sparingly and keeping coral
-    static let primary = Color(hex: "2D2D2D") // Vibrant coral for important elements
-    static let secondary = Color(hex: "FFFFFF") // Pure white for special highlights
+    // Primary colors - More vibrant accents
+    static let primary = Color(hex: "#0EA5E9") // Sky 500
+    static let primaryAccent = Color(hex: "#38BDF8") // Sky 400
     
-    // Text colors - High contrast
+    // Text colors - Better contrast
     static var primaryText: Color {
         switch current {
-        case .dark: return Color.black // Black text for contrast
-        case .light: return Color.black
+        case .dark: return Color(hex: "#F8FAFC") // Slate 50
+        case .light: return Color(hex: "#0F172A") // Slate 900
         }
     }
     
     static var secondaryText: Color {
         switch current {
-        case .dark: return Color(hex: "2D2D2D") // Dark gray text
-        case .light: return Color(hex: "2D2D2D")
+        case .dark: return Color(hex: "#94A3B8") // Slate 400
+        case .light: return Color(hex: "#64748B") // Slate 500
         }
     }
     
-    // Card border and shadow properties for neobrutalism
+    // Card properties - More subtle borders
     static var cardBorder: Color {
-        return Color.black // Always black border for neobrutalism
+        switch current {
+        case .dark: return Color(hex: "#1E293B").opacity(0.5) // Slate 800 with opacity
+        case .light: return Color(hex: "#E2E8F0").opacity(0.5) // Slate 200 with opacity
+        }
     }
     
-    // Shadow opacity - Stronger for neobrutalism
+    // Shadow properties - More natural depth
     static var shadowOpacity: Double {
-        return 1.0 // Full opacity for brutal look
+        switch current {
+        case .dark: return 0.1
+        case .light: return 0.05
+        }
     }
     
-    // Shadow offset for neobrutalism
     static var shadowOffset: CGPoint {
-        return CGPoint(x: 4, y: 4) // Distinct offset for brutal look
+        return CGPoint(x: 0, y: 1) // Minimal offset
+    }
+    
+    static var shadowRadius: CGFloat {
+        return 2 // Subtle blur
     }
 }
 
