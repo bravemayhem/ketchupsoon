@@ -24,6 +24,10 @@ struct Friend: Identifiable {
         }
     }
     
+    var isActive: Bool {
+        return !isOverdue
+    }
+    
     var profileImage: Image? {
         guard let data = photoData,
               let uiImage = UIImage(data: data) else {

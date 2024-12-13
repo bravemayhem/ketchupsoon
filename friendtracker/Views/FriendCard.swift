@@ -121,11 +121,16 @@ private struct CardContent: View {
             .padding(.vertical, 12)
             .padding(.horizontal, 16)
             
-            // Overdue tag overlay
-            if friend.isOverdue {
-                OverdueTag()
-                    .padding(12)
+            // Status tags overlay
+            HStack(spacing: 8) {
+                if friend.isActive {
+                    ActiveTag()
+                }
+                if friend.isOverdue {
+                    OverdueTag()
+                }
             }
+            .padding(12)
         }
         .background(NeoBrutalistBackground())
         .padding(.horizontal)
@@ -143,6 +148,27 @@ private struct OverdueTag: View {
             .background(
                 RoundedRectangle(cornerRadius: 6)
                     .fill(Color(hex: "#E57373"))
+            )
+            .shadow(
+                color: Color.black.opacity(0.1),
+                radius: 2,
+                x: 0,
+                y: 1
+            )
+    }
+}
+
+// New ActiveTag component
+private struct ActiveTag: View {
+    var body: some View {
+        Text("active")
+            .font(.system(size: 12, weight: .medium))
+            .foregroundColor(.white)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(Color(hex: "#4CAD73")) // Green color for active status
             )
             .shadow(
                 color: Color.black.opacity(0.1),
