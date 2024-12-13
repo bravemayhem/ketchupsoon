@@ -84,11 +84,12 @@ private struct CardContent: View {
                 
                 Divider()
                     .background(Theme.cardBorder)
+                    .padding(.vertical, 0)
                 
                 // Bottom section with info and photo
-                HStack(alignment: .bottom) {
+                HStack(alignment: .center) {
                     // Info column
-                    VStack(alignment: .leading, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 8) {
                         // Frequency row
                         HStack(spacing: 6) {
                             Image(systemName: "calendar")
@@ -112,10 +113,11 @@ private struct CardContent: View {
                     
                     // Profile photo
                     ProfileImage(friend: friend)
-                        .frame(width: 70, height: 70)
+                        .frame(width: 64, height: 64)
                 }
             }
-            .padding(16)
+            .padding(.vertical, 12)
+            .padding(.horizontal, 16)
             
             // Overdue tag overlay
             if friend.isOverdue {
