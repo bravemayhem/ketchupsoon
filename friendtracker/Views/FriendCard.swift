@@ -2,12 +2,14 @@ import SwiftUI
 
 struct FriendCard: View {
     let friend: Friend
+    var onLogHangout: () -> Void
     @State private var showingDetail = false
     
     var body: some View {
         CardButton(
             friend: friend,
-            showingDetail: $showingDetail
+            showingDetail: $showingDetail,
+            onLogHangout: onLogHangout
         )
     }
 }
@@ -16,12 +18,13 @@ struct FriendCard: View {
 private struct CardButton: View {
     let friend: Friend
     @Binding var showingDetail: Bool
+    var onLogHangout: () -> Void
     
     var body: some View {
         Button {
             showingDetail = true
         } label: {
-            CardContent(friend: friend)
+            CardContent(friend: friend, onLogHangout: onLogHangout)
         }
         .buttonStyle(.plain)
         .sheet(isPresented: $showingDetail) {
@@ -33,6 +36,7 @@ private struct CardButton: View {
 // Simplified content component
 private struct CardContent: View {
     let friend: Friend
+    var onLogHangout: () -> Void
     
     var body: some View {
         ZStack(alignment: .topTrailing) {
@@ -108,6 +112,24 @@ private struct CardContent: View {
                                 .font(.system(size: 15))
                         }
                         .foregroundColor(Theme.secondaryText)
+                        
+                        // Add Log Hangout button
+                        Button(action: onLogHangout) {
+                            HStack(spacing: 6) {
+                                Image(systemName: "plus.circle.fill")
+                                    .font(.system(size: 14))
+                                Text("Log Hangout")
+                                    .font(.system(size: 15, weight: .medium))
+                            }
+                            .foregroundColor(Theme.primary)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(
+                                RoundedRectangle(cornerRadius: 6)
+                                    .fill(Theme.primary.opacity(0.1))
+                            )
+                        }
+                        .padding(.top, 4)
                     }
                     
                     Spacer()
@@ -233,14 +255,17 @@ private struct InitialsAvatar: View {
 }
 
 #Preview {
-    FriendCard(friend: Friend(
-        id: UUID(),
-        name: "John Doe",
-        frequency: "Weekly check-in",
-        lastHangoutWeeks: 2,
-        phoneNumber: "+1234567890",
-        isInnerCircle: true,
-        isLocal: true,
-        photoData: nil
-    ))
+    FriendCard(
+        friend: Friend(
+            id: UUID(),
+            name: "John Doe",
+            frequency: "Weekly check-in",
+            lastHangoutWeeks: 2,
+            phoneNumber: "+1234567890",
+            isInnerCircle: true,
+            isLocal: true,
+            photoData: nil
+        ),
+        onLogHangout: {}
+    )
 } 

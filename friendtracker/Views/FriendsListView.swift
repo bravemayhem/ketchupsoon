@@ -3,6 +3,7 @@ import SwiftUI
 struct FriendsListView: View {
     @State private var friends = SampleData.friends
     @State private var showingAddFriend = false
+    @State private var hangoutsThisMonth: Int = 0
     
     var sortedFriends: [Friend] {
         friends.sorted { friend1, friend2 in
@@ -19,6 +20,16 @@ struct FriendsListView: View {
         NavigationView {
             FriendsContent(
                 friends: sortedFriends,
+                hangoutsThisMonth: hangoutsThisMonth,
+                onLogHangout: { friend in
+                    if let index = friends.firstIndex(where: { $0.id == friend.id }) {
+                        var updatedFriend = friends[index]
+                        updatedFriend.hangoutsThisMonth += 1
+                        updatedFriend.lastHangoutWeeks = 0
+                        friends[index] = updatedFriend
+                        hangoutsThisMonth += 1
+                    }
+                },
                 showingAddFriend: $showingAddFriend
             )
             .navigationBarTitleDisplayMode(.inline)
@@ -53,6 +64,8 @@ struct FriendsListView: View {
 
 private struct FriendsContent: View {
     let friends: [Friend]
+    let hangoutsThisMonth: Int
+    let onLogHangout: (Friend) -> Void
     @Binding var showingAddFriend: Bool
     @State private var searchText = ""
     @State private var selectedFilter = FriendFilter.all
@@ -96,8 +109,8 @@ private struct FriendsContent: View {
         ScrollView {
             VStack(spacing: 24) {
                 StatsHeader(
-                    hangoutsThisMonth: 5,  // TODO: Calculate this
-                    currentMood: 4         // TODO: Calculate this
+                    hangoutsThisMonth: hangoutsThisMonth,
+                    currentMood: 4
                 )
                 
                 SearchAndFilterView(
@@ -105,7 +118,10 @@ private struct FriendsContent: View {
                     selectedFilter: $selectedFilter
                 )
                 
-                FriendsList(friends: filteredFriends)
+                FriendsList(
+                    friends: filteredFriends,
+                    onLogHangout: onLogHangout
+                )
             }
             .padding()
         }
@@ -127,7 +143,12 @@ private struct SearchAndFilterView: View {
                     .font(.system(size: 16, weight: .medium))
             }
             .padding()
-            .background(NeoBrutalistBackground())
+            .background(Theme.cardBackground)
+            .cornerRadius(8)
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(Theme.cardBorder, lineWidth: 1)
+            )
             
             // Filter Tabs
             ScrollView(.horizontal, showsIndicators: false) {
@@ -163,10 +184,17 @@ private struct FilterTab: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
             .background(
-                NeoBrutalistBackground()
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Theme.cardBackground)
                     .opacity(isSelected ? 1 : 0.5)
             )
             .foregroundColor(isSelected ? Theme.primary : Theme.secondaryText)
+            .shadow(
+                color: Color.black.opacity(0.05),
+                radius: 2,
+                x: 0,
+                y: 1
+            )
     }
 }
 
@@ -402,11 +430,15 @@ private struct GoalAdjusterSheet: View {
 
 private struct FriendsList: View {
     let friends: [Friend]
+    let onLogHangout: (Friend) -> Void
     
     var body: some View {
         LazyVStack(spacing: 16) {
             ForEach(friends) { friend in
-                FriendCard(friend: friend)
+                FriendCard(
+                    friend: friend,
+                    onLogHangout: { onLogHangout(friend) }
+                )
             }
         }
     }
@@ -414,4 +446,5 @@ private struct FriendsList: View {
 
 #Preview {
     FriendsListView()
+        .preferredColorScheme(.light)
 }

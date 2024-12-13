@@ -5,11 +5,12 @@ struct Friend: Identifiable {
     let id: UUID
     let name: String
     let frequency: String
-    let lastHangoutWeeks: Int
+    var lastHangoutWeeks: Int
     let phoneNumber: String?
     let isInnerCircle: Bool
     let isLocal: Bool
     let photoData: Data?
+    var hangoutsThisMonth: Int = 0
     
     var isOverdue: Bool {
         switch frequency {
