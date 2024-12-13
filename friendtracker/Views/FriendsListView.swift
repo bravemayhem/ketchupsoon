@@ -172,24 +172,43 @@ private struct StatsHeader: View {
     let hangoutsThisMonth: Int
     let currentMood: Int
     
+    private var currentMonthYear: String {
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "MMMM yyyy"
+        return dateFormatter.string(from: Date())
+    }
+    
     var body: some View {
         VStack(spacing: 16) {
-            Text("This Month")
-                .font(.system(size: 24, weight: .bold))
-                .foregroundColor(Theme.primaryText)
-            
-            HStack(spacing: 16) {
-                StatCard(
-                    value: "\(hangoutsThisMonth)",
-                    label: "Hangouts"
-                )
+            // Month indicator and stats container
+            VStack(spacing: 16) {
+                // Month indicator
+                Text(currentMonthYear)
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundColor(Theme.primaryText)
                 
-                StatCard(
-                    value: "5/6",
-                    label: "Hang Target"
-                )
+                // Stats row
+                HStack(spacing: 12) {
+                    StatCard(
+                        value: "\(hangoutsThisMonth)",
+                        label: "Hangs"
+                    )
+                    
+                    StatCard(
+                        value: "83%",
+                        label: "Progress"
+                    )
+                    
+                    StatCard(
+                        value: "6",
+                        label: "Goal"
+                    )
+                }
             }
+            .padding(20)
+            .background(NeoBrutalistBackground())
         }
+        .padding(.horizontal)
     }
 }
 
@@ -200,15 +219,20 @@ private struct StatCard: View {
     var body: some View {
         VStack(alignment: .leading) {
             Text(value)
-                .font(.system(size: 34, weight: .bold))
+                .font(.system(size: 28, weight: .bold))
                 .foregroundColor(Theme.primary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            
             Text(label)
-                .font(.system(size: 16, weight: .medium))
+                .font(.system(size: 14, weight: .medium))
                 .foregroundColor(Theme.secondaryText)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
-        .background(NeoBrutalistBackground())
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Theme.secondaryBackground)
+        )
     }
 }
 
