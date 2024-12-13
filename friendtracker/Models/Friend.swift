@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 
 struct Friend: Identifiable {
     let id: UUID
@@ -8,6 +9,7 @@ struct Friend: Identifiable {
     let phoneNumber: String?
     let isInnerCircle: Bool
     let isLocal: Bool
+    let photoData: Data?
     
     var isOverdue: Bool {
         switch frequency {
@@ -20,5 +22,13 @@ struct Friend: Identifiable {
         default:
             return false
         }
+    }
+    
+    var profileImage: Image? {
+        guard let data = photoData,
+              let uiImage = UIImage(data: data) else {
+            return nil
+        }
+        return Image(uiImage: uiImage)
     }
 } 

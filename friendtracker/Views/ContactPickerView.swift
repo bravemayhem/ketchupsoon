@@ -62,7 +62,8 @@ struct ContactPickerView: View {
             lastHangoutWeeks: 0,
             phoneNumber: contact.phoneNumbers.first?.value.stringValue,
             isInnerCircle: false,
-            isLocal: true
+            isLocal: true,
+            photoData: contact.imageData ?? contact.thumbnailImageData
         )
     }
 }

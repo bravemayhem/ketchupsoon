@@ -9,7 +9,8 @@ struct SampleData {
             lastHangoutWeeks: 6,
             phoneNumber: "+1234567890",
             isInnerCircle: true,
-            isLocal: false
+            isLocal: false,
+            photoData: nil
         ),
         Friend(
             id: UUID(),
@@ -18,7 +19,8 @@ struct SampleData {
             lastHangoutWeeks: 4,
             phoneNumber: "+1234567891",
             isInnerCircle: true,
-            isLocal: true
+            isLocal: true,
+            photoData: nil
         ),
         Friend(
             id: UUID(),
@@ -27,7 +29,8 @@ struct SampleData {
             lastHangoutWeeks: 2,
             phoneNumber: "+1234567892",
             isInnerCircle: false,
-            isLocal: true
+            isLocal: true,
+            photoData: nil
         ),
         Friend(
             id: UUID(),
@@ -36,7 +39,8 @@ struct SampleData {
             lastHangoutWeeks: 1,
             phoneNumber: "+1234567893",
             isInnerCircle: false,
-            isLocal: true
+            isLocal: true,
+            photoData: nil
         ),
         Friend(
             id: UUID(),
@@ -45,7 +49,8 @@ struct SampleData {
             lastHangoutWeeks: 5,
             phoneNumber: "+1234567894",
             isInnerCircle: true,
-            isLocal: false
+            isLocal: false,
+            photoData: nil
         ),
         Friend(
             id: UUID(),
@@ -54,7 +59,8 @@ struct SampleData {
             lastHangoutWeeks: 5,
             phoneNumber: "+1234567894",
             isInnerCircle: true,
-            isLocal: false
+            isLocal: false,
+            photoData: nil
         )
     ]
     
