@@ -24,11 +24,12 @@ struct FriendsListView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .principal) {
-                    Text("Friends")
-                        .font(.system(size: 34, weight: .bold))
+                    Text("bfriended")
+                        .font(.system(size: 25, weight: .bold))
                         .foregroundColor(Theme.primaryText)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.leading)
+                        .padding(.horizontal)
+                        .padding(.vertical, 8)
                 }
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -38,7 +39,8 @@ struct FriendsListView: View {
                         Image(systemName: "plus")
                             .font(.system(size: 24, weight: .bold))
                             .foregroundColor(Theme.primary)
-                            .padding(.trailing)
+                            .padding(.horizontal)
+                            .padding(.vertical, 8)
                     }
                 }
             }
