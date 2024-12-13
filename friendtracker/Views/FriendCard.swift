@@ -36,7 +36,7 @@ private struct CardContent: View {
     
     var body: some View {
         ZStack(alignment: .topTrailing) {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 12) {
                 // Top section with name and badges
                 VStack(alignment: .leading, spacing: 8) {
                     // Name row
@@ -84,12 +84,12 @@ private struct CardContent: View {
                 
                 Divider()
                     .background(Theme.cardBorder)
-                    .padding(.vertical, 0)
+                    .padding(.vertical, 2)
                 
                 // Bottom section with info and photo
                 HStack(alignment: .center) {
                     // Info column
-                    VStack(alignment: .leading, spacing: 8) {
+                    VStack(alignment: .leading, spacing: 6) {
                         // Frequency row
                         HStack(spacing: 6) {
                             Image(systemName: "calendar")
@@ -98,6 +98,7 @@ private struct CardContent: View {
                                 .font(.system(size: 15, weight: .medium))
                         }
                         .foregroundColor(Theme.secondaryText)
+                        
                         
                         // Last hangout row
                         HStack(spacing: 6) {
@@ -115,6 +116,7 @@ private struct CardContent: View {
                     ProfileImage(friend: friend)
                         .frame(width: 64, height: 64)
                 }
+                .padding(.top, -4)
             }
             .padding(.vertical, 12)
             .padding(.horizontal, 16)
