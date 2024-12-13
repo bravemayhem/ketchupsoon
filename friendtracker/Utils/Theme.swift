@@ -10,27 +10,27 @@ struct Theme {
     // Main colors - Using provided neobrutalist palette
     static var background: Color {
         switch current {
-        case .dark: return Color(hex: "FCFFDA") // Soft yellow background
-        case .light: return Color(hex: "FCFFDA") // Same for light mode
+        case .dark: return Color(hex: "#f9f5f2") // Warm yellow background
+        case .light: return Color(hex: "#f9f5f2") // Same for light mode
         }
     }
     
     static var secondaryBackground: Color {
         switch current {
-        case .dark: return Color(hex: "B8FF9F") // Mint green
-        case .light: return Color(hex: "B8FF9F")
+        case .dark: return Color(hex: "#f9f5f2") // Light yellow
+        case .light: return Color(hex: "#f9f5f2")
         }
     }
     
     static var cardBackground: Color {
         switch current {
-        case .dark: return Color(hex: "B8FF9F") // Mint green cards
-        case .light: return Color(hex: "B8FF9F")
+        case .dark: return Color(hex: "#f2edd5") // Light yellow for cards
+        case .light: return Color(hex: "#f2edd5")
         }
     }
     
     // Accent colors - Using white sparingly and keeping coral
-    static let primary = Color(hex: "FF6B6B") // Vibrant coral for important elements
+    static let primary = Color(hex: "2D2D2D") // Vibrant coral for important elements
     static let secondary = Color(hex: "FFFFFF") // Pure white for special highlights
     
     // Text colors - High contrast

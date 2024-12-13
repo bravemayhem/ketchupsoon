@@ -38,8 +38,7 @@ struct StatsView: View {
                 }
                 .frame(maxWidth: .infinity)
                 .padding()
-                .background(Color.blue.opacity(0.1))
-                .cornerRadius(12)
+                .background(NeoBrutalistBackground())
                 
                 // Mood Card
                 VStack {
@@ -52,8 +51,7 @@ struct StatsView: View {
                 }
                 .frame(maxWidth: .infinity)
                 .padding()
-                .background(Color.blue.opacity(0.1))
-                .cornerRadius(12)
+                .background(NeoBrutalistBackground())
             }
             .padding(.horizontal)
         }

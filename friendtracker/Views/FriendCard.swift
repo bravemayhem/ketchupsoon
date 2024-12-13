@@ -89,7 +89,7 @@ private struct OverdueTag: View {
             .padding(.vertical, 8)
             .background(
                 Rectangle()
-                    .fill(Theme.primary)
+                    .fill(Color(hex: "#FF6B6B"))
                     .overlay(
                         Rectangle()
                             .stroke(Color.black, lineWidth: 2)

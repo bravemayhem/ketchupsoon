@@ -208,7 +208,22 @@ private struct StatCard: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
-        .background(NeoBrutalistBackground())
+        .background(
+            ZStack {
+                // Drop shadow
+                Rectangle()
+                    .fill(Color.black)
+                    .offset(x: Theme.shadowOffset.x, y: Theme.shadowOffset.y)
+                    
+                // Main card background with custom fill color
+                Rectangle()
+                    .fill(Theme.cardBackground)
+                    .overlay(
+                        Rectangle()
+                            .stroke(Color.black, lineWidth: 2)
+                    )
+            }
+        )
     }
 }
 
