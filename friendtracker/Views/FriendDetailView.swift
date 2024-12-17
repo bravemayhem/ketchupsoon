@@ -5,6 +5,7 @@ import MessageUI
 struct FriendDetailView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var theme: Theme
     let friend: Friend
     let presentationMode: PresentationMode
     @State private var showingDatePicker = false
@@ -25,7 +26,7 @@ struct FriendDetailView: View {
                     Text("Last Seen")
                     Spacer()
                     Button(friend.lastSeenText) {
-                        lastSeenDate = friend.lastSeen ?? Date()
+                        lastSeenDate = friend.lastSeen
                         showingDatePicker = true
                     }
                     .foregroundStyle(.secondary)
@@ -49,7 +50,7 @@ struct FriendDetailView: View {
                 }
             }
             
-            Section {
+            Section("Actions") {
                 if friend.phoneNumber != nil {
                     Button(action: {
                         showingMessageSheet = true
@@ -98,6 +99,33 @@ struct FriendDetailView: View {
                 }
             }
         }
+        .sheet(isPresented: $showingDatePicker) {
+            NavigationStack {
+                DatePicker(
+                    "Select Date",
+                    selection: $lastSeenDate,
+                    in: ...Date(),
+                    displayedComponents: [.date]
+                )
+                .datePickerStyle(.graphical)
+                .navigationTitle("Last Seen Date")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Cancel") {
+                            showingDatePicker = false
+                        }
+                    }
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Save") {
+                            friend.lastSeen = lastSeenDate
+                            showingDatePicker = false
+                        }
+                    }
+                }
+            }
+            .presentationDetents([.medium])
+        }
         .sheet(isPresented: $showingScheduler) {
             NavigationStack {
                 SchedulerView(initialFriend: friend)
@@ -122,4 +150,5 @@ struct FriendDetailView: View {
         )
     }
     .modelContainer(for: Friend.self)
+    .environmentObject(Theme.shared)
 } 

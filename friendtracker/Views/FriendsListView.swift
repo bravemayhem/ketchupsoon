@@ -8,6 +8,10 @@ struct FriendsListView: View {
     @Query(sort: [SortDescriptor(\Friend.name)]) private var friends: [Friend]
     @State private var selectedFriend: Friend?
     @State private var showingFriendSheet = false
+    @State private var showingActionSheet = false
+    @State private var showingScheduler = false
+    @State private var showingMessageSheet = false
+    @State private var showingFrequencyPicker = false
     
     var body: some View {
         ScrollView {
@@ -20,8 +24,11 @@ struct FriendsListView: View {
                         FriendListCard(friend: friend)
                             .padding(.horizontal)
                             .onTapGesture {
+                                #if DEBUG
+                                debugLog("Tapped friend card: \(friend.name)")
+                                #endif
                                 selectedFriend = friend
-                                showingFriendSheet = true
+                                showingActionSheet = true
                             }
                     }
                 }
@@ -29,13 +36,77 @@ struct FriendsListView: View {
             .padding(.vertical)
         }
         .background(theme.background)
+        .onAppear {
+            #if DEBUG
+            debugLog("FriendsListView appeared with \(friends.count) friends")
+            #endif
+        }
         .sheet(isPresented: $showingFriendSheet, content: {
             if let friend = selectedFriend {
                 NavigationStack {
-                    FriendDetailSheet(friend: friend, isPresented: $showingFriendSheet)
+                    FriendDetailView(
+                        friend: friend,
+                        presentationMode: .sheet($showingFriendSheet)
+                    )
                 }
             }
         })
+        .sheet(isPresented: $showingScheduler) {
+            if let friend = selectedFriend {
+                NavigationStack {
+                    SchedulerView(initialFriend: friend)
+                }
+            }
+        }
+        .sheet(isPresented: $showingMessageSheet) {
+            if let friend = selectedFriend {
+                MessageComposeView(recipient: friend.phoneNumber ?? "")
+            }
+        }
+        .sheet(isPresented: $showingFrequencyPicker) {
+            if let friend = selectedFriend {
+                NavigationStack {
+                    FrequencyPickerView(friend: friend)
+                }
+            }
+        }
+        .confirmationDialog("Actions", isPresented: $showingActionSheet, presenting: selectedFriend) { friend in
+            Button("View Details") {
+                showingFriendSheet = true
+            }
+            
+            if friend.phoneNumber != nil {
+                Button("Send Message") {
+                    showingMessageSheet = true
+                }
+            }
+            
+            Button("Schedule Hangout") {
+                showingScheduler = true
+            }
+            
+            Button("Mark as Seen Today") {
+                friend.updateLastSeen(Date())
+            }
+            
+            if friend.needsToConnectFlag {
+                Button("Remove from To Connect List") {
+                    friend.needsToConnectFlag = false
+                }
+            } else {
+                Button("Add to To Connect List") {
+                    friend.needsToConnectFlag = true
+                }
+            }
+            
+            Button("Set Catch-up Frequency") {
+                showingFrequencyPicker = true
+            }
+            
+            Button("Cancel", role: .cancel) {}
+        } message: { friend in
+            Text(friend.name)
+        }
     }
 }
 
@@ -44,14 +115,11 @@ struct FriendListCard: View {
     let friend: Friend
     
     var lastSeenText: String {
-        if let lastSeen = friend.lastSeen {
-            if Calendar.current.isDateInToday(lastSeen) {
-                return "Active today"
-            } else {
-                return lastSeen.formatted(.relative(presentation: .named))
-            }
+        if Calendar.current.isDateInToday(friend.lastSeen) {
+            return "Active today"
+        } else {
+            return friend.lastSeen.formatted(.relative(presentation: .named))
         }
-        return "Never"
     }
     
     var body: some View {
@@ -66,21 +134,6 @@ struct FriendListCard: View {
             
             Text(friend.location)
                 .foregroundColor(theme.secondaryText)
-            
-            HStack {
-                Spacer()
-                Button(action: {}) {
-                    Text("Connect")
-                        .font(.headline)
-                        .foregroundColor(theme.primaryText)
-                        .padding(.horizontal, 24)
-                        .padding(.vertical, 8)
-                        .background(
-                            RoundedRectangle(cornerRadius: 8)
-                                .stroke(theme.primaryText, lineWidth: 1)
-                        )
-                }
-            }
         }
         .padding()
         .background(
@@ -91,127 +144,98 @@ struct FriendListCard: View {
     }
 }
 
-struct FriendDetailSheet: View {
-    @Environment(\.modelContext) private var modelContext
+struct FrequencyPickerView: View {
+    @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var theme: Theme
     let friend: Friend
-    @Binding var isPresented: Bool
-    @State private var showingDatePicker = false
-    @State private var lastSeenDate = Date()
-    @State private var showingScheduler = false
-    @State private var showingMessageSheet = false
+    @State private var customDays: Int = 30
+    @State private var showingCustomDaysPicker = false
     
     var body: some View {
         List {
             Section {
-                // Last Seen
-                HStack {
-                    Text("Last Seen")
-                    Spacer()
-                    Button(friend.lastSeenText) {
-                        lastSeenDate = friend.lastSeen ?? Date()
-                        showingDatePicker = true
-                    }
-                    .foregroundStyle(.secondary)
+                Button("No Automatic Reminders") {
+                    friend.updateFrequency(nil)
+                    friend.updateCustomDays(nil)
+                    dismiss()
                 }
-                
-                // Location
-                HStack {
-                    Text("Location")
-                    Spacer()
-                    Text(friend.location)
-                        .foregroundStyle(.secondary)
-                }
-                
-                if let phoneNumber = friend.phoneNumber {
-                    HStack {
-                        Text("Phone")
-                        Spacer()
-                        Text(phoneNumber)
-                            .foregroundStyle(.secondary)
-                    }
-                }
+                .foregroundColor(friend.catchUpFrequency == nil ? theme.primary : .primary)
+            } header: {
+                Text("Manual Mode")
+            } footer: {
+                Text("You'll only be reminded to connect when you manually add this friend to the To Connect list.")
             }
             
-            Section("Actions") {
-                if friend.phoneNumber != nil {
-                    Button(action: {
-                        showingMessageSheet = true
-                    }) {
-                        Label("Send Message", systemImage: "message.fill")
+            Section {
+                ForEach(CatchUpFrequency.allCases, id: \.rawValue) { frequency in
+                    Button {
+                        if frequency == .custom {
+                            showingCustomDaysPicker = true
+                        } else {
+                            friend.updateFrequency(frequency.rawValue)
+                            friend.updateCustomDays(nil)
+                            dismiss()
+                        }
+                    } label: {
+                        HStack {
+                            Text(frequency.rawValue)
+                            Spacer()
+                            if let currentFrequency = friend.catchUpFrequency,
+                               currentFrequency == frequency.rawValue {
+                                Image(systemName: "checkmark")
+                                    .foregroundColor(theme.primary)
+                            }
+                        }
                     }
+                    .foregroundColor(.primary)
                 }
-                
-                Button(action: {
-                    showingScheduler = true
-                }) {
-                    Label("Schedule Hangout", systemImage: "calendar")
-                }
-                
-                Button(action: {
-                    friend.lastSeen = Date()
-                }) {
-                    Label("Mark as Seen Today", systemImage: "checkmark.circle.fill")
-                }
+            } header: {
+                Text("Automatic Reminders")
+            } footer: {
+                Text("You'll be automatically reminded to connect 3 weeks before the next catch-up is due.")
             }
         }
-        .navigationTitle(friend.name)
+        .navigationTitle("Catch Up Frequency")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button("Done") {
-                    isPresented = false
+            ToolbarItem(placement: .cancellationAction) {
+                Button("Cancel") {
+                    dismiss()
                 }
             }
         }
-        .sheet(isPresented: $showingDatePicker) {
+        .sheet(isPresented: $showingCustomDaysPicker) {
             NavigationStack {
-                DatePicker(
-                    "Select Date",
-                    selection: $lastSeenDate,
-                    in: ...Date(),
-                    displayedComponents: [.date]
-                )
-                .datePickerStyle(.graphical)
-                .navigationTitle("Last Seen Date")
+                Form {
+                    Section {
+                        Stepper("Every \(customDays) days", value: $customDays, in: 1...365)
+                    }
+                }
+                .navigationTitle("Custom Frequency")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
                         Button("Cancel") {
-                            showingDatePicker = false
+                            showingCustomDaysPicker = false
                         }
                     }
                     ToolbarItem(placement: .confirmationAction) {
                         Button("Save") {
-                            friend.lastSeen = lastSeenDate
-                            showingDatePicker = false
+                            friend.updateFrequency(CatchUpFrequency.custom.rawValue)
+                            friend.updateCustomDays(customDays)
+                            showingCustomDaysPicker = false
+                            dismiss()
                         }
                     }
                 }
             }
             .presentationDetents([.medium])
         }
-        .sheet(isPresented: $showingScheduler) {
-            NavigationStack {
-                SchedulerView(initialFriend: friend)
-            }
-        }
-        .sheet(isPresented: $showingMessageSheet) {
-            MessageComposeView(recipient: friend.phoneNumber ?? "")
-        }
     }
 }
 
 #Preview {
-    NavigationStack {
-        FriendDetailSheet(
-            friend: Friend(
-                name: "Preview Friend",
-                lastSeen: Date(),
-                location: "Local",
-                phoneNumber: "+1234567890"
-            ),
-            isPresented: .constant(true)
-        )
-    }
-    .modelContainer(for: Friend.self)
+    FriendsListView()
+        .modelContainer(for: Friend.self)
+        .environmentObject(Theme.shared)
 }

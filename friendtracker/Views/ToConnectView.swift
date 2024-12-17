@@ -2,15 +2,11 @@ import SwiftUI
 import SwiftData
 
 struct ToConnectView: View {
-    @EnvironmentObject private var theme: Theme
     @Query(sort: [SortDescriptor(\Friend.lastSeen)]) private var friends: [Friend]
+    @EnvironmentObject private var theme: Theme
     
     var friendsToConnect: [Friend] {
-        friends.filter { friend in
-            guard let lastSeen = friend.lastSeen else { return true }
-            let days = Calendar.current.dateComponents([.day], from: lastSeen, to: Date()).day ?? 0
-            return days > 14
-        }
+        friends.filter { $0.needsToConnect }
     }
     
     var body: some View {
@@ -21,15 +17,12 @@ struct ToConnectView: View {
                         .foregroundColor(theme.primaryText)
                 } else {
                     ForEach(friendsToConnect) { friend in
-                        FriendCard(
-                            friend: friend,
-                            buttonTitle: "Schedule",
-                            buttonStyle: .secondary,
-                            action: {
-                                // Schedule action
+                        FriendListCard(friend: friend)
+                            .padding(.horizontal)
+                            .onTapGesture {
+                                friend.needsToConnectFlag = false
+                                friend.lastSeen = Date()
                             }
-                        )
-                        .padding(.horizontal)
                     }
                 }
             }
