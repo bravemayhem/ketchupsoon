@@ -2,6 +2,7 @@ import SwiftUI
 import SwiftData
 
 struct ScheduledView: View {
+    @EnvironmentObject private var theme: Theme
     @Query(
         sort: [SortDescriptor(\Hangout.date)]
     ) private var hangouts: [Hangout]
@@ -17,6 +18,7 @@ struct ScheduledView: View {
             LazyVStack(spacing: 16) {
                 if upcomingHangouts.isEmpty {
                     ContentUnavailableView("No Scheduled Hangouts", systemImage: "calendar.badge.plus")
+                        .foregroundColor(theme.primaryText)
                 } else {
                     ForEach(upcomingHangouts) { hangout in
                         HangoutCard(hangout: hangout)
@@ -26,43 +28,41 @@ struct ScheduledView: View {
             }
             .padding(.vertical)
         }
+        .background(theme.background)
     }
 }
 
 struct HangoutCard: View {
+    @EnvironmentObject private var theme: Theme
     let hangout: Hangout
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            // Friend Name
             Text(hangout.friend?.name ?? "")
                 .font(.title2)
                 .bold()
+                .foregroundColor(theme.primaryText)
             
-            // Activity
             Text(hangout.activity)
                 .font(.title3)
-                .foregroundStyle(.secondary)
+                .foregroundColor(theme.secondaryText)
             
             HStack(spacing: 16) {
-                // Date/Time
                 Label {
                     Text(hangout.date.formatted(.relative(presentation: .named)))
                 } icon: {
                     Image(systemName: "calendar")
                 }
-                .foregroundStyle(.secondary)
+                .foregroundColor(theme.secondaryText)
                 
-                // Location
                 Label {
                     Text(hangout.location)
                 } icon: {
                     Image(systemName: "mappin.and.ellipse")
                 }
-                .foregroundStyle(.secondary)
+                .foregroundColor(theme.secondaryText)
             }
             
-            // Message Button
             HStack {
                 Spacer()
                 Button(action: {
@@ -70,12 +70,12 @@ struct HangoutCard: View {
                 }) {
                     Label("Message", systemImage: "message")
                         .font(.headline)
-                        .foregroundColor(.primary)
+                        .foregroundColor(theme.primaryText)
                         .padding(.horizontal, 20)
                         .padding(.vertical, 8)
                         .background(
                             RoundedRectangle(cornerRadius: 8)
-                                .stroke(Color.primary, lineWidth: 1)
+                                .stroke(theme.primaryText, lineWidth: 1)
                         )
                 }
             }
@@ -83,8 +83,8 @@ struct HangoutCard: View {
         .padding()
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(Color(.systemBackground))
-                .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 2)
+                .fill(theme.cardBackground)
+                .shadow(color: Color.black.opacity(theme.shadowOpacity), radius: theme.shadowRadius, x: theme.shadowOffset.x, y: theme.shadowOffset.y)
         )
     }
 }
@@ -92,4 +92,5 @@ struct HangoutCard: View {
 #Preview {
     ScheduledView()
         .modelContainer(for: Friend.self)
+        .environmentObject(Theme.shared)
 }

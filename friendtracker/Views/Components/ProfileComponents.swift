@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct ProfileImage: View {
+    @EnvironmentObject private var theme: Theme
     let friend: Friend
     
     var body: some View {
@@ -17,7 +18,7 @@ struct ProfileImage: View {
         .clipShape(Circle())
         .overlay(
             Circle()
-                .stroke(Theme.cardBorder, lineWidth: 1)
+                .stroke(theme.cardBorder, lineWidth: 1)
         )
         .shadow(
             color: Color.black.opacity(0.08),
@@ -29,6 +30,7 @@ struct ProfileImage: View {
 }
 
 struct InitialsAvatar: View {
+    @EnvironmentObject private var theme: Theme
     let name: String
     
     var initials: String {
@@ -42,11 +44,29 @@ struct InitialsAvatar: View {
     var body: some View {
         ZStack {
             Circle()
-                .fill(Theme.secondaryBackground)
+                .fill(theme.secondaryBackground)
             
             Text(initials)
                 .font(.system(size: 16, weight: .medium))
-                .foregroundColor(Theme.primaryText)
+                .foregroundColor(theme.primaryText)
+        }
+    }
+}
+
+struct ProfileButton: View {
+    @EnvironmentObject private var theme: Theme
+    let title: String
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            Text(title)
+                .font(.headline)
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(theme.secondaryBackground)
+                .cornerRadius(10)
+                .foregroundColor(theme.primaryText)
         }
     }
 } 

@@ -8,7 +8,7 @@ enum FriendLocation: String, Codable {
 }
 
 @Model
-@MainActor
+@preconcurrency
 final class Friend {
     @Attribute(.unique) var id: UUID
     var name: String

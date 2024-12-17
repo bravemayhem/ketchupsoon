@@ -10,7 +10,7 @@ struct FriendsView: View {
                     FriendCard(
                         friend: friend,
                         buttonTitle: "Connect",
-                        style: .secondary,
+                        buttonStyle: .secondary,
                         action: {
                             // Connect action
                         }

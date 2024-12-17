@@ -3,6 +3,7 @@ import SwiftData
 import MessageUI
 
 struct FriendsListView: View {
+    @EnvironmentObject private var theme: Theme
     @Environment(\.modelContext) private var modelContext
     @Query(sort: [SortDescriptor(\Friend.name)]) private var friends: [Friend]
     @State private var selectedFriend: Friend?
@@ -13,6 +14,7 @@ struct FriendsListView: View {
             LazyVStack(spacing: 16) {
                 if friends.isEmpty {
                     ContentUnavailableView("No Friends Added", systemImage: "person.2.badge.plus")
+                        .foregroundColor(theme.primaryText)
                 } else {
                     ForEach(friends) { friend in
                         FriendListCard(friend: friend)
@@ -26,6 +28,7 @@ struct FriendsListView: View {
             }
             .padding(.vertical)
         }
+        .background(theme.background)
         .sheet(isPresented: $showingFriendSheet, content: {
             if let friend = selectedFriend {
                 NavigationStack {
@@ -37,6 +40,7 @@ struct FriendsListView: View {
 }
 
 struct FriendListCard: View {
+    @EnvironmentObject private var theme: Theme
     let friend: Friend
     
     var lastSeenText: String {
@@ -52,33 +56,28 @@ struct FriendListCard: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            // Friend Name
             Text(friend.name)
                 .font(.title2)
                 .bold()
+                .foregroundColor(theme.primaryText)
             
-            // Last Seen
             Text(lastSeenText)
-                .foregroundStyle(.secondary)
+                .foregroundColor(theme.secondaryText)
             
-            // Location
             Text(friend.location)
-                .foregroundStyle(.secondary)
+                .foregroundColor(theme.secondaryText)
             
-            // Connect Button
             HStack {
                 Spacer()
-                Button(action: {
-                    // Connect action handled by parent tap gesture
-                }) {
+                Button(action: {}) {
                     Text("Connect")
                         .font(.headline)
-                        .foregroundStyle(.primary)
+                        .foregroundColor(theme.primaryText)
                         .padding(.horizontal, 24)
                         .padding(.vertical, 8)
                         .background(
                             RoundedRectangle(cornerRadius: 8)
-                                .stroke(Color.primary, lineWidth: 1)
+                                .stroke(theme.primaryText, lineWidth: 1)
                         )
                 }
             }
@@ -86,8 +85,8 @@ struct FriendListCard: View {
         .padding()
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(Color(.systemBackground))
-                .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 2)
+                .fill(theme.cardBackground)
+                .shadow(color: Color.black.opacity(theme.shadowOpacity), radius: theme.shadowRadius, x: theme.shadowOffset.x, y: theme.shadowOffset.y)
         )
     }
 }

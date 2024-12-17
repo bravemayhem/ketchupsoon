@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct FriendCard: View {
+    @EnvironmentObject private var theme: Theme
     let friend: Friend
     let buttonTitle: String
     let buttonStyle: ButtonStyle
@@ -14,8 +15,7 @@ struct FriendCard: View {
         var backgroundColor: Color {
             switch self {
             case .primary: return .black
-            case .secondary: return .clear
-            case .outline: return .clear
+            case .secondary, .outline: return .clear
             }
         }
         
@@ -32,25 +32,25 @@ struct FriendCard: View {
             Text(friend.name)
                 .font(.title2)
                 .bold()
+                .foregroundColor(theme.primaryText)
             
             Text(friend.lastSeenText)
-                .foregroundStyle(.secondary)
+                .foregroundColor(theme.secondaryText)
             
             Text(friend.location)
-                .foregroundStyle(.secondary)
+                .foregroundColor(theme.secondaryText)
             
             HStack {
                 Spacer()
                 Button(action: action) {
                     Text(buttonTitle)
                         .font(.headline)
-                        .foregroundStyle(buttonStyle.foregroundColor)
+                        .foregroundColor(theme.primaryText)
                         .padding(.horizontal, 24)
                         .padding(.vertical, 8)
                         .background(
                             RoundedRectangle(cornerRadius: 8)
-                                .fill(buttonStyle.backgroundColor)
-                                .stroke(Color.primary, lineWidth: buttonStyle == .outline ? 1 : 0)
+                                .stroke(theme.primaryText, lineWidth: 1)
                         )
                 }
             }
@@ -58,8 +58,8 @@ struct FriendCard: View {
         .padding()
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(Color(.systemBackground))
-                .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 2)
+                .fill(theme.cardBackground)
+                .shadow(color: Color.black.opacity(theme.shadowOpacity), radius: theme.shadowRadius, x: theme.shadowOffset.x, y: theme.shadowOffset.y)
         )
     }
 }
@@ -71,4 +71,5 @@ struct FriendCard: View {
         buttonStyle: .primary,
         action: {}
     )
+    .environmentObject(Theme.shared)
 } 

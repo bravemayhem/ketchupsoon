@@ -2,7 +2,7 @@ import Foundation
 import SwiftData
 
 @Model
-@MainActor
+@preconcurrency
 final class Hangout {
     @Attribute(.unique) var id: UUID
     var date: Date

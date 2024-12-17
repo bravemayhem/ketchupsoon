@@ -1,79 +1,50 @@
 import SwiftUI
 
-struct Theme {
-    enum Mode {
-        case light, dark
+final class Theme: ObservableObject {
+    static let shared = Theme()
+    
+    // Default to light mode
+    @Published var isDarkMode: Bool = false
+    
+    // MARK: - Colors
+    var background: Color {
+        isDarkMode ? Color(hex: "#020817") : Color(hex: "#F2F7F5")
     }
     
-    static var current: Mode = .light // Changed default to light
-    
-    // Background colors
-    static var background: Color {
-        switch current {
-        case .dark: return Color(hex: "#020817")
-        case .light: return Color(hex: "#F2F7F5") // Very light sage green background
-        }
+    var secondaryBackground: Color {
+        isDarkMode ? Color(hex: "#1E293B") : Color(hex: "#E8F1ED")
     }
     
-    static var secondaryBackground: Color {
-        switch current {
-        case .dark: return Color(hex: "#1E293B")
-        case .light: return Color(hex: "#E8F1ED") // Slightly darker sage background
-        }
+    var cardBackground: Color {
+        isDarkMode ? Color(hex: "#0F172A") : Color(hex: "#FFFFFF")
     }
     
-    static var cardBackground: Color {
-        switch current {
-        case .dark: return Color(hex: "#0F172A")
-        case .light: return Color(hex: "#FFFFFF") // Pure white
-        }
+    // Primary brand colors (constant regardless of theme)
+    let primary = Color(hex: "#4CAF90")
+    let primaryAccent = Color(hex: "#65C4A6")
+    
+    var primaryText: Color {
+        isDarkMode ? Color(hex: "#F8FAFC") : Color(hex: "#2F3B35")
     }
     
-    // Primary colors
-    static let primary = Color(hex: "#4CAF90") // Sage green
-    static let primaryAccent = Color(hex: "#65C4A6") // Light sage
-    
-    // Text colors
-    static var primaryText: Color {
-        switch current {
-        case .dark: return Color(hex: "#F8FAFC")
-        case .light: return Color(hex: "#2F3B35") // Dark sage gray
-        }
+    var secondaryText: Color {
+        isDarkMode ? Color(hex: "#94A3B8") : Color(hex: "#6B7C73")
     }
     
-    static var secondaryText: Color {
-        switch current {
-        case .dark: return Color(hex: "#94A3B8")
-        case .light: return Color(hex: "#6B7C73") // Medium sage gray
-        }
+    var cardBorder: Color {
+        (isDarkMode ? Color(hex: "#1E293B") : Color(hex: "#E3EBE7")).opacity(0.5)
     }
     
-    // Card properties
-    static var cardBorder: Color {
-        switch current {
-        case .dark: return Color(hex: "#1E293B").opacity(0.5)
-        case .light: return Color(hex: "#E3EBE7").opacity(0.5) // Very light sage
-        }
+    // MARK: - Shadow Properties
+    var shadowOpacity: Double {
+        isDarkMode ? 0.1 : 0.04
     }
     
-    // Shadow properties
-    static var shadowOpacity: Double {
-        switch current {
-        case .dark: return 0.1
-        case .light: return 0.04
-        }
-    }
-    
-    static var shadowOffset: CGPoint {
-        return CGPoint(x: 0, y: 2)
-    }
-    
-    static var shadowRadius: CGFloat {
-        return 4
-    }
+    let shadowOffset = CGPoint(x: 0, y: 2)
+    let shadowRadius: CGFloat = 4
 }
 
-// Extension for hex color support
+// MARK: - Hex Color Support
 extension Color {
     init(hex: String) {
         let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
@@ -94,7 +65,7 @@ extension Color {
             .sRGB,
             red: Double(r) / 255,
             green: Double(g) / 255,
-            blue:  Double(b) / 255,
+            blue: Double(b) / 255,
             opacity: Double(a) / 255
         )
     }

@@ -2,6 +2,7 @@ import SwiftUI
 import SwiftData
 
 struct ToConnectView: View {
+    @EnvironmentObject private var theme: Theme
     @Query(sort: [SortDescriptor(\Friend.lastSeen)]) private var friends: [Friend]
     
     var friendsToConnect: [Friend] {
@@ -17,25 +18,29 @@ struct ToConnectView: View {
             LazyVStack(spacing: 16) {
                 if friendsToConnect.isEmpty {
                     ContentUnavailableView("No Friends to Connect With", systemImage: "person.2.badge.gearshape")
+                        .foregroundColor(theme.primaryText)
                 } else {
                     ForEach(friendsToConnect) { friend in
                         FriendCard(
                             friend: friend,
                             buttonTitle: "Schedule",
-                            style: .secondary
-                        ) {
-                            // Schedule action
-                        }
+                            buttonStyle: .secondary,
+                            action: {
+                                // Schedule action
+                            }
+                        )
                         .padding(.horizontal)
                     }
                 }
             }
             .padding(.vertical)
         }
+        .background(theme.background)
     }
 }
 
 #Preview {
     ToConnectView()
         .modelContainer(for: Friend.self)
+        .environmentObject(Theme.shared)
 } 
