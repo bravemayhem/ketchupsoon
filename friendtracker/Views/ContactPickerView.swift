@@ -1,35 +1,41 @@
 import SwiftUI
 import Contacts
+import SwiftData
 
 struct ContactPickerView: View {
+    @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     @StateObject private var contactsManager = ContactsManager()
-    @State private var contacts: [CNContact] = []
     @State private var selectedContacts: Set<String> = []
-    @Binding var friends: [Friend]
+    @State private var showingSettingsAlert = false
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             VStack {
-                if !contactsManager.isAuthorized {
+                switch contactsManager.authorizationStatus {
+                case .notDetermined:
                     RequestAccessView(contactsManager: contactsManager)
-                } else {
+                case .denied, .restricted:
+                    DeniedAccessView()
+                case .authorized, .limited:
                     ContactListView(
-                        contacts: contacts,
+                        contacts: contactsManager.contacts,
                         selectedContacts: $selectedContacts
                     )
+                @unknown default:
+                    RequestAccessView(contactsManager: contactsManager)
                 }
             }
             .navigationTitle("Import Contacts")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
+                ToolbarItem(placement: .navigationBarLeading) {
                     Button("Cancel") {
                         dismiss()
                     }
                 }
                 
-                ToolbarItem(placement: .confirmationAction) {
+                ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Import") {
                         importSelectedContacts()
                         dismiss()
@@ -38,33 +44,39 @@ struct ContactPickerView: View {
                 }
             }
         }
-        .onAppear {
-            if contactsManager.isAuthorized {
-                contacts = contactsManager.fetchContacts()
+        .onChange(of: contactsManager.isAuthorized) { _, isAuthorized in
+            if isAuthorized {
+                Task {
+                    await contactsManager.fetchContacts()
+                }
             }
+        }
+        .alert("Contacts Access Required", isPresented: $showingSettingsAlert) {
+            Button("Open Settings") {
+                if let url = URL(string: UIApplication.openSettingsURLString) {
+                    UIApplication.shared.open(url)
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Please enable contacts access in Settings to import your contacts.")
         }
     }
     
     private func importSelectedContacts() {
-        let newFriends = contacts
+        contactsManager.contacts
             .filter { selectedContacts.contains($0.identifier) }
-            .map { contact in
-                createFriend(from: contact)
+            .forEach { contact in
+                addFriend(contact)
             }
-        friends.append(contentsOf: newFriends)
     }
     
-    private func createFriend(from contact: CNContact) -> Friend {
-        Friend(
-            id: UUID(),
+    private func addFriend(_ contact: CNContact) {
+        let newFriend = Friend(
             name: "\(contact.givenName) \(contact.familyName)".trimmingCharacters(in: .whitespaces),
-            frequency: "Monthly catch-up",
-            lastHangoutWeeks: 0,
-            phoneNumber: contact.phoneNumbers.first?.value.stringValue,
-            isInnerCircle: false,
-            isLocal: true,
-            photoData: contact.imageData ?? contact.thumbnailImageData
+            phoneNumber: contact.phoneNumbers.first?.value.stringValue
         )
+        modelContext.insert(newFriend)
     }
 }
 
@@ -86,6 +98,31 @@ struct RequestAccessView: View {
             
             Button("Grant Access") {
                 contactsManager.requestAccess()
+            }
+            .buttonStyle(.borderedProminent)
+        }
+        .padding()
+    }
+}
+
+struct DeniedAccessView: View {
+    var body: some View {
+        VStack(spacing: 20) {
+            Image(systemName: "person.crop.circle.badge.exclamationmark")
+                .font(.system(size: 50))
+                .foregroundColor(.red)
+            
+            Text("Access Denied")
+                .font(.headline)
+            
+            Text("Please enable contacts access in Settings to import your contacts.")
+                .multilineTextAlignment(.center)
+                .foregroundColor(.secondary)
+            
+            Button("Open Settings") {
+                if let url = URL(string: UIApplication.openSettingsURLString) {
+                    UIApplication.shared.open(url)
+                }
             }
             .buttonStyle(.borderedProminent)
         }
@@ -134,7 +171,7 @@ struct ContactRow: View {
     
     var body: some View {
         HStack {
-            Text("\(contact.givenName) \(contact.familyName)")
+            Text("\(contact.givenName) \(contact.familyName)".trimmingCharacters(in: .whitespaces))
             Spacer()
             if isSelected {
                 Image(systemName: "checkmark.circle.fill")

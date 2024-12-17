@@ -1,99 +1,91 @@
 import Foundation
+import SwiftData
 
-struct SampleData {
-    static let friends: [Friend] = [
-        Friend(
-            id: UUID(),
-            name: "Aleah Goldstein",
-            frequency: "Quarterly catch-up",
-            lastHangoutWeeks: 6,
-            phoneNumber: "+1234567890",
-            isInnerCircle: true,
-            isLocal: false,
-            photoData: nil
-        ),
-        Friend(
-            id: UUID(),
-            name: "Julian Gamboa",
-            frequency: "Weekly check-in",
-            lastHangoutWeeks: 4,
-            phoneNumber: "+1234567891",
-            isInnerCircle: true,
-            isLocal: true,
-            photoData: nil
-        ),
-        Friend(
-            id: UUID(),
-            name: "Maddie Powell",
-            frequency: "Monthly catch-up",
-            lastHangoutWeeks: 2,
-            phoneNumber: "+1234567892",
-            isInnerCircle: false,
-            isLocal: true,
-            photoData: nil
-        ),
-        Friend(
-            id: UUID(),
-            name: "Maddi Rose",
-            frequency: "Weekly check-in",
-            lastHangoutWeeks: 1,
-            phoneNumber: "+1234567893",
-            isInnerCircle: false,
-            isLocal: true,
-            photoData: nil
-        ),
-        Friend(
-            id: UUID(),
-            name: "Emma Stammen",
-            frequency: "Monthly catch-up",
-            lastHangoutWeeks: 5,
-            phoneNumber: "+1234567894",
-            isInnerCircle: true,
-            isLocal: false,
-            photoData: nil
-        ),
-        Friend(
-            id: UUID(),
-            name: "Vic Farina",
-            frequency: "Monthly catch-up",
-            lastHangoutWeeks: 5,
-            phoneNumber: "+1234567894",
-            isInnerCircle: true,
-            isLocal: false,
-            photoData: nil
-        )
+actor SampleData {
+    static let activities = [
+        "Coffee",
+        "Lunch",
+        "Dinner",
+        "Movie",
+        "Walk",
+        "Video Call",
+        "Phone Call",
+        "Game Night"
     ]
     
-    static let activities: [ActivitySuggestion] = [
-        ActivitySuggestion(
-            title: "Coffee catch-up",
-            category: .general,
-            duration: 3600, // 1 hour
-            weatherDependent: false
-        ),
-        ActivitySuggestion(
-            title: "Hiking nearby trail",
-            category: .outdoor,
-            duration: 7200, // 2 hours
-            weatherDependent: true
-        ),
-        ActivitySuggestion(
-            title: "Try new ramen place",
-            category: .dinner,
-            duration: 5400, // 1.5 hours
-            weatherDependent: false
-        ),
-        ActivitySuggestion(
-            title: "Beach day",
-            category: .outdoor,
-            duration: 14400, // 4 hours
-            weatherDependent: true
-        ),
-        ActivitySuggestion(
-            title: "Board game night",
-            category: .general,
-            duration: 10800, // 3 hours
-            weatherDependent: false
-        )
-    ]
+    @MainActor
+    static func createPreviewContainer() -> ModelContainer {
+        let schema = Schema([Friend.self, Hangout.self])
+        let configuration = ModelConfiguration(isStoredInMemoryOnly: true)
+        
+        do {
+            let container = try ModelContainer(for: schema, configurations: [configuration])
+            let modelContext = container.mainContext
+            
+            // Add sample friends with varying last seen dates
+            let friends = [
+                Friend(
+                    name: "Aleah Goldstein",
+                    lastSeen: Calendar.current.date(byAdding: .month, value: -2, to: Date())!,
+                    location: "Remote",
+                    phoneNumber: "+1234567890"
+                ),
+                Friend(
+                    name: "Julian Gamboa",
+                    lastSeen: Calendar.current.date(byAdding: .day, value: -2, to: Date())!,
+                    location: "Local",
+                    phoneNumber: "+1234567891"
+                ),
+                Friend(
+                    name: "Maddie Powell",
+                    lastSeen: Calendar.current.date(byAdding: .day, value: -21, to: Date())!,
+                    location: "Local",
+                    phoneNumber: "+1234567892"
+                ),
+                Friend(
+                    name: "Maddi Rose",
+                    lastSeen: Calendar.current.date(byAdding: .day, value: -5, to: Date())!,
+                    location: "Local",
+                    phoneNumber: "+1234567893"
+                ),
+                Friend(
+                    name: "Emma Thompson",
+                    lastSeen: Calendar.current.date(byAdding: .month, value: -1, to: Date())!,
+                    location: "Remote",
+                    phoneNumber: "+1234567894"
+                ),
+                Friend(
+                    name: "James Wilson",
+                    lastSeen: Date(),
+                    location: "Local",
+                    phoneNumber: "+1234567895"
+                )
+            ]
+            
+            // Add some scheduled hangouts
+            let jamesHangout = Hangout(
+                date: Calendar.current.date(byAdding: .day, value: 2, to: Date())!,
+                activity: "Coffee",
+                location: "Blue Bottle",
+                isScheduled: true,
+                friend: friends[5]
+            )
+            friends[5].hangouts.append(jamesHangout)
+            
+            let maddieHangout = Hangout(
+                date: Calendar.current.date(byAdding: .day, value: 5, to: Date())!,
+                activity: "Lunch",
+                location: "Italian Place",
+                isScheduled: true,
+                friend: friends[2]
+            )
+            friends[2].hangouts.append(maddieHangout)
+            
+            friends.forEach { modelContext.insert($0) }
+            return container
+            
+        } catch {
+            fatalError("Could not create preview container: \(error.localizedDescription)")
+        }
+    }
 } 

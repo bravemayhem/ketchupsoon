@@ -1,218 +1,66 @@
 import SwiftUI
 
+struct FriendCardStyle {
+    let backgroundColor: Color
+    let foregroundColor: Color
+    
+    static let primary = FriendCardStyle(
+        backgroundColor: .blue,
+        foregroundColor: .white
+    )
+    
+    static let secondary = FriendCardStyle(
+        backgroundColor: Color(.systemBackground),
+        foregroundColor: .blue
+    )
+}
+
 struct FriendCard: View {
     let friend: Friend
-    var onLogHangout: () -> Void
-    @State private var showingDetail = false
+    let buttonTitle: String
+    let style: FriendCardStyle
+    let action: () -> Void
     
     var body: some View {
-        CardButton(
-            friend: friend,
-            showingDetail: $showingDetail,
-            onLogHangout: onLogHangout
-        )
-    }
-}
-
-// Simplified button component
-private struct CardButton: View {
-    let friend: Friend
-    @Binding var showingDetail: Bool
-    var onLogHangout: () -> Void
-    
-    var body: some View {
-        Button {
-            showingDetail = true
-        } label: {
-            CardContent(friend: friend, onLogHangout: onLogHangout)
-        }
-        .buttonStyle(.plain)
-        .sheet(isPresented: $showingDetail) {
-            FriendDetailView(friend: friend)
-        }
-    }
-}
-
-// Simplified content component
-private struct CardContent: View {
-    let friend: Friend
-    var onLogHangout: () -> Void
-    
-    var body: some View {
-        ZStack(alignment: .topTrailing) {
-            VStack(alignment: .leading, spacing: 12) {
-                // Top section with name and badges
-                VStack(alignment: .leading, spacing: 8) {
-                    // Name row
-                    Text(friend.name)
-                        .font(.system(size: 22, weight: .bold))
-                        .foregroundColor(Theme.primaryText)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .lineLimit(2)
-                    
-                    // Badges row
-                    HStack(spacing: 8) {
-                        if friend.isInnerCircle {
-                            HStack(spacing: 4) {
-                                Image(systemName: "star.fill")
-                                    .font(.system(size: 12))
-                                Text("Inner Circle")
-                                    .font(.system(size: 14, weight: .medium))
-                            }
-                            .foregroundColor(Theme.primary)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(
-                                RoundedRectangle(cornerRadius: 6)
-                                    .fill(Theme.primary.opacity(0.1))
-                            )
-                        }
-                        
-                        if friend.isLocal {
-                            HStack(spacing: 4) {
-                                Image(systemName: "location.fill")
-                                    .font(.system(size: 12))
-                                Text("Local")
-                                    .font(.system(size: 14, weight: .medium))
-                            }
-                            .foregroundColor(Theme.secondaryText)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(
-                                RoundedRectangle(cornerRadius: 6)
-                                    .fill(Theme.secondaryText.opacity(0.1))
-                            )
-                        }
-                    }
-                }
-                
-                Divider()
-                    .background(Theme.cardBorder)
-                    .padding(.vertical, 2)
-                
-                // Bottom section with info and photo
-                HStack(alignment: .center) {
-                    // Info column
-                    VStack(alignment: .leading, spacing: 6) {
-                        // Frequency row
-                        HStack(spacing: 6) {
-                            Image(systemName: "calendar")
-                                .font(.system(size: 14))
-                            Text(friend.frequency)
-                                .font(.system(size: 15, weight: .medium))
-                        }
-                        .foregroundColor(Theme.secondaryText)
-                        
-                        
-                        // Last hangout row
-                        HStack(spacing: 6) {
-                            Image(systemName: "clock")
-                                .font(.system(size: 14))
-                            Text("\(friend.lastHangoutWeeks) weeks since last hangout")
-                                .font(.system(size: 15))
-                        }
-                        .foregroundColor(Theme.secondaryText)
-                        
-                        // Add Log Hangout button
-                        Button(action: onLogHangout) {
-                            HStack(spacing: 6) {
-                                Image(systemName: "plus.circle.fill")
-                                    .font(.system(size: 14))
-                                Text("Log Hangout")
-                                    .font(.system(size: 15, weight: .medium))
-                            }
-                            .foregroundColor(Theme.primary)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(
-                                RoundedRectangle(cornerRadius: 6)
-                                    .fill(Theme.primary.opacity(0.1))
-                            )
-                        }
-                        .padding(.top, 4)
-                    }
-                    
-                    Spacer()
-                    
-                    // Profile photo
-                    ProfileImage(friend: friend)
-                        .frame(width: 64, height: 64)
-                }
-                .padding(.top, -4)
+        VStack(alignment: .leading, spacing: 12) {
+            // Friend name and last seen
+            VStack(alignment: .leading, spacing: 4) {
+                Text(friend.name)
+                    .font(.system(size: 18, weight: .semibold))
+                Text(friend.lastSeenText)
+                    .font(.system(size: 14))
+                    .foregroundColor(.secondary)
             }
-            .padding(.vertical, 12)
-            .padding(.horizontal, 16)
             
-            // Status tags overlay
-            HStack(spacing: 8) {
-                if friend.isActive {
-                    ActiveTag()
-                }
-                if friend.isOverdue {
-                    OverdueTag()
-                }
+            // Location
+            Text(friend.location)
+                .font(.system(size: 14))
+                .foregroundColor(.secondary)
+            
+            // Connect button
+            Button(action: action) {
+                Text(buttonTitle)
+                    .font(.system(size: 14, weight: .medium))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
+                    .background(style.backgroundColor)
+                    .foregroundColor(style.foregroundColor)
+                    .cornerRadius(8)
             }
-            .padding(12)
+            .buttonStyle(.plain)
         }
-        .background(NeoBrutalistBackground())
-        .padding(.horizontal)
-    }
-}
-
-// Updated OverdueTag with improved styling
-private struct OverdueTag: View {
-    var body: some View {
-        Text("overdue")
-            .font(.system(size: 12, weight: .medium))
-            .foregroundColor(.white)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(
-                RoundedRectangle(cornerRadius: 6)
-                    .fill(Color(hex: "#E57373"))
-            )
-            .shadow(
-                color: Color.black.opacity(0.1),
-                radius: 2,
-                x: 0,
-                y: 1
-            )
-    }
-}
-
-// New ActiveTag component
-private struct ActiveTag: View {
-    var body: some View {
-        Text("active")
-            .font(.system(size: 12, weight: .medium))
-            .foregroundColor(.white)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(
-                RoundedRectangle(cornerRadius: 6)
-                    .fill(Color(hex: "#4CAD73")) // Green color for active status
-            )
-            .shadow(
-                color: Color.black.opacity(0.1),
-                radius: 2,
-                x: 0,
-                y: 1
-            )
+        .padding()
+        .background(Color(.systemBackground))
+        .cornerRadius(12)
+        .shadow(color: Color.black.opacity(0.1), radius: 1, x: 0, y: 1)
     }
 }
 
 #Preview {
     FriendCard(
-        friend: Friend(
-            id: UUID(),
-            name: "John Doe",
-            frequency: "Weekly check-in",
-            lastHangoutWeeks: 2,
-            phoneNumber: "+1234567890",
-            isInnerCircle: true,
-            isLocal: true,
-            photoData: nil
-        ),
-        onLogHangout: {}
+        friend: Friend(name: "John Doe"),
+        buttonTitle: "Connect",
+        style: .secondary,
+        action: {}
     )
 } 
