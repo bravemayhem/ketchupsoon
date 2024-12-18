@@ -235,4 +235,27 @@ final class Friend {
         }
         return Image(uiImage: uiImage)
     }
+    
+    // Calendar Integration Properties
+    var calendarIntegrationEnabled: Bool = false
+    var calendarVisibilityPreference: CalendarVisibility = .busyTime
+    var connectedCalendars: [ConnectedCalendar] = []
+    
+    enum CalendarVisibility: String, Codable {
+        case none
+        case busyTime
+        case fullDetails
+    }
+    
+    struct ConnectedCalendar: Codable, Identifiable {
+        var id: String
+        var type: CalendarType
+        var name: String
+        var isEnabled: Bool
+    }
+    
+    enum CalendarType: String, Codable {
+        case apple
+        case google
+    }
 }

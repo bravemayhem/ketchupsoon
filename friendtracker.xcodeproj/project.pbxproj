@@ -6,6 +6,12 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		F486A14D2D134CA90011CC59 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = F486A14C2D134CA90011CC59 /* GoogleSignIn */; };
+		F486A14F2D134CA90011CC59 /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = F486A14E2D134CA90011CC59 /* GoogleSignInSwift */; };
+		F486A1522D13515A0011CC59 /* GoogleAPIClientForREST_Calendar in Frameworks */ = {isa = PBXBuildFile; productRef = F486A1512D13515A0011CC59 /* GoogleAPIClientForREST_Calendar */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		F4070A392D0A184000B11C0B /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -52,6 +58,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F486A14D2D134CA90011CC59 /* GoogleSignIn in Frameworks */,
+				F486A1522D13515A0011CC59 /* GoogleAPIClientForREST_Calendar in Frameworks */,
+				F486A14F2D134CA90011CC59 /* GoogleSignInSwift in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -112,6 +121,9 @@
 			);
 			name = friendtracker;
 			packageProductDependencies = (
+				F486A14C2D134CA90011CC59 /* GoogleSignIn */,
+				F486A14E2D134CA90011CC59 /* GoogleSignInSwift */,
+				F486A1512D13515A0011CC59 /* GoogleAPIClientForREST_Calendar */,
 			);
 			productName = friendtracker;
 			productReference = F4070A282D0A183C00B11C0B /* friendtracker.app */;
@@ -195,6 +207,10 @@
 			);
 			mainGroup = F4070A1F2D0A183C00B11C0B;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				F486A14B2D134CA90011CC59 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
+				F486A1502D13515A0011CC59 /* XCRemoteSwiftPackageReference "google-api-objectivec-client-for-rest" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = F4070A292D0A183C00B11C0B /* Products */;
 			projectDirPath = "";
@@ -558,6 +574,43 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		F486A14B2D134CA90011CC59 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/google/GoogleSignIn-iOS.git";
+			requirement = {
+				kind = upToNextMinorVersion;
+				minimumVersion = 8.0.0;
+			};
+		};
+		F486A1502D13515A0011CC59 /* XCRemoteSwiftPackageReference "google-api-objectivec-client-for-rest" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/google/google-api-objectivec-client-for-rest.git";
+			requirement = {
+				kind = upToNextMinorVersion;
+				minimumVersion = 4.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		F486A14C2D134CA90011CC59 /* GoogleSignIn */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F486A14B2D134CA90011CC59 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignIn;
+		};
+		F486A14E2D134CA90011CC59 /* GoogleSignInSwift */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F486A14B2D134CA90011CC59 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignInSwift;
+		};
+		F486A1512D13515A0011CC59 /* GoogleAPIClientForREST_Calendar */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F486A1502D13515A0011CC59 /* XCRemoteSwiftPackageReference "google-api-objectivec-client-for-rest" */;
+			productName = GoogleAPIClientForREST_Calendar;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = F4070A202D0A183C00B11C0B /* Project object */;
 }
