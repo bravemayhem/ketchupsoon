@@ -9,6 +9,7 @@ final class Hangout {
     var activity: String
     var location: String
     var isScheduled: Bool
+    var needsReschedule: Bool?
     var friend: Friend?
     
     init(
@@ -17,6 +18,7 @@ final class Hangout {
         activity: String = "",
         location: String = "",
         isScheduled: Bool = false,
+        needsReschedule: Bool? = false,
         friend: Friend? = nil
     ) {
         self.id = id
@@ -24,6 +26,7 @@ final class Hangout {
         self.activity = activity
         self.location = location
         self.isScheduled = isScheduled
+        self.needsReschedule = needsReschedule
         self.friend = friend
     }
     

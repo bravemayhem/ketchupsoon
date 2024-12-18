@@ -151,10 +151,12 @@ final class Friend {
         }
         
         let now = Date()
-        let components = Calendar.current.dateComponents([.month, .weekOfYear, .day], from: lastSeen, to: now)
+        let components = Calendar.current.dateComponents([.year, .month, .weekOfYear, .day], from: lastSeen, to: now)
         
         let result: String
-        if let months = components.month, months > 0 {
+        if let years = components.year, years > 1 {
+            result = "Please update last seen"
+        } else if let months = components.month, months > 0 {
             result = "\(months) month\(months == 1 ? "" : "s") ago"
         } else if let weeks = components.weekOfYear, weeks > 0 {
             result = "\(weeks) week\(weeks == 1 ? "" : "s") ago"

@@ -124,8 +124,7 @@ struct SchedulerView: View {
     }
     
     private var isScheduleButtonDisabled: Bool {
-        selectedFriend == nil || 
-        selectedLocation.isEmpty
+        selectedFriend == nil
     }
     
     private func scheduleHangout() {
@@ -161,6 +160,9 @@ struct SchedulerView: View {
                     friend: friend
                 )
                 modelContext.insert(hangout)
+                
+                // Only remove from To Connect list, but don't update last seen
+                friend.needsToConnectFlag = false
                 
                 await MainActor.run {
                     isLoading = false

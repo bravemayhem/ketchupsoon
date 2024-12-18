@@ -6,29 +6,68 @@ struct ScheduledView: View {
     @Query(
         sort: [SortDescriptor(\Hangout.date)]
     ) private var hangouts: [Hangout]
+    @State private var hangoutToCheck: Hangout?
+    @State private var showingCompletionPrompt = false
     
     var upcomingHangouts: [Hangout] {
         hangouts.filter { hangout in
-            hangout.isScheduled && hangout.date > Date()
+            hangout.isScheduled && hangout.date > Date() && !(hangout.needsReschedule ?? false)
+        }
+    }
+    
+    var pastHangouts: [Hangout] {
+        hangouts.filter { hangout in
+            hangout.isScheduled && hangout.date <= Date()
         }
     }
     
     var body: some View {
         ScrollView {
             LazyVStack(spacing: 16) {
-                if upcomingHangouts.isEmpty {
+                if !pastHangouts.isEmpty {
+                    Section(header: Text("Past Hangouts")
+                        .font(.headline)
+                        .foregroundColor(.black)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal)) {
+                        ForEach(pastHangouts) { hangout in
+                            HangoutCard(hangout: hangout)
+                                .padding(.horizontal)
+                                .onAppear {
+                                    // Show completion prompt when past hangout appears
+                                    hangoutToCheck = hangout
+                                    showingCompletionPrompt = true
+                                }
+                        }
+                    }
+                }
+                
+                if upcomingHangouts.isEmpty && pastHangouts.isEmpty {
                     ContentUnavailableView("No Scheduled Hangouts", systemImage: "calendar.badge.plus")
                         .foregroundColor(theme.primaryText)
                 } else {
-                    ForEach(upcomingHangouts) { hangout in
-                        HangoutCard(hangout: hangout)
-                            .padding(.horizontal)
+                    Section(header: Text("Upcoming Hangouts")
+                        .font(.headline)
+                        .foregroundColor(.black)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal)) {
+                        ForEach(upcomingHangouts) { hangout in
+                            HangoutCard(hangout: hangout)
+                                .padding(.horizontal)
+                        }
                     }
                 }
             }
             .padding(.vertical)
         }
         .background(theme.background)
+        .sheet(isPresented: $showingCompletionPrompt, onDismiss: {
+            hangoutToCheck = nil
+        }) {
+            if let hangout = hangoutToCheck {
+                HangoutCompletionView(hangout: hangout)
+            }
+        }
     }
 }
 

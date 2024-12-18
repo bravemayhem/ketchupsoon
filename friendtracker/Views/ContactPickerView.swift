@@ -91,9 +91,10 @@ struct ContactPickerView: View {
     
     private func addFriend(from contact: CNContact) {
         let phoneNumber = contact.phoneNumbers.first?.value.stringValue
+        let distantPast = Calendar.current.date(byAdding: .year, value: -100, to: Date()) ?? Date()
         let friend = Friend(
             name: "\(contact.givenName) \(contact.familyName)",
-            lastSeen: Date(),
+            lastSeen: distantPast,
             location: FriendLocation.local.rawValue,
             contactIdentifier: contact.identifier,
             phoneNumber: phoneNumber
