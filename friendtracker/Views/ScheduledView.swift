@@ -37,54 +37,72 @@ struct HangoutCard: View {
     let hangout: Hangout
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text(hangout.friend?.name ?? "")
-                .font(.title2)
-                .bold()
-                .foregroundColor(theme.primaryText)
-            
-            Text(hangout.activity)
-                .font(.title3)
-                .foregroundColor(theme.secondaryText)
-            
-            HStack(spacing: 16) {
-                Label {
-                    Text(hangout.date.formatted(.relative(presentation: .named)))
-                } icon: {
-                    Image(systemName: "calendar")
+        VStack(spacing: 16) {
+            if let friend = hangout.friend {
+                HStack(spacing: 16) {
+                    ProfileImage(friend: friend)
+                    
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(friend.name)
+                            .font(.title3)
+                            .bold()
+                            .foregroundColor(theme.primaryText)
+                            .lineLimit(1)
+                        
+                        Text(hangout.activity)
+                            .font(.subheadline)
+                            .foregroundColor(theme.secondaryText)
+                            .lineLimit(1)
+                        
+                        HStack(spacing: 16) {
+                            Label {
+                                Text(hangout.date.formatted(.relative(presentation: .named)))
+                                    .lineLimit(1)
+                            } icon: {
+                                Image(systemName: "calendar")
+                            }
+                            .font(.subheadline)
+                            
+                            Label {
+                                Text(hangout.location)
+                                    .lineLimit(1)
+                            } icon: {
+                                Image(systemName: "mappin.and.ellipse")
+                            }
+                            .font(.subheadline)
+                        }
+                        .foregroundColor(theme.secondaryText)
+                    }
+                    
+                    Spacer()
                 }
-                .foregroundColor(theme.secondaryText)
-                
-                Label {
-                    Text(hangout.location)
-                } icon: {
-                    Image(systemName: "mappin.and.ellipse")
-                }
-                .foregroundColor(theme.secondaryText)
             }
             
-            HStack {
-                Spacer()
-                Button(action: {
-                    // Message action
-                }) {
-                    Label("Message", systemImage: "message")
-                        .font(.headline)
-                        .foregroundColor(theme.primaryText)
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 8)
-                        .background(
-                            RoundedRectangle(cornerRadius: 8)
-                                .stroke(theme.primaryText, lineWidth: 1)
-                        )
-                }
+            Button(action: {
+                // Message action
+            }) {
+                Label("Message", systemImage: "message")
+                    .font(.headline)
+                    .foregroundColor(theme.primaryText)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(theme.primaryText, lineWidth: 1)
+                    )
             }
         }
-        .padding()
+        .frame(maxWidth: .infinity)
+        .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 16)
                 .fill(theme.cardBackground)
-                .shadow(color: Color.black.opacity(theme.shadowOpacity), radius: theme.shadowRadius, x: theme.shadowOffset.x, y: theme.shadowOffset.y)
+                .shadow(
+                    color: Color.black.opacity(0.08),
+                    radius: 8,
+                    x: 0,
+                    y: 4
+                )
         )
     }
 }

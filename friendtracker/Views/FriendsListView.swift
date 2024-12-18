@@ -123,23 +123,44 @@ struct FriendListCard: View {
     }
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text(friend.name)
-                .font(.title2)
-                .bold()
-                .foregroundColor(theme.primaryText)
+        HStack(spacing: 16) {
+            ProfileImage(friend: friend)
             
-            Text(lastSeenText)
-                .foregroundColor(theme.secondaryText)
+            VStack(alignment: .leading, spacing: 8) {
+                Text(friend.name)
+                    .font(.title3)
+                    .bold()
+                    .foregroundColor(theme.primaryText)
+                    .lineLimit(1)
+                
+                Text(lastSeenText)
+                    .font(.subheadline)
+                    .foregroundColor(theme.secondaryText)
+                
+                Text(friend.location)
+                    .font(.subheadline)
+                    .foregroundColor(theme.secondaryText)
+                    .lineLimit(1)
+            }
             
-            Text(friend.location)
+            Spacer()
+            
+            Image(systemName: "chevron.right")
                 .foregroundColor(theme.secondaryText)
+                .font(.system(size: 14, weight: .semibold))
         }
-        .padding()
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
         .background(
             RoundedRectangle(cornerRadius: 16)
                 .fill(theme.cardBackground)
-                .shadow(color: Color.black.opacity(theme.shadowOpacity), radius: theme.shadowRadius, x: theme.shadowOffset.x, y: theme.shadowOffset.y)
+                .shadow(
+                    color: Color.black.opacity(0.08),
+                    radius: 8,
+                    x: 0,
+                    y: 4
+                )
         )
     }
 }
