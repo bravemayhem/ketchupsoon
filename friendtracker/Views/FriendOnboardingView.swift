@@ -4,7 +4,7 @@ import SwiftData
 struct FriendOnboardingView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
-    let contact: (name: String, identifier: String?, phoneNumber: String?)
+    let contact: (name: String, identifier: String?, phoneNumber: String?, imageData: Data?)
     
     @State private var hasLastSeen = false
     @State private var lastSeenDate = Date()
@@ -76,6 +76,7 @@ struct FriendOnboardingView: View {
             location: FriendLocation.local.rawValue,
             contactIdentifier: contact.identifier,
             phoneNumber: contact.phoneNumber,
+            photoData: contact.imageData,
             needsToConnectFlag: false,
             catchUpFrequency: hasCatchUpFrequency ? selectedFrequency.rawValue : nil,
             customCatchUpDays: hasCatchUpFrequency && selectedFrequency == .custom ? customDays : nil
