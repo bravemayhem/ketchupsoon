@@ -21,10 +21,32 @@ struct FriendTrackerApp: App {
             debugLog("Initializing ModelContainer with configuration")
             #endif
             
-            container = try ModelContainer(
-                for: Friend.self, Hangout.self,
-                configurations: config
-            )
+            // First try to initialize normally
+            do {
+                container = try ModelContainer(
+                    for: Friend.self, Hangout.self,
+                    configurations: config
+                )
+            } catch {
+                // DEVELOPMENT ONLY: Delete and recreate store on failure
+                // TODO: Remove this catch block before production deployment.
+                //       Production code should implement proper migrations to preserve user data.
+                #if DEBUG
+                debugLog("Failed to load store, attempting to delete and recreate")
+                #endif
+                
+                try? FileManager.default.removeItem(
+                    at: URL.applicationSupportDirectory.appending(
+                        component: "default.store"
+                    )
+                )
+                
+                // Try one more time with a fresh store
+                container = try ModelContainer(
+                    for: Friend.self, Hangout.self,
+                    configurations: config
+                )
+            }
             
             #if DEBUG
             debugLog("Successfully initialized container")
@@ -76,5 +98,14 @@ struct FriendTrackerApp: App {
 extension ProcessInfo {
     var isPreview: Bool {
         environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1"
+    }
+}
+
+extension URL {
+    static var applicationSupportDirectory: URL {
+        FileManager.default.urls(
+            for: .applicationSupportDirectory,
+            in: .userDomainMask
+        )[0]
     }
 }

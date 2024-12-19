@@ -17,15 +17,34 @@ struct ScheduledView: View {
     
     var pastHangouts: [Hangout] {
         hangouts.filter { hangout in
-            hangout.isScheduled && hangout.date <= Date()
+            hangout.isScheduled && hangout.endDate <= Date() && !hangout.isCompleted
+        }
+    }
+    
+    var completedHangouts: [Hangout] {
+        hangouts.filter { hangout in
+            hangout.isScheduled && hangout.isCompleted
         }
     }
     
     var body: some View {
         ScrollView {
             LazyVStack(spacing: 16) {
-                if !pastHangouts.isEmpty {
+                if !completedHangouts.isEmpty {
                     Section(header: Text("Past Hangouts")
+                        .font(.headline)
+                        .foregroundColor(.black)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal)) {
+                        ForEach(completedHangouts) { hangout in
+                            HangoutCard(hangout: hangout)
+                                .padding(.horizontal)
+                        }
+                    }
+                }
+                
+                if !pastHangouts.isEmpty {
+                    Section(header: Text("Needs Confirmation")
                         .font(.headline)
                         .foregroundColor(.black)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -34,15 +53,17 @@ struct ScheduledView: View {
                             HangoutCard(hangout: hangout)
                                 .padding(.horizontal)
                                 .onAppear {
-                                    // Show completion prompt when past hangout appears
-                                    hangoutToCheck = hangout
-                                    showingCompletionPrompt = true
+                                    // Only show completion prompt for unhandled past hangouts
+                                    if !hangout.isCompleted {
+                                        hangoutToCheck = hangout
+                                        showingCompletionPrompt = true
+                                    }
                                 }
                         }
                     }
                 }
                 
-                if upcomingHangouts.isEmpty && pastHangouts.isEmpty {
+                if upcomingHangouts.isEmpty && pastHangouts.isEmpty && completedHangouts.isEmpty {
                     ContentUnavailableView("No Scheduled Hangouts", systemImage: "calendar.badge.plus")
                         .foregroundColor(theme.primaryText)
                 } else {

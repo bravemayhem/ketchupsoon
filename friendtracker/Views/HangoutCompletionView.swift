@@ -38,6 +38,7 @@ struct HangoutCompletionView: View {
             friend.updateLastSeen(hangout.date)
             friend.needsToConnectFlag = false
         }
+        hangout.isCompleted = true
         dismiss()
     }
     

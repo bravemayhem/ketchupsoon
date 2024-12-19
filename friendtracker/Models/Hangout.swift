@@ -10,6 +10,8 @@ final class Hangout {
     var location: String
     var isScheduled: Bool
     var needsReschedule: Bool?
+    var isCompleted: Bool = false
+    var duration: TimeInterval?  // Optional duration in minutes
     var friend: Friend?
     
     init(
@@ -19,6 +21,8 @@ final class Hangout {
         location: String = "",
         isScheduled: Bool = false,
         needsReschedule: Bool? = false,
+        isCompleted: Bool = false,
+        duration: TimeInterval? = nil,
         friend: Friend? = nil
     ) {
         self.id = id
@@ -27,7 +31,18 @@ final class Hangout {
         self.location = location
         self.isScheduled = isScheduled
         self.needsReschedule = needsReschedule
+        self.isCompleted = isCompleted
+        self.duration = duration
         self.friend = friend
+    }
+    
+    var endDate: Date {
+        if let duration = duration {
+            return date.addingTimeInterval(duration * 60)  // Convert minutes to seconds
+        } else {
+            // Default to 1 hour if no duration specified
+            return date.addingTimeInterval(3600)  // 3600 seconds = 1 hour
+        }
     }
     
     var formattedDate: String {
