@@ -115,10 +115,14 @@ struct FriendListCard: View {
     let friend: Friend
     
     var lastSeenText: String {
-        if Calendar.current.isDateInToday(friend.lastSeen) {
+        guard let lastSeen = friend.lastSeen else {
+            return "Never"
+        }
+        
+        if Calendar.current.isDateInToday(lastSeen) {
             return "Active today"
         } else {
-            return friend.lastSeen.formatted(.relative(presentation: .named))
+            return lastSeen.formatted(.relative(presentation: .named))
         }
     }
     

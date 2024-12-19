@@ -8,11 +8,11 @@ final class Theme: ObservableObject {
     
     // MARK: - Colors
     var background: Color {
-        isDarkMode ? Color(hex: "#020817") : Color(hex: "#F2F7F5")
+        isDarkMode ? Color(hex: "#020817") : Color(hex: "#E8EEF0")
     }
     
     var secondaryBackground: Color {
-        isDarkMode ? Color(hex: "#1E293B") : Color(hex: "#E8F1ED")
+        isDarkMode ? Color(hex: "#1E293B") : Color(hex: "#DDE5E8")
     }
     
     var cardBackground: Color {

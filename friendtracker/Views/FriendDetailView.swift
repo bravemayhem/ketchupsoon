@@ -26,7 +26,7 @@ struct FriendDetailView: View {
                     Text("Last Seen")
                     Spacer()
                     Button(friend.lastSeenText) {
-                        lastSeenDate = friend.lastSeen
+                        lastSeenDate = friend.lastSeen ?? Date()
                         showingDatePicker = true
                     }
                     .foregroundStyle(.secondary)
