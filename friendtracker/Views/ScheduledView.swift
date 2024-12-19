@@ -95,61 +95,72 @@ struct ScheduledView: View {
 struct HangoutCard: View {
     @EnvironmentObject private var theme: Theme
     let hangout: Hangout
+    @State private var showingMessageSheet = false
+    @State private var showingFriendDetails = false
     
     var body: some View {
         VStack(spacing: 16) {
             if let friend = hangout.friend {
-                HStack(spacing: 16) {
-                    ProfileImage(friend: friend)
-                    
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(friend.name)
-                            .font(.title3)
-                            .bold()
-                            .foregroundColor(theme.primaryText)
-                            .lineLimit(1)
+                Button(action: {
+                    showingFriendDetails = true
+                }) {
+                    HStack(spacing: 16) {
+                        ProfileImage(friend: friend)
                         
-                        Text(hangout.activity)
-                            .font(.subheadline)
-                            .foregroundColor(theme.secondaryText)
-                            .lineLimit(1)
-                        
-                        HStack(spacing: 16) {
-                            Label {
-                                Text(hangout.date.formatted(.relative(presentation: .named)))
-                                    .lineLimit(1)
-                            } icon: {
-                                Image(systemName: "calendar")
-                            }
-                            .font(.subheadline)
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text(friend.name)
+                                .font(.title3)
+                                .bold()
+                                .foregroundColor(theme.primaryText)
+                                .lineLimit(1)
                             
-                            Label {
-                                Text(hangout.location)
-                                    .lineLimit(1)
-                            } icon: {
-                                Image(systemName: "mappin.and.ellipse")
+                            Text(hangout.activity)
+                                .font(.subheadline)
+                                .foregroundColor(theme.secondaryText)
+                                .lineLimit(1)
+                            
+                            HStack(spacing: 16) {
+                                Label {
+                                    Text(hangout.date.formatted(.relative(presentation: .named)))
+                                        .lineLimit(1)
+                                } icon: {
+                                    Image(systemName: "calendar")
+                                }
+                                .font(.subheadline)
+                                
+                                Label {
+                                    Text(hangout.location)
+                                        .lineLimit(1)
+                                } icon: {
+                                    Image(systemName: "mappin.and.ellipse")
+                                }
+                                .font(.subheadline)
                             }
-                            .font(.subheadline)
+                            .foregroundColor(theme.secondaryText)
                         }
-                        .foregroundColor(theme.secondaryText)
+                        
+                        Spacer()
+                        
+                        Image(systemName: "chevron.right")
+                            .foregroundColor(theme.secondaryText)
                     }
-                    
-                    Spacer()
                 }
             }
             
-            Button(action: {
-                // Message action
-            }) {
-                Label("Message", systemImage: "message")
-                    .font(.headline)
-                    .foregroundColor(theme.primaryText)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-                    .background(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(theme.primaryText, lineWidth: 1)
-                    )
+            if let friend = hangout.friend, friend.phoneNumber != nil {
+                Button(action: {
+                    showingMessageSheet = true
+                }) {
+                    Label("Message", systemImage: "message")
+                        .font(.headline)
+                        .foregroundColor(theme.primaryText)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(theme.primaryText, lineWidth: 1)
+                        )
+                }
             }
         }
         .frame(maxWidth: .infinity)
@@ -164,6 +175,21 @@ struct HangoutCard: View {
                     y: 4
                 )
         )
+        .sheet(isPresented: $showingMessageSheet) {
+            if let friend = hangout.friend, let phoneNumber = friend.phoneNumber {
+                MessageComposeView(recipient: phoneNumber)
+            }
+        }
+        .sheet(isPresented: $showingFriendDetails) {
+            if let friend = hangout.friend {
+                NavigationStack {
+                    FriendDetailView(
+                        friend: friend,
+                        presentationMode: .sheet($showingFriendDetails)
+                    )
+                }
+            }
+        }
     }
 }
 
