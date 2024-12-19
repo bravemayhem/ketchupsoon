@@ -6,15 +6,29 @@ struct FriendOnboardingView: View {
     @Environment(\.modelContext) private var modelContext
     let contact: (name: String, identifier: String?, phoneNumber: String?, imageData: Data?)
     
+    @State private var friendName = ""
+    @State private var phoneNumber = ""
     @State private var hasLastSeen = false
     @State private var lastSeenDate = Date()
     @State private var hasCatchUpFrequency = false
     @State private var selectedFrequency: CatchUpFrequency = .monthly
     @State private var customDays: Int?
+    @State private var wantToConnectSoon = false
+    
+    private var isFromContacts: Bool {
+        !contact.name.isEmpty
+    }
     
     var body: some View {
         NavigationStack {
             Form {
+                if !isFromContacts {
+                    Section("Friend Details") {
+                        TextField("Name", text: $friendName)
+                        TextField("Phone Number (Optional)", text: $phoneNumber)
+                    }
+                }
+                
                 Section("Last Seen") {
                     Toggle("Have you met before?", isOn: $hasLastSeen)
                     
@@ -50,6 +64,10 @@ struct FriendOnboardingView: View {
                         }
                     }
                 }
+                
+                Section("Connect Soon") {
+                    Toggle("Want to connect soon?", isOn: $wantToConnectSoon)
+                }
             }
             .navigationTitle("Add Friend Details")
             .navigationBarTitleDisplayMode(.inline)
@@ -64,6 +82,7 @@ struct FriendOnboardingView: View {
                         addFriend()
                         dismiss()
                     }
+                    .disabled(!isFromContacts && friendName.isEmpty)
                 }
             }
         }
@@ -71,13 +90,13 @@ struct FriendOnboardingView: View {
     
     private func addFriend() {
         let friend = Friend(
-            name: contact.name,
+            name: isFromContacts ? contact.name : friendName,
             lastSeen: hasLastSeen ? lastSeenDate : nil,
             location: FriendLocation.local.rawValue,
             contactIdentifier: contact.identifier,
-            phoneNumber: contact.phoneNumber,
+            phoneNumber: isFromContacts ? contact.phoneNumber : (phoneNumber.isEmpty ? nil : phoneNumber),
             photoData: contact.imageData,
-            needsToConnectFlag: false,
+            needsToConnectFlag: wantToConnectSoon,
             catchUpFrequency: hasCatchUpFrequency ? selectedFrequency.rawValue : nil,
             customCatchUpDays: hasCatchUpFrequency && selectedFrequency == .custom ? customDays : nil
         )

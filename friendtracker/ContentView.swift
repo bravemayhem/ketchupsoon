@@ -7,13 +7,14 @@ struct ContentView: View {
     @State private var selectedTab = 0
     @State private var showingContactPicker = false
     @State private var showingDebugAlert = false
+    @State private var showingImportOptions = false
     
     var body: some View {
         TabView(selection: $selectedTab) {
             NavigationTab(
                 title: "Scheduled",
                 icon: "calendar",
-                showContactPicker: $showingContactPicker,
+                showImportOptions: $showingImportOptions,
                 showingDebugAlert: $showingDebugAlert,
                 clearData: clearAllData
             ) {
@@ -24,7 +25,7 @@ struct ContentView: View {
             NavigationTab(
                 title: "To Connect",
                 icon: "clock",
-                showContactPicker: $showingContactPicker,
+                showImportOptions: $showingImportOptions,
                 showingDebugAlert: $showingDebugAlert,
                 clearData: clearAllData
             ) {
@@ -35,13 +36,16 @@ struct ContentView: View {
             NavigationTab(
                 title: "Friends",
                 icon: "person.2",
-                showContactPicker: $showingContactPicker,
+                showImportOptions: $showingImportOptions,
                 showingDebugAlert: $showingDebugAlert,
                 clearData: clearAllData
             ) {
                 FriendsListView()
             }
             .tag(2)
+        }
+        .sheet(isPresented: $showingImportOptions) {
+            ImportOptionsView(showingContactPicker: $showingContactPicker, showingImportOptions: $showingImportOptions)
         }
         .sheet(isPresented: $showingContactPicker) {
             ContactPickerView()
@@ -76,9 +80,6 @@ struct ContentView: View {
                 modelContext.delete(friend)
             }
         }
-        
-        // Save changes
-        try? modelContext.save()
     }
 }
 
@@ -87,7 +88,7 @@ private struct NavigationTab<Content: View>: View {
     
     let title: String
     let icon: String
-    @Binding var showContactPicker: Bool
+    @Binding var showImportOptions: Bool
     @Binding var showingDebugAlert: Bool
     let clearData: () async -> Void
     let content: Content
@@ -95,14 +96,14 @@ private struct NavigationTab<Content: View>: View {
     init(
         title: String,
         icon: String,
-        showContactPicker: Binding<Bool>,
+        showImportOptions: Binding<Bool>,
         showingDebugAlert: Binding<Bool>,
         clearData: @escaping () async -> Void,
         @ViewBuilder content: () -> Content
     ) {
         self.title = title
         self.icon = icon
-        self._showContactPicker = showContactPicker
+        self._showImportOptions = showImportOptions
         self._showingDebugAlert = showingDebugAlert
         self.clearData = clearData
         self.content = content()
@@ -116,7 +117,7 @@ private struct NavigationTab<Content: View>: View {
                 .toolbar {
                     ToolbarItem(placement: .topBarTrailing) {
                         Button {
-                            showContactPicker = true
+                            showImportOptions = true
                         } label: {
                             Image(systemName: "plus")
                                 .font(.title2)
@@ -132,6 +133,39 @@ private struct NavigationTab<Content: View>: View {
         }
         .tabItem {
             Label(title, systemImage: icon)
+        }
+    }
+}
+
+struct ImportOptionsView: View {
+    @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var theme: Theme
+    @Binding var showingContactPicker: Bool
+    @Binding var showingImportOptions: Bool
+    
+    var body: some View {
+        NavigationStack {
+            List {
+                Button(action: {
+                    showingImportOptions = false
+                    showingContactPicker = true
+                }) {
+                    Label("Import from Contacts", systemImage: "person.crop.circle")
+                }
+                
+                NavigationLink(destination: FriendOnboardingView(contact: ("", nil, nil, nil))) {
+                    Label("Add from Memory", systemImage: "brain")
+                }
+            }
+            .navigationTitle("Add Friend")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+            }
         }
     }
 }
