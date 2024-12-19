@@ -71,6 +71,41 @@ struct SchedulerView: View {
                             Text(friend.calendarVisibilityPreference == .none ? "Not Sharing" : "Sharing")
                                 .foregroundColor(.secondary)
                         }
+                        
+                        if !calendarManager.isGoogleAuthorized {
+                            Button(action: {
+                                Task {
+                                    do {
+                                        try await calendarManager.requestGoogleAccess()
+                                        // Test the freebusy query
+                                        await calendarManager.fetchBusyTimeSlots(for: Date(), friends: [friend])
+                                        print("Busy slots: \(calendarManager.busyTimeSlots)")
+                                    } catch {
+                                        errorMessage = "Failed to connect: \(error.localizedDescription)"
+                                    }
+                                }
+                            }) {
+                                HStack {
+                                    Image(systemName: "g.circle.fill")
+                                        .foregroundColor(.blue)
+                                    Text("Sign in with Google")
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                                .background(Color(.systemBackground))
+                                .cornerRadius(8)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .stroke(Color.blue, lineWidth: 1)
+                                )
+                            }
+                        } else {
+                            Button("Find Available Times") {
+                                Task {
+                                    await findAvailableTimes()
+                                }
+                            }
+                        }
                     }
                     
                     DatePicker(
@@ -173,24 +208,17 @@ struct SchedulerView: View {
         isLoading = true
         errorMessage = nil
         
-        do {
-            // Get suggested times considering both users' calendars
-            let times = await calendarManager.suggestAvailableTimeSlots(
-                with: [friend],
-                duration: selectedDuration,
-                limit: 5
-            )
-            
-            await MainActor.run {
-                suggestedTimes = times
-                showingSuggestedTimes = true
-                isLoading = false
-            }
-        } catch {
-            await MainActor.run {
-                errorMessage = "Failed to fetch available times: \(error.localizedDescription)"
-                isLoading = false
-            }
+        // Get suggested times considering both users' calendars
+        let times = await calendarManager.suggestAvailableTimeSlots(
+            with: [friend],
+            duration: selectedDuration,
+            limit: 5
+        )
+        
+        await MainActor.run {
+            suggestedTimes = times
+            showingSuggestedTimes = true
+            isLoading = false
         }
     }
     

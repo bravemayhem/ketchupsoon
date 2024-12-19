@@ -7,9 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		F486A14D2D134CA90011CC59 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = F486A14C2D134CA90011CC59 /* GoogleSignIn */; };
-		F486A14F2D134CA90011CC59 /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = F486A14E2D134CA90011CC59 /* GoogleSignInSwift */; };
-		F486A1522D13515A0011CC59 /* GoogleAPIClientForREST_Calendar in Frameworks */ = {isa = PBXBuildFile; productRef = F486A1512D13515A0011CC59 /* GoogleAPIClientForREST_Calendar */; };
+		F486A1D52D139CE00011CC59 /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = F486A1D42D139CE00011CC59 /* GoogleSignInSwift */; };
+		F486A1D82D139D710011CC59 /* GoogleAPIClientForREST_Calendar in Frameworks */ = {isa = PBXBuildFile; productRef = F486A1D72D139D710011CC59 /* GoogleAPIClientForREST_Calendar */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -35,9 +34,22 @@
 		F4070A422D0A184000B11C0B /* friendtrackerUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = friendtrackerUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		F486A1DB2D13AC2D0011CC59 /* Exceptions for "friendtracker" folder in "friendtracker" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = F4070A272D0A183C00B11C0B /* friendtracker */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		F4070A2A2D0A183C00B11C0B /* friendtracker */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				F486A1DB2D13AC2D0011CC59 /* Exceptions for "friendtracker" folder in "friendtracker" target */,
+			);
 			path = friendtracker;
 			sourceTree = "<group>";
 		};
@@ -58,9 +70,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				F486A14D2D134CA90011CC59 /* GoogleSignIn in Frameworks */,
-				F486A1522D13515A0011CC59 /* GoogleAPIClientForREST_Calendar in Frameworks */,
-				F486A14F2D134CA90011CC59 /* GoogleSignInSwift in Frameworks */,
+				F486A1D52D139CE00011CC59 /* GoogleSignInSwift in Frameworks */,
+				F486A1D82D139D710011CC59 /* GoogleAPIClientForREST_Calendar in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -121,9 +132,8 @@
 			);
 			name = friendtracker;
 			packageProductDependencies = (
-				F486A14C2D134CA90011CC59 /* GoogleSignIn */,
-				F486A14E2D134CA90011CC59 /* GoogleSignInSwift */,
-				F486A1512D13515A0011CC59 /* GoogleAPIClientForREST_Calendar */,
+				F486A1D42D139CE00011CC59 /* GoogleSignInSwift */,
+				F486A1D72D139D710011CC59 /* GoogleAPIClientForREST_Calendar */,
 			);
 			productName = friendtracker;
 			productReference = F4070A282D0A183C00B11C0B /* friendtracker.app */;
@@ -208,8 +218,8 @@
 			mainGroup = F4070A1F2D0A183C00B11C0B;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				F486A14B2D134CA90011CC59 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
-				F486A1502D13515A0011CC59 /* XCRemoteSwiftPackageReference "google-api-objectivec-client-for-rest" */,
+				F486A1D32D139CE00011CC59 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
+				F486A1D62D139D710011CC59 /* XCRemoteSwiftPackageReference "google-api-objectivec-client-for-rest" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = F4070A292D0A183C00B11C0B /* Products */;
@@ -415,6 +425,7 @@
 				DEVELOPMENT_TEAM = 29BFDAU9TF;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = friendtracker/Info.plist;
 				INFOPLIST_KEY_NSCalendarsUsageDescription = "FriendTracker needs access to your calendar to schedule and manage hangouts with your friends.";
 				INFOPLIST_KEY_NSContactsUsageDescription = "We need access to your contacts to help you import friends into the app";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -446,6 +457,7 @@
 				DEVELOPMENT_TEAM = 29BFDAU9TF;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = friendtracker/Info.plist;
 				INFOPLIST_KEY_NSCalendarsUsageDescription = "FriendTracker needs access to your calendar to schedule and manage hangouts with your friends.";
 				INFOPLIST_KEY_NSContactsUsageDescription = "We need access to your contacts to help you import friends into the app";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -576,7 +588,7 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		F486A14B2D134CA90011CC59 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */ = {
+		F486A1D32D139CE00011CC59 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/google/GoogleSignIn-iOS.git";
 			requirement = {
@@ -584,7 +596,7 @@
 				minimumVersion = 8.0.0;
 			};
 		};
-		F486A1502D13515A0011CC59 /* XCRemoteSwiftPackageReference "google-api-objectivec-client-for-rest" */ = {
+		F486A1D62D139D710011CC59 /* XCRemoteSwiftPackageReference "google-api-objectivec-client-for-rest" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/google/google-api-objectivec-client-for-rest.git";
 			requirement = {
@@ -595,19 +607,14 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		F486A14C2D134CA90011CC59 /* GoogleSignIn */ = {
+		F486A1D42D139CE00011CC59 /* GoogleSignInSwift */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = F486A14B2D134CA90011CC59 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
-			productName = GoogleSignIn;
-		};
-		F486A14E2D134CA90011CC59 /* GoogleSignInSwift */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = F486A14B2D134CA90011CC59 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			package = F486A1D32D139CE00011CC59 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
 			productName = GoogleSignInSwift;
 		};
-		F486A1512D13515A0011CC59 /* GoogleAPIClientForREST_Calendar */ = {
+		F486A1D72D139D710011CC59 /* GoogleAPIClientForREST_Calendar */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = F486A1502D13515A0011CC59 /* XCRemoteSwiftPackageReference "google-api-objectivec-client-for-rest" */;
+			package = F486A1D62D139D710011CC59 /* XCRemoteSwiftPackageReference "google-api-objectivec-client-for-rest" */;
 			productName = GoogleAPIClientForREST_Calendar;
 		};
 /* End XCSwiftPackageProductDependency section */

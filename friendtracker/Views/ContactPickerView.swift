@@ -9,6 +9,8 @@ struct ContactPickerView: View {
     @State private var searchText = ""
     @State private var contacts: [CNContact] = []
     @State private var isLoading = true
+    @State private var selectedContact: (name: String, identifier: String?, phoneNumber: String?)?
+    @State private var showingOnboarding = false
     
     var body: some View {
         NavigationView {
@@ -28,6 +30,11 @@ struct ContactPickerView: View {
                     }
                 }
             }
+            .sheet(isPresented: $showingOnboarding) {
+                if let contact = selectedContact {
+                    FriendOnboardingView(contact: contact)
+                }
+            }
         }
         .task {
             await loadContacts()
@@ -37,8 +44,12 @@ struct ContactPickerView: View {
     private var contactsList: some View {
         List(filteredContacts, id: \.identifier) { contact in
             Button {
-                addFriend(from: contact)
-                dismiss()
+                selectedContact = (
+                    name: "\(contact.givenName) \(contact.familyName)",
+                    identifier: contact.identifier,
+                    phoneNumber: contact.phoneNumbers.first?.value.stringValue
+                )
+                showingOnboarding = true
             } label: {
                 HStack {
                     if let imageData = contact.thumbnailImageData,
@@ -87,18 +98,5 @@ struct ContactPickerView: View {
             contacts = await contactsManager.fetchContacts()
         }
         isLoading = false
-    }
-    
-    private func addFriend(from contact: CNContact) {
-        let phoneNumber = contact.phoneNumbers.first?.value.stringValue
-        let distantPast = Calendar.current.date(byAdding: .year, value: -100, to: Date()) ?? Date()
-        let friend = Friend(
-            name: "\(contact.givenName) \(contact.familyName)",
-            lastSeen: distantPast,
-            location: FriendLocation.local.rawValue,
-            contactIdentifier: contact.identifier,
-            phoneNumber: phoneNumber
-        )
-        modelContext.insert(friend)
     }
 } 

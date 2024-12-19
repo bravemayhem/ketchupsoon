@@ -1,7 +1,8 @@
 import EventKit
 import SwiftUI
 import GoogleSignIn
-import GoogleAPIClientForREST
+import GoogleSignInSwift
+import GoogleAPIClientForREST_Calendar
 
 @MainActor
 class CalendarManager: ObservableObject {
@@ -23,7 +24,7 @@ class CalendarManager: ObservableObject {
     private func setupGoogleCalendar() {
         googleService = GTLRCalendarService()
         // Configure Google Sign-In
-        GIDSignIn.sharedInstance.configuration = GIDConfiguration(clientID: "YOUR_CLIENT_ID")
+        GIDSignIn.sharedInstance.configuration = GIDConfiguration(clientID: "144315286048-7jasampp9nttpd09rd3d31iui3j9stif.apps.googleusercontent.com")
     }
     
     func requestAccess() async {
@@ -53,10 +54,21 @@ class CalendarManager: ObservableObject {
     
     func requestGoogleAccess() async throws {
         guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-              let window = windowScene.windows.first else { return }
+              let window = windowScene.windows.first,
+              let rootViewController = window.rootViewController else { return }
         
         do {
-            let result = try await GIDSignIn.sharedInstance.signIn(withPresenting: window.rootViewController!)
+            GIDSignIn.sharedInstance.configuration = GIDConfiguration(clientID: "144315286048-7jasampp9nttpd09rd3d31iui3j9stif.apps.googleusercontent.com")
+            let result = try await GIDSignIn.sharedInstance.signIn(
+                withPresenting: rootViewController,
+                hint: nil,
+                additionalScopes: [
+                    "https://www.googleapis.com/auth/calendar",
+                    "https://www.googleapis.com/auth/calendar.events",
+                    "https://www.googleapis.com/auth/calendar.readonly"
+                ]
+            )
+            
             isGoogleAuthorized = true
             googleService?.authorizer = result.user.fetcherAuthorizer
             await loadConnectedCalendars()
@@ -85,10 +97,23 @@ class CalendarManager: ObservableObject {
         // Load Google Calendars
         if isGoogleAuthorized, let service = googleService {
             do {
-                let query = GTLRCalendarQuery_CalendarList_List.query()
-                let response = try await service.executeQuery(query)
-                if let calendarList = response.items as? [GTLRCalendar_CalendarListEntry] {
-                    calendars.append(contentsOf: calendarList.map { calendar in
+                let query = GTLRCalendarQuery_CalendarListList.query()
+                let response = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<GTLRCalendar_CalendarList, Error>) in
+                    service.executeQuery(query) { callbackTicket, response, error in
+                        if let error = error {
+                            continuation.resume(throwing: error)
+                            return
+                        }
+                        if let calendarList = response as? GTLRCalendar_CalendarList {
+                            continuation.resume(returning: calendarList)
+                        } else {
+                            continuation.resume(throwing: NSError(domain: "", code: -1))
+                        }
+                    }
+                }
+                
+                if let items = response.items {
+                    calendars.append(contentsOf: items.map { calendar in
                         Friend.ConnectedCalendar(
                             id: calendar.identifier ?? UUID().uuidString,
                             type: .google,
@@ -104,6 +129,56 @@ class CalendarManager: ObservableObject {
         
         await MainActor.run {
             self.connectedCalendars = calendars
+        }
+    }
+    
+    private func fetchFriendAvailability(friend: Friend, start: Date, end: Date) async -> [DateInterval] {
+        guard isGoogleAuthorized, let service = googleService else { return [] }
+        
+        do {
+            // Create the FreeBusy request body
+            let freeBusyRequest = GTLRCalendar_FreeBusyRequest()
+            freeBusyRequest.timeMin = GTLRDateTime(date: start)
+            freeBusyRequest.timeMax = GTLRDateTime(date: end)
+            
+            // Add the calendar to check
+            let requestItem = GTLRCalendar_FreeBusyRequestItem()
+            requestItem.identifier = "primary"
+            freeBusyRequest.items = [requestItem]
+            
+            // Create the query with the request
+            let query = GTLRCalendarQuery_FreebusyQuery(object: freeBusyRequest)
+            
+            // Execute the query
+            let response = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Any, Error>) in
+                service.executeQuery(query) { callbackTicket, response, error in
+                    if let error = error {
+                        continuation.resume(throwing: error)
+                        return
+                    }
+                    continuation.resume(returning: response ?? NSNull())
+                }
+            }
+            
+            // Process the response
+            guard let freeBusyResponse = response as? GTLRCalendar_FreeBusyResponse,
+                  let calendars = freeBusyResponse.calendars?.additionalProperties(),
+                  let primaryCalendar = calendars["primary"] as? GTLRCalendar_FreeBusyCalendar,
+                  let busyPeriods = primaryCalendar.busy else {
+                return []
+            }
+            
+            // Convert to DateIntervals
+            return busyPeriods.compactMap { period -> DateInterval? in
+                guard let startDate = period.start?.date,
+                      let endDate = period.end?.date else {
+                    return nil
+                }
+                return DateInterval(start: startDate, end: endDate)
+            }
+        } catch {
+            print("Error fetching freebusy data: \(error)")
+            return []
         }
     }
     
@@ -124,23 +199,14 @@ class CalendarManager: ObservableObject {
         // Fetch friends' busy times
         for friend in friends where friend.calendarIntegrationEnabled {
             if friend.calendarVisibilityPreference != .none {
-                // In a real app, this would make an API call to your backend
-                // to fetch the friend's availability
-                // For now, we'll just use a placeholder
-                let mockBusySlots = await fetchFriendAvailability(friend: friend, start: startOfDay, end: endOfDay)
-                allBusySlots.append(contentsOf: mockBusySlots)
+                let busySlots = await fetchFriendAvailability(friend: friend, start: startOfDay, end: endOfDay)
+                allBusySlots.append(contentsOf: busySlots)
             }
         }
         
         await MainActor.run {
             self.busyTimeSlots = allBusySlots
         }
-    }
-    
-    private func fetchFriendAvailability(friend: Friend, start: Date, end: Date) async -> [DateInterval] {
-        // This would be replaced with actual API calls to your backend
-        // which would then fetch the friend's calendar data
-        return []
     }
     
     func suggestAvailableTimeSlots(with friends: [Friend], duration: TimeInterval = 3600, limit: Int = 3) async -> [Date] {

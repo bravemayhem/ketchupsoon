@@ -54,7 +54,7 @@ func debugLog(_ message: String) {
 final class Friend {
     @Attribute(.unique) var id: UUID
     var name: String
-    var lastSeen: Date
+    var lastSeen: Date?
     var location: String
     var contactIdentifier: String?
     var phoneNumber: String?
@@ -68,7 +68,7 @@ final class Friend {
     init(
         id: UUID = UUID(),
         name: String,
-        lastSeen: Date = Date(),
+        lastSeen: Date? = nil,
         location: String = FriendLocation.local.rawValue,
         contactIdentifier: String? = nil,
         phoneNumber: String? = nil,
@@ -110,7 +110,7 @@ final class Friend {
         let daysToWait = customCatchUpDays ?? frequency.days
         
         // Get the target date (last seen + frequency days)
-        let targetDate = Calendar.current.date(byAdding: .day, value: daysToWait, to: lastSeen) ?? Date()
+        let targetDate = Calendar.current.date(byAdding: .day, value: daysToWait, to: lastSeen ?? Date()) ?? Date()
         
         // Get date 3 weeks before target
         nextConnectDate = Calendar.current.date(byAdding: .day, value: -21, to: targetDate)
@@ -150,12 +150,18 @@ final class Friend {
             return cached
         }
         
+        guard let lastSeen = lastSeen else {
+            _lastSeenText = "Never"
+            _lastSeenDate = nil
+            return "Never"
+        }
+        
         let now = Date()
         let components = Calendar.current.dateComponents([.year, .month, .weekOfYear, .day], from: lastSeen, to: now)
         
         let result: String
         if let years = components.year, years > 1 {
-            result = "Please update last seen"
+            result = "Last Seen Not Entered"
         } else if let months = components.month, months > 0 {
             result = "\(months) month\(months == 1 ? "" : "s") ago"
         } else if let weeks = components.weekOfYear, weeks > 0 {
@@ -237,8 +243,8 @@ final class Friend {
     }
     
     // Calendar Integration Properties
-    var calendarIntegrationEnabled: Bool = false
-    var calendarVisibilityPreference: CalendarVisibility = .busyTime
+    var calendarIntegrationEnabled: Bool = true  // Set to true for testing
+    var calendarVisibilityPreference: CalendarVisibility = Friend.CalendarVisibility.busyTime
     var connectedCalendars: [ConnectedCalendar] = []
     
     enum CalendarVisibility: String, Codable {
