@@ -9,89 +9,57 @@ import SwiftUI
 import SwiftData
 
 @main
-struct FriendTrackerApp: App {
-    let container: ModelContainer
-    let theme = Theme.shared
-    
+struct friendtrackerApp: App {
     init() {
-        do {
-            let config = ModelConfiguration(isStoredInMemoryOnly: ProcessInfo.processInfo.isPreview)
-            
-            #if DEBUG
-            debugLog("Initializing ModelContainer with configuration")
-            #endif
-            
-            // First try to initialize normally
-            do {
-                container = try ModelContainer(
-                    for: Friend.self, Hangout.self,
-                    configurations: config
-                )
-            } catch {
-                // DEVELOPMENT ONLY: Delete and recreate store on failure
-                // TODO: Remove this catch block before production deployment.
-                //       Production code should implement proper migrations to preserve user data.
-                #if DEBUG
-                debugLog("Failed to load store, attempting to delete and recreate")
-                #endif
-                
-                try? FileManager.default.removeItem(
-                    at: URL.applicationSupportDirectory.appending(
-                        component: "default.store"
-                    )
-                )
-                
-                // Try one more time with a fresh store
-                container = try ModelContainer(
-                    for: Friend.self, Hangout.self,
-                    configurations: config
-                )
-            }
-            
-            #if DEBUG
-            debugLog("Successfully initialized container")
-            #endif
-        } catch {
-            #if DEBUG
-            debugLog("Failed to initialize container: \(error)")
-            #endif
-            fatalError("Failed to initialize container: \(error)")
-        }
-        
         configureAppearance()
     }
     
     private func configureAppearance() {
         // Shared background color for bars
-        let backgroundColor = UIColor(theme.background)
+        let backgroundColor = UIColor(AppColors.systemBackground)
         
-        // Navigation bar configuration -  bar at the top of each screen that shows the title "Friends" and contains the "+" button
+        // Navigation bar configuration
         let navAppearance = UINavigationBarAppearance()
-        navAppearance.configureWithOpaqueBackground()
+        navAppearance.configureWithTransparentBackground()
         navAppearance.backgroundColor = backgroundColor
-        navAppearance.titleTextAttributes = [.foregroundColor: UIColor(theme.primaryText)]
-        navAppearance.largeTitleTextAttributes = [.foregroundColor: UIColor(theme.primaryText)]
+        navAppearance.shadowColor = .clear // This removes the bottom border
+        navAppearance.titleTextAttributes = [.foregroundColor: UIColor(AppColors.label)]
+        navAppearance.largeTitleTextAttributes = [.foregroundColor: UIColor(AppColors.label)]
         
         UINavigationBar.appearance().standardAppearance = navAppearance
         UINavigationBar.appearance().compactAppearance = navAppearance
         UINavigationBar.appearance().scrollEdgeAppearance = navAppearance
         
-        // Tab bar configuration - This is the bar at the bottom of the screen that lets you switch between "Scheduled", "To Connect", and "Friends" tabs
+        // Tab bar configuration
         let tabAppearance = UITabBarAppearance()
         tabAppearance.configureWithOpaqueBackground()
         tabAppearance.backgroundColor = backgroundColor
         
         UITabBar.appearance().standardAppearance = tabAppearance
         UITabBar.appearance().scrollEdgeAppearance = tabAppearance
-        UITabBar.appearance().unselectedItemTintColor = UIColor(theme.secondaryText)
+        UITabBar.appearance().unselectedItemTintColor = UIColor(AppColors.secondaryLabel)
+        UITabBar.appearance().tintColor = UIColor(AppColors.accent)
     }
     
+    var sharedModelContainer: ModelContainer = {
+        let schema = Schema([
+            Friend.self,
+            Hangout.self,
+        ])
+        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
+
+        do {
+            return try ModelContainer(for: schema, configurations: [modelConfiguration])
+        } catch {
+            fatalError("Could not create ModelContainer: \(error)")
+        }
+    }()
+
     var body: some Scene {
         WindowGroup {
             ContentView()
-                .environmentObject(theme)
         }
-        .modelContainer(container)
+        .modelContainer(sharedModelContainer)
     }
 }
 

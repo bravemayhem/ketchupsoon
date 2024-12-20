@@ -2,7 +2,6 @@ import SwiftUI
 import SwiftData
 
 struct ContentView: View {
-    @EnvironmentObject private var theme: Theme
     @Environment(\.modelContext) private var modelContext
     @State private var selectedTab = 0
     @State private var showingContactPicker = false
@@ -60,7 +59,7 @@ struct ContentView: View {
         } message: {
             Text("This will delete all friends and hangouts. This action cannot be undone.")
         }
-        .tint(theme.primary)
+        .tint(AppColors.accent)
     }
     
     @MainActor
@@ -84,8 +83,6 @@ struct ContentView: View {
 }
 
 private struct NavigationTab<Content: View>: View {
-    @EnvironmentObject private var theme: Theme
-    
     let title: String
     let icon: String
     @Binding var showImportOptions: Bool
@@ -121,7 +118,7 @@ private struct NavigationTab<Content: View>: View {
                         } label: {
                             Image(systemName: "plus")
                                 .font(.title2)
-                                .foregroundColor(theme.primaryText)
+                                .foregroundColor(AppColors.label)
                         }
                         #if DEBUG
                         .onLongPressGesture {
@@ -139,7 +136,6 @@ private struct NavigationTab<Content: View>: View {
 
 struct ImportOptionsView: View {
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject private var theme: Theme
     @Binding var showingContactPicker: Bool
     @Binding var showingImportOptions: Bool
     
@@ -151,11 +147,15 @@ struct ImportOptionsView: View {
                     showingContactPicker = true
                 }) {
                     Label("Import from Contacts", systemImage: "person.crop.circle")
+                        .foregroundColor(AppColors.label)
                 }
+                .listRowBackground(AppColors.systemBackground)
                 
                 NavigationLink(destination: FriendOnboardingView(contact: ("", nil, nil, nil))) {
                     Label("Add from Memory", systemImage: "brain")
+                        .foregroundColor(AppColors.label)
                 }
+                .listRowBackground(AppColors.systemBackground)
             }
             .navigationTitle("Add Friend")
             .navigationBarTitleDisplayMode(.inline)
@@ -164,8 +164,10 @@ struct ImportOptionsView: View {
                     Button("Cancel") {
                         dismiss()
                     }
+                    .foregroundColor(AppColors.accent)
                 }
             }
+            .background(AppColors.systemBackground)
         }
     }
 }
@@ -173,5 +175,4 @@ struct ImportOptionsView: View {
 #Preview {
     ContentView()
         .modelContainer(for: [Friend.self, Hangout.self], inMemory: true)
-        .environmentObject(Theme.shared)
 } 

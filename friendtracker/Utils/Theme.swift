@@ -1,72 +1,87 @@
 import SwiftUI
 
-final class Theme: ObservableObject {
-    static let shared = Theme()
+enum AppTheme {
+    // MARK: - Corner Radius
+    static let cornerRadiusSmall: CGFloat = 8
+    static let cornerRadiusMedium: CGFloat = 12
+    static let cornerRadiusLarge: CGFloat = 16
     
-    // Default to light mode
-    @Published var isDarkMode: Bool = false
+    // MARK: - Spacing
+    static let spacingTiny: CGFloat = 4
+    static let spacingSmall: CGFloat = 8
+    static let spacingMedium: CGFloat = 16
+    static let spacingLarge: CGFloat = 24
+    static let spacingXLarge: CGFloat = 32
     
-    // MARK: - Colors
-    var background: Color {
-        isDarkMode ? Color(hex: "#020817") : Color(hex: "#E8EEF0")
+    // MARK: - Shadows
+    struct ShadowStyle {
+        let color: Color
+        let radius: CGFloat
+        let x: CGFloat
+        let y: CGFloat
     }
     
-    var secondaryBackground: Color {
-        isDarkMode ? Color(hex: "#1E293B") : Color(hex: "#DDE5E8")
+    static let shadowSmall = ShadowStyle(
+        color: Color.black.opacity(0.1),
+        radius: 4,
+        x: 0,
+        y: 2
+    )
+    
+    static let shadowMedium = ShadowStyle(
+        color: Color.black.opacity(0.15),
+        radius: 8,
+        x: 0,
+        y: 4
+    )
+    
+    // MARK: - Text Styles
+    static let titleFont: Font = .system(.title, design: .rounded, weight: .bold)
+    static let headlineFont: Font = .system(.headline, design: .rounded, weight: .semibold)
+    static let bodyFont: Font = .system(.body, design: .rounded)
+    static let captionFont: Font = .system(.caption, design: .rounded)
+    
+    // MARK: - Animation
+    static let defaultAnimation: Animation = .spring(response: 0.3, dampingFraction: 0.7)
+    
+    // MARK: - Button Styles
+    static func primaryButtonStyle() -> some ButtonStyle {
+        return CustomButtonStyle(
+            backgroundColor: AppColors.accent,
+            foregroundColor: .white,
+            cornerRadius: cornerRadiusMedium
+        )
     }
     
-    var cardBackground: Color {
-        isDarkMode ? Color(hex: "#0F172A") : Color(hex: "#FFFFFF")
+    static func secondaryButtonStyle() -> some ButtonStyle {
+        return CustomButtonStyle(
+            backgroundColor: AppColors.systemBackground,
+            foregroundColor: AppColors.accent,
+            cornerRadius: cornerRadiusMedium
+        )
     }
-    
-    // Primary brand colors (constant regardless of theme)
-    let primary = Color(hex: "#4CAF90")
-    let primaryAccent = Color(hex: "#65C4A6")
-    
-    var primaryText: Color {
-        isDarkMode ? Color(hex: "#F8FAFC") : Color(hex: "#2F3B35")
-    }
-    
-    var secondaryText: Color {
-        isDarkMode ? Color(hex: "#94A3B8") : Color(hex: "#6B7C73")
-    }
-    
-    var cardBorder: Color {
-        (isDarkMode ? Color(hex: "#1E293B") : Color(hex: "#E3EBE7")).opacity(0.5)
-    }
-    
-    // MARK: - Shadow Properties
-    var shadowOpacity: Double {
-        isDarkMode ? 0.1 : 0.04
-    }
-    
-    let shadowOffset = CGPoint(x: 0, y: 2)
-    let shadowRadius: CGFloat = 4
 }
 
-// MARK: - Hex Color Support
-extension Color {
-    init(hex: String) {
-        let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
-        var int: UInt64 = 0
-        Scanner(string: hex).scanHexInt64(&int)
-        let a, r, g, b: UInt64
-        switch hex.count {
-        case 3: // RGB (12-bit)
-            (a, r, g, b) = (255, (int >> 8) * 17, (int >> 4 & 0xF) * 17, (int & 0xF) * 17)
-        case 6: // RGB (24-bit)
-            (a, r, g, b) = (255, int >> 16, int >> 8 & 0xFF, int & 0xFF)
-        case 8: // ARGB (32-bit)
-            (a, r, g, b) = (int >> 24, int >> 16 & 0xFF, int >> 8 & 0xFF, int & 0xFF)
-        default:
-            (a, r, g, b) = (1, 1, 1, 0)
-        }
-        self.init(
-            .sRGB,
-            red: Double(r) / 255,
-            green: Double(g) / 255,
-            blue: Double(b) / 255,
-            opacity: Double(a) / 255
-        )
+// Custom button style
+struct CustomButtonStyle: ButtonStyle {
+    let backgroundColor: Color
+    let foregroundColor: Color
+    let cornerRadius: CGFloat
+    
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .padding(.horizontal, AppTheme.spacingLarge)
+            .padding(.vertical, AppTheme.spacingMedium)
+            .background(backgroundColor)
+            .foregroundColor(foregroundColor)
+            .cornerRadius(cornerRadius)
+            .shadow(
+                color: AppTheme.shadowSmall.color,
+                radius: AppTheme.shadowSmall.radius,
+                x: AppTheme.shadowSmall.x,
+                y: AppTheme.shadowSmall.y
+            )
+            .scaleEffect(configuration.isPressed ? 0.95 : 1)
+            .animation(AppTheme.defaultAnimation, value: configuration.isPressed)
     }
 } 

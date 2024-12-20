@@ -3,7 +3,6 @@ import SwiftData
 
 struct ToConnectView: View {
     @Query(sort: [SortDescriptor(\Friend.lastSeen)]) private var friends: [Friend]
-    @EnvironmentObject private var theme: Theme
     @State private var selectedFriend: Friend?
     @State private var showingFriendSheet = false
     @State private var showingActionSheet = false
@@ -17,10 +16,10 @@ struct ToConnectView: View {
     
     var body: some View {
         ScrollView {
-            LazyVStack(spacing: 16) {
+            LazyVStack(spacing: AppTheme.spacingMedium) {
                 if friendsToConnect.isEmpty {
                     ContentUnavailableView("No Friends to Connect With", systemImage: "person.2.badge.gearshape")
-                        .foregroundColor(theme.primaryText)
+                        .foregroundColor(AppColors.label)
                 } else {
                     ForEach(friendsToConnect) { friend in
                         FriendListCard(friend: friend)
@@ -34,7 +33,7 @@ struct ToConnectView: View {
             }
             .padding(.vertical)
         }
-        .background(theme.background)
+        .background(AppColors.systemBackground)
         .sheet(isPresented: $showingFriendSheet, content: {
             if let friend = selectedFriend {
                 NavigationStack {
@@ -101,5 +100,4 @@ struct ToConnectView: View {
 #Preview {
     ToConnectView()
         .modelContainer(for: Friend.self)
-        .environmentObject(Theme.shared)
 } 

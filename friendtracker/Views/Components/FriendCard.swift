@@ -1,7 +1,6 @@
 import SwiftUI
 
 struct FriendCard: View {
-    @EnvironmentObject private var theme: Theme
     let friend: Friend
     let buttonTitle: String
     let buttonStyle: ButtonStyle
@@ -14,7 +13,7 @@ struct FriendCard: View {
         
         var backgroundColor: Color {
             switch self {
-            case .primary: return .black
+            case .primary: return AppColors.accent
             case .secondary, .outline: return .clear
             }
         }
@@ -22,30 +21,29 @@ struct FriendCard: View {
         var foregroundColor: Color {
             switch self {
             case .primary: return .white
-            case .secondary, .outline: return .primary
+            case .secondary, .outline: return AppColors.accent
             }
         }
     }
     
     var body: some View {
-        VStack(spacing: 16) {
-            HStack(spacing: 16) {
+        VStack(spacing: AppTheme.spacingMedium) {
+            HStack(spacing: AppTheme.spacingMedium) {
                 ProfileImage(friend: friend)
                 
-                VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: AppTheme.spacingSmall) {
                     Text(friend.name)
-                        .font(.title3)
-                        .bold()
-                        .foregroundColor(theme.primaryText)
+                        .font(AppTheme.headlineFont)
+                        .foregroundColor(AppColors.label)
                         .lineLimit(1)
                     
                     Text(friend.lastSeenText)
-                        .font(.subheadline)
-                        .foregroundColor(theme.secondaryText)
+                        .font(AppTheme.captionFont)
+                        .foregroundColor(AppColors.secondaryLabel)
                     
                     Text(friend.location)
-                        .font(.subheadline)
-                        .foregroundColor(theme.secondaryText)
+                        .font(AppTheme.captionFont)
+                        .foregroundColor(AppColors.secondaryLabel)
                         .lineLimit(1)
                 }
                 
@@ -54,26 +52,26 @@ struct FriendCard: View {
             
             Button(action: action) {
                 Text(buttonTitle)
-                    .font(.headline)
+                    .font(AppTheme.headlineFont)
                     .foregroundColor(buttonStyle.foregroundColor)
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
+                    .padding(.vertical, AppTheme.spacingSmall)
                     .background(
-                        RoundedRectangle(cornerRadius: 12)
+                        RoundedRectangle(cornerRadius: AppTheme.cornerRadiusMedium)
                             .fill(buttonStyle.backgroundColor)
                     )
             }
         }
         .frame(maxWidth: .infinity)
-        .padding(16)
+        .padding(AppTheme.spacingMedium)
         .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(theme.cardBackground)
+            RoundedRectangle(cornerRadius: AppTheme.cornerRadiusLarge)
+                .fill(AppColors.secondarySystemBackground)
                 .shadow(
-                    color: Color.black.opacity(0.08),
-                    radius: 8,
-                    x: 0,
-                    y: 4
+                    color: AppTheme.shadowSmall.color,
+                    radius: AppTheme.shadowSmall.radius,
+                    x: AppTheme.shadowSmall.x,
+                    y: AppTheme.shadowSmall.y
                 )
         )
     }
@@ -86,5 +84,6 @@ struct FriendCard: View {
         buttonStyle: .primary,
         action: {}
     )
-    .environmentObject(Theme.shared)
+    .padding()
+    .background(AppColors.systemBackground)
 } 

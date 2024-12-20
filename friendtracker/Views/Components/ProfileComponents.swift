@@ -1,37 +1,43 @@
 import SwiftUI
 
 struct ProfileImage: View {
-    @EnvironmentObject private var theme: Theme
     let friend: Friend
+    let showBorder: Bool
+    
+    init(friend: Friend, showBorder: Bool = true) {
+        self.friend = friend
+        self.showBorder = showBorder
+    }
     
     var body: some View {
-        Group {
-            if let profileImage = friend.profileImage {
-                profileImage
-                    .resizable()
-                    .scaledToFill()
-            } else {
-                InitialsAvatar(name: friend.name)
-            }
+        if let photoData = friend.photoData,
+           let uiImage = UIImage(data: photoData) {
+            Image(uiImage: uiImage)
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+                .frame(width: 48, height: 48)
+                .clipShape(Circle())
+                .if(showBorder) { view in
+                    view.overlay(
+                        Circle()
+                            .stroke(.white, lineWidth: 2)
+                            .shadow(color: Color.black.opacity(0.1), radius: 1, x: 0, y: 1)
+                    )
+                }
+        } else {
+            InitialsAvatar(name: friend.name, showBorder: showBorder)
         }
-        .frame(width: 64, height: 64)
-        .clipShape(Circle())
-        .overlay(
-            Circle()
-                .stroke(theme.cardBorder, lineWidth: 1)
-        )
-        .shadow(
-            color: Color.black.opacity(0.08),
-            radius: 3,
-            x: 0,
-            y: 2
-        )
     }
 }
 
 struct InitialsAvatar: View {
-    @EnvironmentObject private var theme: Theme
     let name: String
+    let showBorder: Bool
+    
+    init(name: String, showBorder: Bool = true) {
+        self.name = name
+        self.showBorder = showBorder
+    }
     
     var initials: String {
         name.components(separatedBy: " ")
@@ -44,29 +50,137 @@ struct InitialsAvatar: View {
     var body: some View {
         ZStack {
             Circle()
-                .fill(theme.secondaryBackground)
+                .fill(AppColors.avatarColor(for: name))
             
             Text(initials)
-                .font(.system(size: 16, weight: .medium))
-                .foregroundColor(theme.primaryText)
+                .font(.system(size: 16, weight: .medium, design: .rounded))
+                .foregroundColor(.white)
+        }
+        .frame(width: 48, height: 48)
+        .if(showBorder) { view in
+            view.overlay(
+                Circle()
+                    .stroke(.white, lineWidth: 2)
+                    .shadow(color: Color.black.opacity(0.1), radius: 1, x: 0, y: 1)
+            )
         }
     }
 }
 
-struct ProfileButton: View {
-    @EnvironmentObject private var theme: Theme
-    let title: String
-    let action: () -> Void
+struct LargeProfileImage: View {
+    let friend: Friend
+    let showBorder: Bool
+    
+    init(friend: Friend, showBorder: Bool = true) {
+        self.friend = friend
+        self.showBorder = showBorder
+    }
     
     var body: some View {
-        Button(action: action) {
-            Text(title)
-                .font(.headline)
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(theme.secondaryBackground)
-                .cornerRadius(10)
-                .foregroundColor(theme.primaryText)
+        if let photoData = friend.photoData,
+           let uiImage = UIImage(data: photoData) {
+            Image(uiImage: uiImage)
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+                .frame(width: 96, height: 96)
+                .clipShape(Circle())
+                .if(showBorder) { view in
+                    view.overlay(
+                        Circle()
+                            .stroke(.white, lineWidth: 3)
+                            .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
+                    )
+                }
+        } else {
+            LargeInitialsAvatar(name: friend.name, showBorder: showBorder)
         }
+    }
+}
+
+struct LargeInitialsAvatar: View {
+    let name: String
+    let showBorder: Bool
+    
+    init(name: String, showBorder: Bool = true) {
+        self.name = name
+        self.showBorder = showBorder
+    }
+    
+    var initials: String {
+        name.components(separatedBy: " ")
+            .compactMap { $0.first }
+            .prefix(2)
+            .map(String.init)
+            .joined()
+    }
+    
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(AppColors.avatarColor(for: name))
+            
+            Text(initials)
+                .font(.system(size: 32, weight: .medium, design: .rounded))
+                .foregroundColor(.white)
+        }
+        .frame(width: 96, height: 96)
+        .if(showBorder) { view in
+            view.overlay(
+                Circle()
+                    .stroke(.white, lineWidth: 3)
+                    .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
+            )
+        }
+    }
+}
+
+// Helper extension for conditional modifiers
+extension View {
+    @ViewBuilder func `if`<Content: View>(_ condition: Bool, transform: (Self) -> Content) -> some View {
+        if condition {
+            transform(self)
+        } else {
+            self
+        }
+    }
+}
+
+#Preview {
+    ZStack {
+        AppColors.backgroundGradient
+            .ignoresSafeArea()
+        
+        VStack(spacing: 40) {
+            // Regular avatars
+            VStack(spacing: 24) {
+                Text("Regular Size")
+                    .font(.headline)
+                    .foregroundColor(AppColors.label)
+                
+                HStack(spacing: 24) {
+                    ProfileImage(friend: Friend(name: "John Doe"))
+                    ProfileImage(friend: Friend(name: "Alice Smith"))
+                    ProfileImage(friend: Friend(name: "Bob Wilson"))
+                }
+            }
+            
+            // Large avatars
+            VStack(spacing: 24) {
+                Text("Large Size")
+                    .font(.headline)
+                    .foregroundColor(AppColors.label)
+                
+                HStack(spacing: 24) {
+                    LargeProfileImage(friend: Friend(name: "Emma Davis"))
+                    LargeProfileImage(friend: Friend(name: "Mike Brown"))
+                }
+            }
+        }
+        .padding(32)
+        .background(
+            AppColors.glassMorphism()
+                .clipShape(RoundedRectangle(cornerRadius: 20))
+        )
+        .padding(24)
     }
 } 

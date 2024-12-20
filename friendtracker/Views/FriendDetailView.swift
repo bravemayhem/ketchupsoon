@@ -2,16 +2,33 @@ import SwiftUI
 import SwiftData
 import MessageUI
 
+@Observable
+class FriendDetailViewModel {
+    let friend: Friend
+    var showingDatePicker = false
+    var showingScheduler = false
+    var showingMessageSheet = false
+    var lastSeenDate = Date()
+    
+    init(friend: Friend) {
+        self.friend = friend
+    }
+    
+    func markAsSeen() {
+        friend.lastSeen = Date()
+    }
+}
+
 struct FriendDetailView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject private var theme: Theme
-    let friend: Friend
+    @State private var viewModel: FriendDetailViewModel
     let presentationMode: PresentationMode
-    @State private var showingDatePicker = false
-    @State private var lastSeenDate = Date()
-    @State private var showingScheduler = false
-    @State private var showingMessageSheet = false
+    
+    init(friend: Friend, presentationMode: PresentationMode) {
+        self._viewModel = State(initialValue: FriendDetailViewModel(friend: friend))
+        self.presentationMode = presentationMode
+    }
     
     enum PresentationMode {
         case sheet(Binding<Bool>)
@@ -20,75 +37,28 @@ struct FriendDetailView: View {
     
     var body: some View {
         List {
-            Section {
-                // Last Seen
-                HStack {
-                    Text("Last Seen")
-                    Spacer()
-                    Button(friend.lastSeenText) {
-                        lastSeenDate = friend.lastSeen ?? Date()
-                        showingDatePicker = true
-                    }
-                    .foregroundStyle(.secondary)
+            FriendInfoSection(
+                friend: viewModel.friend,
+                onLastSeenTap: {
+                    viewModel.lastSeenDate = viewModel.friend.lastSeen ?? Date()
+                    viewModel.showingDatePicker = true
                 }
-                
-                // Location
-                HStack {
-                    Text("Location")
-                    Spacer()
-                    Text(friend.location)
-                        .foregroundStyle(.secondary)
-                }
-                
-                if let phoneNumber = friend.phoneNumber {
-                    HStack {
-                        Text("Phone")
-                        Spacer()
-                        Text(phoneNumber)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-            }
+            )
             
-            Section("Actions") {
-                if friend.phoneNumber != nil {
-                    Button(action: {
-                        showingMessageSheet = true
-                    }) {
-                        Label("Send Message", systemImage: "message.fill")
-                    }
-                }
-                
-                Button(action: {
-                    showingScheduler = true
-                }) {
-                    Label("Schedule Hangout", systemImage: "calendar")
-                }
-                
-                Button(action: {
-                    friend.lastSeen = Date()
-                }) {
-                    Label("Mark as Seen Today", systemImage: "checkmark.circle.fill")
-                }
-            }
+            FriendActionSection(
+                friend: viewModel.friend,
+                onMessageTap: { viewModel.showingMessageSheet = true },
+                onScheduleTap: { viewModel.showingScheduler = true },
+                onMarkSeenTap: { viewModel.markAsSeen() }
+            )
             
-            if !friend.hangouts.isEmpty {
-                Section("Upcoming Hangouts") {
-                    ForEach(friend.scheduledHangouts) { hangout in
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(hangout.activity)
-                                .font(.headline)
-                            Text(hangout.location)
-                                .foregroundStyle(.secondary)
-                            Text(hangout.formattedDate)
-                                .foregroundStyle(.secondary)
-                        }
-                        .padding(.vertical, 4)
-                    }
-                }
-            }
+            FriendHangoutsSection(hangouts: viewModel.friend.scheduledHangouts)
         }
-        .navigationTitle(friend.name)
+        .scrollContentBackground(.hidden)
+        .listStyle(.insetGrouped)
+        .listSectionSpacing(20)
+        .environment(\.defaultMinListHeaderHeight, 0)
+        .navigationTitle(viewModel.friend.name)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             if case .sheet(let isPresented) = presentationMode {
@@ -96,14 +66,15 @@ struct FriendDetailView: View {
                     Button("Done") {
                         isPresented.wrappedValue = false
                     }
+                    .foregroundColor(AppColors.accent)
                 }
             }
         }
-        .sheet(isPresented: $showingDatePicker) {
+        .sheet(isPresented: $viewModel.showingDatePicker) {
             NavigationStack {
                 DatePicker(
                     "Select Date",
-                    selection: $lastSeenDate,
+                    selection: $viewModel.lastSeenDate,
                     in: ...Date(),
                     displayedComponents: [.date]
                 )
@@ -113,27 +84,30 @@ struct FriendDetailView: View {
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
                         Button("Cancel") {
-                            showingDatePicker = false
+                            viewModel.showingDatePicker = false
                         }
+                        .foregroundColor(AppColors.accent)
                     }
                     ToolbarItem(placement: .confirmationAction) {
                         Button("Save") {
-                            friend.lastSeen = lastSeenDate
-                            showingDatePicker = false
+                            viewModel.friend.lastSeen = viewModel.lastSeenDate
+                            viewModel.showingDatePicker = false
                         }
+                        .foregroundColor(AppColors.accent)
                     }
                 }
             }
             .presentationDetents([.medium])
         }
-        .sheet(isPresented: $showingScheduler) {
+        .sheet(isPresented: $viewModel.showingScheduler) {
             NavigationStack {
-                SchedulerView(initialFriend: friend)
+                SchedulerView(initialFriend: viewModel.friend)
             }
         }
-        .sheet(isPresented: $showingMessageSheet) {
-            MessageComposeView(recipient: friend.phoneNumber ?? "")
+        .sheet(isPresented: $viewModel.showingMessageSheet) {
+            MessageComposeView(recipient: viewModel.friend.phoneNumber ?? "")
         }
+        .background(AppColors.systemBackground)
     }
 }
 
@@ -150,5 +124,4 @@ struct FriendDetailView: View {
         )
     }
     .modelContainer(for: Friend.self)
-    .environmentObject(Theme.shared)
 } 

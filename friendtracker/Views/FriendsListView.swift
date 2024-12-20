@@ -3,7 +3,6 @@ import SwiftData
 import MessageUI
 
 struct FriendsListView: View {
-    @EnvironmentObject private var theme: Theme
     @Environment(\.modelContext) private var modelContext
     @Query(sort: [SortDescriptor(\Friend.name)]) private var friends: [Friend]
     @State private var selectedFriend: Friend?
@@ -15,33 +14,22 @@ struct FriendsListView: View {
     
     var body: some View {
         ScrollView {
-            LazyVStack(spacing: 16) {
+            LazyVStack(spacing: AppTheme.spacingMedium) {
                 if friends.isEmpty {
-                    ContentUnavailableView("No Friends Added", systemImage: "person.2.badge.plus")
-                        .foregroundColor(theme.primaryText)
+                    emptyStateView
                 } else {
-                    ForEach(friends) { friend in
-                        FriendListCard(friend: friend)
-                            .padding(.horizontal)
-                            .onTapGesture {
-                                #if DEBUG
-                                debugLog("Tapped friend card: \(friend.name)")
-                                #endif
-                                selectedFriend = friend
-                                showingActionSheet = true
-                            }
-                    }
+                    friendsList
                 }
             }
             .padding(.vertical)
         }
-        .background(theme.background)
+        .background(AppColors.systemBackground)
         .onAppear {
             #if DEBUG
             debugLog("FriendsListView appeared with \(friends.count) friends")
             #endif
         }
-        .sheet(isPresented: $showingFriendSheet, content: {
+        .sheet(isPresented: $showingFriendSheet) {
             if let friend = selectedFriend {
                 NavigationStack {
                     FriendDetailView(
@@ -50,7 +38,7 @@ struct FriendsListView: View {
                     )
                 }
             }
-        })
+        }
         .sheet(isPresented: $showingScheduler) {
             if let friend = selectedFriend {
                 NavigationStack {
@@ -71,196 +59,72 @@ struct FriendsListView: View {
             }
         }
         .confirmationDialog("Actions", isPresented: $showingActionSheet, presenting: selectedFriend) { friend in
-            Button("View Details") {
-                showingFriendSheet = true
-            }
-            
-            if friend.phoneNumber != nil {
-                Button("Send Message") {
-                    showingMessageSheet = true
-                }
-            }
-            
-            Button("Schedule Hangout") {
-                showingScheduler = true
-            }
-            
-            Button("Mark as Seen Today") {
-                friend.updateLastSeen(Date())
-            }
-            
-            if friend.needsToConnectFlag {
-                Button("Remove from To Connect List") {
-                    friend.needsToConnectFlag = false
-                }
-            } else {
-                Button("Add to To Connect List") {
-                    friend.needsToConnectFlag = true
-                }
-            }
-            
-            Button("Set Catch-up Frequency") {
-                showingFrequencyPicker = true
-            }
-            
-            Button("Cancel", role: .cancel) {}
+            actionButtons(for: friend)
         } message: { friend in
             Text(friend.name)
         }
     }
-}
-
-struct FriendListCard: View {
-    @EnvironmentObject private var theme: Theme
-    let friend: Friend
     
-    var lastSeenText: String {
-        guard let lastSeen = friend.lastSeen else {
-            return "Never"
+    @ViewBuilder
+    private var emptyStateView: some View {
+        ContentUnavailableView("No Friends Added", systemImage: "person.2.badge.plus")
+            .foregroundColor(AppColors.label)
+    }
+    
+    @ViewBuilder
+    private var friendsList: some View {
+        ForEach(friends) { friend in
+            FriendListCard(friend: friend)
+                .padding(.horizontal)
+                .onTapGesture {
+                    #if DEBUG
+                    debugLog("Tapped friend card: \(friend.name)")
+                    #endif
+                    selectedFriend = friend
+                    showingActionSheet = true
+                }
+        }
+    }
+    
+    @ViewBuilder
+    private func actionButtons(for friend: Friend) -> some View {
+        Button("View Details") {
+            showingFriendSheet = true
         }
         
-        if Calendar.current.isDateInToday(lastSeen) {
-            return "Active today"
+        if friend.phoneNumber != nil {
+            Button("Send Message") {
+                showingMessageSheet = true
+            }
+        }
+        
+        Button("Schedule Hangout") {
+            showingScheduler = true
+        }
+        
+        Button("Mark as Seen Today") {
+            friend.updateLastSeen(Date())
+        }
+        
+        if friend.needsToConnectFlag {
+            Button("Remove from To Connect List") {
+                friend.needsToConnectFlag = false
+            }
         } else {
-            return lastSeen.formatted(.relative(presentation: .named))
-        }
-    }
-    
-    var body: some View {
-        HStack(spacing: 16) {
-            ProfileImage(friend: friend)
-            
-            VStack(alignment: .leading, spacing: 8) {
-                Text(friend.name)
-                    .font(.title3)
-                    .bold()
-                    .foregroundColor(theme.primaryText)
-                    .lineLimit(1)
-                
-                Text(lastSeenText)
-                    .font(.subheadline)
-                    .foregroundColor(theme.secondaryText)
-                
-                Text(friend.location)
-                    .font(.subheadline)
-                    .foregroundColor(theme.secondaryText)
-                    .lineLimit(1)
-            }
-            
-            Spacer()
-            
-            Image(systemName: "chevron.right")
-                .foregroundColor(theme.secondaryText)
-                .font(.system(size: 14, weight: .semibold))
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(theme.cardBackground)
-                .shadow(
-                    color: Color.black.opacity(0.08),
-                    radius: 8,
-                    x: 0,
-                    y: 4
-                )
-        )
-    }
-}
-
-struct FrequencyPickerView: View {
-    @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject private var theme: Theme
-    let friend: Friend
-    @State private var customDays: Int = 30
-    @State private var showingCustomDaysPicker = false
-    
-    var body: some View {
-        List {
-            Section {
-                Button("No Automatic Reminders") {
-                    friend.updateFrequency(nil)
-                    friend.updateCustomDays(nil)
-                    dismiss()
-                }
-                .foregroundColor(friend.catchUpFrequency == nil ? theme.primary : .primary)
-            } header: {
-                Text("Manual Mode")
-            } footer: {
-                Text("You'll only be reminded to connect when you manually add this friend to the To Connect list.")
-            }
-            
-            Section {
-                ForEach(CatchUpFrequency.allCases, id: \.rawValue) { frequency in
-                    Button {
-                        if frequency == .custom {
-                            showingCustomDaysPicker = true
-                        } else {
-                            friend.updateFrequency(frequency.rawValue)
-                            friend.updateCustomDays(nil)
-                            dismiss()
-                        }
-                    } label: {
-                        HStack {
-                            Text(frequency.rawValue)
-                            Spacer()
-                            if let currentFrequency = friend.catchUpFrequency,
-                               currentFrequency == frequency.rawValue {
-                                Image(systemName: "checkmark")
-                                    .foregroundColor(theme.primary)
-                            }
-                        }
-                    }
-                    .foregroundColor(.primary)
-                }
-            } header: {
-                Text("Automatic Reminders")
-            } footer: {
-                Text("You'll be automatically reminded to connect 3 weeks before the next catch-up is due.")
+            Button("Add to To Connect List") {
+                friend.needsToConnectFlag = true
             }
         }
-        .navigationTitle("Catch Up Frequency")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .cancellationAction) {
-                Button("Cancel") {
-                    dismiss()
-                }
-            }
+        
+        Button("Set Catch-up Frequency") {
+            showingFrequencyPicker = true
         }
-        .sheet(isPresented: $showingCustomDaysPicker) {
-            NavigationStack {
-                Form {
-                    Section {
-                        Stepper("Every \(customDays) days", value: $customDays, in: 1...365)
-                    }
-                }
-                .navigationTitle("Custom Frequency")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button("Cancel") {
-                            showingCustomDaysPicker = false
-                        }
-                    }
-                    ToolbarItem(placement: .confirmationAction) {
-                        Button("Save") {
-                            friend.updateFrequency(CatchUpFrequency.custom.rawValue)
-                            friend.updateCustomDays(customDays)
-                            showingCustomDaysPicker = false
-                            dismiss()
-                        }
-                    }
-                }
-            }
-            .presentationDetents([.medium])
-        }
+        
+        Button("Cancel", role: .cancel) {}
     }
 }
 
 #Preview {
     FriendsListView()
         .modelContainer(for: Friend.self)
-        .environmentObject(Theme.shared)
 }

@@ -2,7 +2,6 @@ import SwiftUI
 import SwiftData
 
 struct ScheduledView: View {
-    @EnvironmentObject private var theme: Theme
     @Query(
         sort: [SortDescriptor(\Hangout.date)]
     ) private var hangouts: [Hangout]
@@ -29,11 +28,11 @@ struct ScheduledView: View {
     
     var body: some View {
         ScrollView {
-            LazyVStack(spacing: 16) {
+            LazyVStack(spacing: AppTheme.spacingMedium) {
                 if !completedHangouts.isEmpty {
                     Section(header: Text("Past Hangouts")
-                        .font(.headline)
-                        .foregroundColor(.black)
+                        .font(AppTheme.headlineFont)
+                        .foregroundColor(AppColors.label)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.horizontal)) {
                         ForEach(completedHangouts) { hangout in
@@ -45,15 +44,14 @@ struct ScheduledView: View {
                 
                 if !pastHangouts.isEmpty {
                     Section(header: Text("Needs Confirmation")
-                        .font(.headline)
-                        .foregroundColor(.black)
+                        .font(AppTheme.headlineFont)
+                        .foregroundColor(AppColors.label)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.horizontal)) {
                         ForEach(pastHangouts) { hangout in
                             HangoutCard(hangout: hangout)
                                 .padding(.horizontal)
                                 .onAppear {
-                                    // Only show completion prompt for unhandled past hangouts
                                     if !hangout.isCompleted {
                                         hangoutToCheck = hangout
                                         showingCompletionPrompt = true
@@ -65,11 +63,11 @@ struct ScheduledView: View {
                 
                 if upcomingHangouts.isEmpty && pastHangouts.isEmpty && completedHangouts.isEmpty {
                     ContentUnavailableView("No Scheduled Hangouts", systemImage: "calendar.badge.plus")
-                        .foregroundColor(theme.primaryText)
+                        .foregroundColor(AppColors.label)
                 } else {
                     Section(header: Text("Upcoming Hangouts")
-                        .font(.headline)
-                        .foregroundColor(.black)
+                        .font(AppTheme.headlineFont)
+                        .foregroundColor(AppColors.label)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.horizontal)) {
                         ForEach(upcomingHangouts) { hangout in
@@ -81,7 +79,7 @@ struct ScheduledView: View {
             }
             .padding(.vertical)
         }
-        .background(theme.background)
+        .background(AppColors.systemBackground)
         .sheet(isPresented: $showingCompletionPrompt, onDismiss: {
             hangoutToCheck = nil
         }) {
@@ -93,40 +91,38 @@ struct ScheduledView: View {
 }
 
 struct HangoutCard: View {
-    @EnvironmentObject private var theme: Theme
     let hangout: Hangout
     @State private var showingMessageSheet = false
     @State private var showingFriendDetails = false
     
     var body: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: AppTheme.spacingMedium) {
             if let friend = hangout.friend {
                 Button(action: {
                     showingFriendDetails = true
                 }) {
-                    HStack(spacing: 16) {
+                    HStack(spacing: AppTheme.spacingMedium) {
                         ProfileImage(friend: friend)
                         
-                        VStack(alignment: .leading, spacing: 8) {
+                        VStack(alignment: .leading, spacing: AppTheme.spacingSmall) {
                             Text(friend.name)
-                                .font(.title3)
-                                .bold()
-                                .foregroundColor(theme.primaryText)
+                                .font(AppTheme.headlineFont)
+                                .foregroundColor(AppColors.label)
                                 .lineLimit(1)
                             
                             Text(hangout.activity)
-                                .font(.subheadline)
-                                .foregroundColor(theme.secondaryText)
+                                .font(AppTheme.captionFont)
+                                .foregroundColor(AppColors.secondaryLabel)
                                 .lineLimit(1)
                             
-                            HStack(spacing: 16) {
+                            HStack(spacing: AppTheme.spacingMedium) {
                                 Label {
                                     Text(hangout.date.formatted(.relative(presentation: .named)))
                                         .lineLimit(1)
                                 } icon: {
                                     Image(systemName: "calendar")
                                 }
-                                .font(.subheadline)
+                                .font(AppTheme.captionFont)
                                 
                                 Label {
                                     Text(hangout.location)
@@ -134,15 +130,15 @@ struct HangoutCard: View {
                                 } icon: {
                                     Image(systemName: "mappin.and.ellipse")
                                 }
-                                .font(.subheadline)
+                                .font(AppTheme.captionFont)
                             }
-                            .foregroundColor(theme.secondaryText)
+                            .foregroundColor(AppColors.secondaryLabel)
                         }
                         
                         Spacer()
                         
                         Image(systemName: "chevron.right")
-                            .foregroundColor(theme.secondaryText)
+                            .foregroundColor(AppColors.secondaryLabel)
                     }
                 }
             }
@@ -152,27 +148,27 @@ struct HangoutCard: View {
                     showingMessageSheet = true
                 }) {
                     Label("Message", systemImage: "message")
-                        .font(.headline)
-                        .foregroundColor(theme.primaryText)
+                        .font(AppTheme.headlineFont)
+                        .foregroundColor(AppColors.accent)
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
+                        .padding(.vertical, AppTheme.spacingSmall)
                         .background(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(theme.primaryText, lineWidth: 1)
+                            RoundedRectangle(cornerRadius: AppTheme.cornerRadiusMedium)
+                                .stroke(AppColors.accent, lineWidth: 1)
                         )
                 }
             }
         }
         .frame(maxWidth: .infinity)
-        .padding(16)
+        .padding(AppTheme.spacingMedium)
         .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(theme.cardBackground)
+            RoundedRectangle(cornerRadius: AppTheme.cornerRadiusLarge)
+                .fill(AppColors.secondarySystemBackground)
                 .shadow(
-                    color: Color.black.opacity(0.08),
-                    radius: 8,
-                    x: 0,
-                    y: 4
+                    color: AppTheme.shadowSmall.color,
+                    radius: AppTheme.shadowSmall.radius,
+                    x: AppTheme.shadowSmall.x,
+                    y: AppTheme.shadowSmall.y
                 )
         )
         .sheet(isPresented: $showingMessageSheet) {
@@ -196,5 +192,4 @@ struct HangoutCard: View {
 #Preview {
     ScheduledView()
         .modelContainer(for: Friend.self)
-        .environmentObject(Theme.shared)
 }
