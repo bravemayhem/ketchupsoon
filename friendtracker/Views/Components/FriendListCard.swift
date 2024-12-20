@@ -33,6 +33,13 @@ struct FriendListCard: View {
                     .font(AppTheme.captionFont)
                     .foregroundColor(AppColors.secondaryLabel)
                     .lineLimit(1)
+                
+                if let frequency = friend.catchUpFrequency {
+                    Text(frequency)
+                        .font(AppTheme.captionFont)
+                        .foregroundColor(AppColors.secondaryLabel)
+                        .lineLimit(1)
+                }
             }
             
             Spacer()

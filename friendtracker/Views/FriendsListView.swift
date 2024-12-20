@@ -13,17 +13,41 @@ struct FriendsListView: View {
     @State private var showingFrequencyPicker = false
     
     var body: some View {
-        ScrollView {
-            LazyVStack(spacing: AppTheme.spacingMedium) {
-                if friends.isEmpty {
-                    emptyStateView
-                } else {
-                    friendsList
+        List {
+            if friends.isEmpty {
+                emptyStateView
+                    .listRowBackground(Color.clear)
+                    .listSectionSeparator(.hidden)
+            } else {
+                ForEach(friends) { friend in
+                    FriendListCard(friend: friend)
+                        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                        .onTapGesture {
+                            #if DEBUG
+                            debugLog("Tapped friend card: \(friend.name)")
+                            #endif
+                            selectedFriend = friend
+                            showingFriendSheet = true
+                        }
+                        .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                            Button {
+                                friend.needsToConnectFlag.toggle()
+                            } label: {
+                                Label(friend.needsToConnectFlag ? "Remove" : "Add", 
+                                      systemImage: friend.needsToConnectFlag ? "star.slash.fill" : "star.fill")
+                            }
+                            .tint(friend.needsToConnectFlag ? .red : AppColors.success)
+                        }
                 }
             }
-            .padding(.vertical)
         }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
         .background(AppColors.systemBackground)
+        .environment(\.defaultMinListRowHeight, 0)
+        .environment(\.defaultMinListHeaderHeight, 0)
         .onAppear {
             #if DEBUG
             debugLog("FriendsListView appeared with \(friends.count) friends")
@@ -69,21 +93,6 @@ struct FriendsListView: View {
     private var emptyStateView: some View {
         ContentUnavailableView("No Friends Added", systemImage: "person.2.badge.plus")
             .foregroundColor(AppColors.label)
-    }
-    
-    @ViewBuilder
-    private var friendsList: some View {
-        ForEach(friends) { friend in
-            FriendListCard(friend: friend)
-                .padding(.horizontal)
-                .onTapGesture {
-                    #if DEBUG
-                    debugLog("Tapped friend card: \(friend.name)")
-                    #endif
-                    selectedFriend = friend
-                    showingActionSheet = true
-                }
-        }
     }
     
     @ViewBuilder

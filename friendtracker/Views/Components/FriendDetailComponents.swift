@@ -36,6 +36,21 @@ struct FriendInfoSection: View {
                         .foregroundColor(AppColors.secondaryLabel)
                 }
             }
+            
+            if let frequency = friend.catchUpFrequency {
+                HStack {
+                    Text("Catch-up Frequency")
+                        .foregroundColor(AppColors.label)
+                    Spacer()
+                    if frequency == CatchUpFrequency.custom.rawValue, let days = friend.customCatchUpDays {
+                        Text("Every \(days) days")
+                            .foregroundColor(AppColors.secondaryLabel)
+                    } else {
+                        Text(frequency)
+                            .foregroundColor(AppColors.secondaryLabel)
+                    }
+                }
+            }
         }
         .listRowBackground(AppColors.secondarySystemBackground)
     }
