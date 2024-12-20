@@ -11,6 +11,16 @@ import SwiftData
 @main
 struct friendtrackerApp: App {
     init() {
+        // Debug: Print all available fonts
+        #if DEBUG
+        for family in UIFont.familyNames.sorted() {
+            print("Family: \(family)")
+            for name in UIFont.fontNames(forFamilyName: family) {
+                print("   Font: \(name)")
+            }
+        }
+        #endif
+        
         configureAppearance()
     }
     
@@ -23,8 +33,33 @@ struct friendtrackerApp: App {
         navAppearance.configureWithTransparentBackground()
         navAppearance.backgroundColor = backgroundColor
         navAppearance.shadowColor = .clear // This removes the bottom border
-        navAppearance.titleTextAttributes = [.foregroundColor: UIColor(AppColors.label)]
-        navAppearance.largeTitleTextAttributes = [.foregroundColor: UIColor(AppColors.label)]
+        
+        // Title text attributes
+        let titleTextAttributes: [NSAttributedString.Key: Any] = [
+            .foregroundColor: UIColor(AppColors.label),
+            .font: UIFont(name: "Cabin-Bold", size: 20) ?? {
+                #if DEBUG
+                print("Available fonts:")
+                for family in UIFont.familyNames.sorted() {
+                    print("\(family):")
+                    for name in UIFont.fontNames(forFamilyName: family) {
+                        print("   \(name)")
+                    }
+                }
+                #endif
+                return .systemFont(ofSize: 20, weight: .bold)
+            }()
+        ]
+        
+        let largeTitleTextAttributes: [NSAttributedString.Key: Any] = [
+            .foregroundColor: UIColor(AppColors.label),
+            .font: UIFont(name: "Cabin-Bold", size: 36) ?? {
+                return .systemFont(ofSize: 36, weight: .bold)
+            }()
+        ]
+        
+        navAppearance.titleTextAttributes = titleTextAttributes
+        navAppearance.largeTitleTextAttributes = largeTitleTextAttributes
         
         UINavigationBar.appearance().standardAppearance = navAppearance
         UINavigationBar.appearance().compactAppearance = navAppearance

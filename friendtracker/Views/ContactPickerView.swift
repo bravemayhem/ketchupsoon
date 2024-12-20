@@ -64,22 +64,26 @@ struct ContactPickerView: View {
                         Image(systemName: "person.circle.fill")
                             .resizable()
                             .frame(width: 40, height: 40)
-                            .foregroundColor(.gray)
+                            .foregroundColor(AppColors.secondaryLabel)
                     }
                     
                     VStack(alignment: .leading) {
                         Text("\(contact.givenName) \(contact.familyName)")
-                            .foregroundColor(.primary)
+                            .foregroundColor(AppColors.label)
                         if let phoneNumber = contact.phoneNumbers.first?.value.stringValue {
                             Text(phoneNumber)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(AppColors.secondaryLabel)
                                 .font(.subheadline)
                         }
                     }
                 }
             }
+            .listRowBackground(AppColors.secondarySystemBackground)
         }
-        .searchable(text: $searchText, prompt: "Search contacts")
+        .scrollContentBackground(.hidden)
+        .background(AppColors.systemBackground)
+        .searchable(text: $searchText, prompt: Text("Search contacts").foregroundColor(AppColors.secondaryLabel))
+        .tint(AppColors.accent)
     }
     
     private var filteredContacts: [CNContact] {
