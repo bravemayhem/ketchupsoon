@@ -65,6 +65,18 @@ struct FriendActionSection: View {
                 Label("Mark as Seen Today", systemImage: "checkmark.circle.fill")
                     .foregroundColor(AppColors.accent)
             }
+            
+            if friend.needsToConnectFlag {
+                Button(action: { friend.needsToConnectFlag = false }) {
+                    Label("Remove from Wishlist", systemImage: "star.slash")
+                        .foregroundColor(AppColors.accent)
+                }
+            } else {
+                Button(action: { friend.needsToConnectFlag = true }) {
+                    Label("Add to Wishlist", systemImage: "star")
+                        .foregroundColor(AppColors.accent)
+                }
+            }
         } header: {
             Text("Actions")
                 .font(AppTheme.headlineFont)

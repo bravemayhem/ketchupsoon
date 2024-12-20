@@ -20,6 +20,7 @@ struct SchedulerView: View {
     @State private var showingCustomDurationInput = false
     @State private var customHours: Int = 1
     @State private var customMinutes: Int = 0
+    @State private var showingWishlistPrompt = false
     
     enum CalendarType {
         case apple, google
@@ -269,6 +270,19 @@ struct SchedulerView: View {
                 .presentationDetents([.medium])
             }
         }
+        .alert("Remove from Wishlist?", isPresented: $showingWishlistPrompt) {
+            Button("Keep on Wishlist") {
+                dismiss()
+            }
+            Button("Remove from Wishlist") {
+                selectedFriend?.needsToConnectFlag = false
+                dismiss()
+            }
+        } message: {
+            if let friend = selectedFriend {
+                Text("You've scheduled time with \(friend.name). Would you like to remove them from your wishlist?")
+            }
+        }
     }
     
     private var isScheduleButtonDisabled: Bool {
@@ -351,12 +365,14 @@ struct SchedulerView: View {
                 )
                 modelContext.insert(hangout)
                 
-                // Only remove from To Connect list, but don't update last seen
-                friend.needsToConnectFlag = false
-                
                 await MainActor.run {
                     isLoading = false
-                    dismiss()
+                    // If friend is on wishlist, show prompt
+                    if friend.needsToConnectFlag {
+                        showingWishlistPrompt = true
+                    } else {
+                        dismiss()
+                    }
                 }
             } catch {
                 await MainActor.run {

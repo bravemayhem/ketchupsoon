@@ -12,31 +12,44 @@ struct WishlistView: View {
     
     var wishlistFriends: [Friend] {
         friends.filter { friend in
-            // Only include friends that are manually flagged and don't have a frequency set
-            friend.needsToConnectFlag && friend.catchUpFrequency == nil
+            // Only include friends that are manually flagged
+            friend.needsToConnectFlag
         }
     }
     
     var body: some View {
-        ScrollView {
-            LazyVStack(spacing: AppTheme.spacingMedium) {
-                if wishlistFriends.isEmpty {
-                    ContentUnavailableView("Wishlist Empty", systemImage: "star")
-                        .foregroundColor(AppColors.label)
-                } else {
-                    ForEach(wishlistFriends) { friend in
-                        FriendListCard(friend: friend)
-                            .padding(.horizontal)
-                            .onTapGesture {
-                                selectedFriend = friend
-                                showingActionSheet = true
+        List {
+            if wishlistFriends.isEmpty {
+                ContentUnavailableView("Wishlist Empty", systemImage: "star")
+                    .foregroundColor(AppColors.label)
+                    .listRowBackground(Color.clear)
+                    .listSectionSeparator(.hidden)
+            } else {
+                ForEach(wishlistFriends) { friend in
+                    FriendListCard(friend: friend)
+                        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                        .listSectionSeparator(.hidden)
+                        .onTapGesture {
+                            selectedFriend = friend
+                            showingActionSheet = true
+                        }
+                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                            Button(role: .destructive) {
+                                friend.needsToConnectFlag = false
+                            } label: {
+                                Label("Remove", systemImage: "trash")
                             }
-                    }
+                        }
                 }
             }
-            .padding(.vertical)
         }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
         .background(AppColors.systemBackground)
+        .environment(\.defaultMinListRowHeight, 0)
+        .environment(\.defaultMinListHeaderHeight, 0)
         .sheet(isPresented: $showingFriendSheet, content: {
             if let friend = selectedFriend {
                 NavigationStack {

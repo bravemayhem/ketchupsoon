@@ -107,11 +107,11 @@ struct FriendsListView: View {
         }
         
         if friend.needsToConnectFlag {
-            Button("Remove from To Connect List") {
+            Button("Remove from Wishlist") {
                 friend.needsToConnectFlag = false
             }
         } else {
-            Button("Add to To Connect List") {
+            Button("Add to Wishlist") {
                 friend.needsToConnectFlag = true
             }
         }
