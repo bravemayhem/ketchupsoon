@@ -433,6 +433,8 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = friendtracker/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Ketchup Soon";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.social-networking";
 				INFOPLIST_KEY_NSCalendarsUsageDescription = "FriendTracker needs access to your calendar to schedule and manage hangouts with your friends.";
 				INFOPLIST_KEY_NSContactsUsageDescription = "We need access to your contacts to help you import friends into the app";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -465,6 +467,8 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = friendtracker/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Ketchup Soon";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.social-networking";
 				INFOPLIST_KEY_NSCalendarsUsageDescription = "FriendTracker needs access to your calendar to schedule and manage hangouts with your friends.";
 				INFOPLIST_KEY_NSContactsUsageDescription = "We need access to your contacts to help you import friends into the app";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
