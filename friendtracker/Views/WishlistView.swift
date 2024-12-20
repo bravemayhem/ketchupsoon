@@ -1,7 +1,7 @@
 import SwiftUI
 import SwiftData
 
-struct ToConnectView: View {
+struct WishlistView: View {
     @Query(sort: [SortDescriptor(\Friend.lastSeen)]) private var friends: [Friend]
     @State private var selectedFriend: Friend?
     @State private var showingFriendSheet = false
@@ -10,18 +10,21 @@ struct ToConnectView: View {
     @State private var showingMessageSheet = false
     @State private var showingFrequencyPicker = false
     
-    var friendsToConnect: [Friend] {
-        friends.filter { $0.needsToConnect }
+    var wishlistFriends: [Friend] {
+        friends.filter { friend in
+            // Only include friends that are manually flagged and don't have a frequency set
+            friend.needsToConnectFlag && friend.catchUpFrequency == nil
+        }
     }
     
     var body: some View {
         ScrollView {
             LazyVStack(spacing: AppTheme.spacingMedium) {
-                if friendsToConnect.isEmpty {
-                    ContentUnavailableView("No Friends to Connect With", systemImage: "person.2.badge.gearshape")
+                if wishlistFriends.isEmpty {
+                    ContentUnavailableView("Wishlist Empty", systemImage: "star")
                         .foregroundColor(AppColors.label)
                 } else {
-                    ForEach(friendsToConnect) { friend in
+                    ForEach(wishlistFriends) { friend in
                         FriendListCard(friend: friend)
                             .padding(.horizontal)
                             .onTapGesture {
@@ -82,7 +85,7 @@ struct ToConnectView: View {
                 friend.updateLastSeen(Date())
             }
             
-            Button("Remove from To Connect List") {
+            Button("Remove from Wishlist") {
                 friend.needsToConnectFlag = false
             }
             
@@ -98,6 +101,6 @@ struct ToConnectView: View {
 }
 
 #Preview {
-    ToConnectView()
+    WishlistView()
         .modelContainer(for: Friend.self)
 } 

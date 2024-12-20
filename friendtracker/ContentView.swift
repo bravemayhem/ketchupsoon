@@ -11,24 +11,24 @@ struct ContentView: View {
     var body: some View {
         TabView(selection: $selectedTab) {
             NavigationTab(
-                title: "Scheduled",
+                title: "Ketchups",
                 icon: "calendar",
                 showImportOptions: $showingImportOptions,
                 showingDebugAlert: $showingDebugAlert,
                 clearData: clearAllData
             ) {
-                ScheduledView()
+                KetchupsView()
             }
             .tag(0)
             
             NavigationTab(
-                title: "To Connect",
-                icon: "clock",
+                title: "Wishlist",
+                icon: "star",
                 showImportOptions: $showingImportOptions,
                 showingDebugAlert: $showingDebugAlert,
                 clearData: clearAllData
             ) {
-                ToConnectView()
+                WishlistView()
             }
             .tag(1)
             

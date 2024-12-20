@@ -1,12 +1,15 @@
 import SwiftUI
 import SwiftData
 
-struct ScheduledView: View {
+struct KetchupsView: View {
     @Query(
         sort: [SortDescriptor(\Hangout.date)]
     ) private var hangouts: [Hangout]
+    @Query(sort: [SortDescriptor(\Friend.lastSeen)]) private var friends: [Friend]
     @State private var hangoutToCheck: Hangout?
     @State private var showingCompletionPrompt = false
+    @State private var selectedFriend: Friend?
+    @State private var showingScheduler = false
     
     var upcomingHangouts: [Hangout] {
         hangouts.filter { hangout in
@@ -26,9 +29,41 @@ struct ScheduledView: View {
         }
     }
     
+    var upcomingCheckIns: [Friend] {
+        let scheduledFriendIds = Set(upcomingHangouts.compactMap { $0.friend?.id })
+        return friends.filter { friend in
+            // Has a frequency set
+            guard let nextConnect = friend.nextConnectDate,
+                  friend.catchUpFrequency != nil else { return false }
+            
+            // Due within next 3 weeks
+            let threeWeeksFromNow = Calendar.current.date(byAdding: .day, value: 21, to: Date()) ?? Date()
+            guard nextConnect <= threeWeeksFromNow else { return false }
+            
+            // Not already scheduled
+            return !scheduledFriendIds.contains(friend.id)
+        }
+    }
+    
     var body: some View {
         ScrollView {
             LazyVStack(spacing: AppTheme.spacingMedium) {
+                if !upcomingCheckIns.isEmpty {
+                    Section(header: Text("Needs Scheduling")
+                        .font(AppTheme.headlineFont)
+                        .foregroundColor(AppColors.label)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal)) {
+                        ForEach(upcomingCheckIns) { friend in
+                            UnscheduledCheckInCard(friend: friend) {
+                                selectedFriend = friend
+                                showingScheduler = true
+                            }
+                            .padding(.horizontal)
+                        }
+                    }
+                }
+                
                 if !completedHangouts.isEmpty {
                     Section(header: Text("Past Hangouts")
                         .font(AppTheme.headlineFont)
@@ -43,7 +78,7 @@ struct ScheduledView: View {
                 }
                 
                 if !pastHangouts.isEmpty {
-                    Section(header: Text("Needs Confirmation")
+                    Section(header: Text("Did this ketchup happen?")
                         .font(AppTheme.headlineFont)
                         .foregroundColor(AppColors.label)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -61,11 +96,11 @@ struct ScheduledView: View {
                     }
                 }
                 
-                if upcomingHangouts.isEmpty && pastHangouts.isEmpty && completedHangouts.isEmpty {
-                    ContentUnavailableView("No Scheduled Hangouts", systemImage: "calendar.badge.plus")
+                if upcomingHangouts.isEmpty && pastHangouts.isEmpty && completedHangouts.isEmpty && upcomingCheckIns.isEmpty {
+                    ContentUnavailableView("No Ketchups", systemImage: "calendar.badge.plus")
                         .foregroundColor(AppColors.label)
-                } else {
-                    Section(header: Text("Upcoming Hangouts")
+                } else if !upcomingHangouts.isEmpty {
+                    Section(header: Text("Scheduled Ketchups")
                         .font(AppTheme.headlineFont)
                         .foregroundColor(AppColors.label)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -87,6 +122,65 @@ struct ScheduledView: View {
                 HangoutCompletionView(hangout: hangout)
             }
         }
+        .sheet(isPresented: $showingScheduler) {
+            if let friend = selectedFriend {
+                NavigationStack {
+                    SchedulerView(initialFriend: friend)
+                }
+            }
+        }
+    }
+}
+
+struct UnscheduledCheckInCard: View {
+    let friend: Friend
+    let onScheduleTapped: () -> Void
+    
+    var body: some View {
+        VStack(spacing: AppTheme.spacingMedium) {
+            HStack(spacing: AppTheme.spacingMedium) {
+                ProfileImage(friend: friend)
+                
+                VStack(alignment: .leading, spacing: AppTheme.spacingSmall) {
+                    Text(friend.name)
+                        .font(AppTheme.headlineFont)
+                        .foregroundColor(AppColors.label)
+                        .lineLimit(1)
+                    
+                    if let frequency = friend.catchUpFrequency {
+                        Text("Due for \(frequency) catch-up")
+                            .font(AppTheme.captionFont)
+                            .foregroundColor(AppColors.secondaryLabel)
+                    }
+                }
+                
+                Spacer()
+            }
+            
+            Button(action: onScheduleTapped) {
+                Label("Schedule Ketchup", systemImage: "calendar.badge.plus")
+                    .font(AppTheme.headlineFont)
+                    .foregroundColor(AppColors.accent)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, AppTheme.spacingSmall)
+                    .background(
+                        RoundedRectangle(cornerRadius: AppTheme.cornerRadiusMedium)
+                            .stroke(AppColors.accent, lineWidth: 1)
+                    )
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(AppTheme.spacingMedium)
+        .background(
+            RoundedRectangle(cornerRadius: AppTheme.cornerRadiusLarge)
+                .fill(AppColors.secondarySystemBackground)
+                .shadow(
+                    color: AppTheme.shadowSmall.color,
+                    radius: AppTheme.shadowSmall.radius,
+                    x: AppTheme.shadowSmall.x,
+                    y: AppTheme.shadowSmall.y
+                )
+        )
     }
 }
 
@@ -190,6 +284,6 @@ struct HangoutCard: View {
 }
 
 #Preview {
-    ScheduledView()
-        .modelContainer(for: Friend.self)
+    KetchupsView()
+        .modelContainer(for: [Friend.self, Hangout.self])
 }
