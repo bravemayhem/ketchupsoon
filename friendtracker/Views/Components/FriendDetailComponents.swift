@@ -6,7 +6,7 @@ struct FriendInfoSection: View {
     let onLastSeenTap: () -> Void
     
     var body: some View {
-        Section {
+        Section(content: {
             // Last Seen
             HStack {
                 Text("Last Seen")
@@ -23,8 +23,10 @@ struct FriendInfoSection: View {
                 Text("Location")
                     .foregroundColor(AppColors.label)
                 Spacer()
-                Text(friend.location)
-                    .foregroundColor(AppColors.secondaryLabel)
+                if let location = friend.location {
+                    Text(location)
+                        .foregroundColor(AppColors.secondaryLabel)
+                }
             }
             
             if let phoneNumber = friend.phoneNumber {
@@ -37,34 +39,38 @@ struct FriendInfoSection: View {
                 }
             }
             
-            if let frequency = friend.catchUpFrequency {
-                HStack {
-                    Text("Catch-up Frequency")
-                        .foregroundColor(AppColors.label)
-                    Spacer()
-                    if frequency == CatchUpFrequency.custom.rawValue, let days = friend.customCatchUpDays {
+            HStack {
+                Text("Catch-up Frequency")
+                    .foregroundColor(AppColors.label)
+                Spacer()
+                if let frequency = friend.catchUpFrequency {
+                    if frequency == .custom, let days = friend.customCatchUpDays {
                         Text("Every \(days) days")
                             .foregroundColor(AppColors.secondaryLabel)
                     } else {
-                        Text(frequency)
+                        Text(frequency.rawValue)
                             .foregroundColor(AppColors.secondaryLabel)
                     }
+                } else {
+                    Text("Not set")
+                        .foregroundColor(AppColors.secondaryLabel)
                 }
             }
-        }
+        })
         .listRowBackground(AppColors.secondarySystemBackground)
     }
 }
+            
 
 struct FriendActionSection: View {
-    let friend: Friend
+    @Bindable var friend: Friend
     let onMessageTap: () -> Void
     let onScheduleTap: () -> Void
     let onMarkSeenTap: () -> Void
     
     var body: some View {
-        Section {
-            if friend.phoneNumber != nil {
+        Section(content: {
+            if !(friend.phoneNumber?.isEmpty ?? true) {
                 Button(action: onMessageTap) {
                     Label("Send Message", systemImage: "message.fill")
                         .foregroundColor(AppColors.accent)
@@ -81,24 +87,18 @@ struct FriendActionSection: View {
                     .foregroundColor(AppColors.accent)
             }
             
-            if friend.needsToConnectFlag {
-                Button(action: { friend.needsToConnectFlag = false }) {
-                    Label("Remove from Wishlist", systemImage: "star.slash")
-                        .foregroundColor(AppColors.accent)
-                }
-            } else {
-                Button(action: { friend.needsToConnectFlag = true }) {
-                    Label("Add to Wishlist", systemImage: "star")
-                        .foregroundColor(AppColors.accent)
-                }
+            Toggle(isOn: $friend.needsToConnectFlag) {
+                Label(friend.needsToConnectFlag ? "Remove from Wishlist" : "Add to Wishlist",
+                      systemImage: friend.needsToConnectFlag ? "star.slash" : "star")
             }
-        } header: {
+            .tint(AppColors.accent)
+        }, header: {
             Text("Actions")
                 .font(AppTheme.headlineFont)
                 .foregroundColor(AppColors.label)
                 .textCase(nil)
                 .padding(.bottom, 8)
-        }
+        })
         .listRowBackground(AppColors.secondarySystemBackground)
     }
 }
@@ -108,7 +108,7 @@ struct FriendHangoutsSection: View {
     
     var body: some View {
         if !hangouts.isEmpty {
-            Section {
+            Section(content: {
                 ForEach(hangouts) { hangout in
                     VStack(alignment: .leading, spacing: AppTheme.spacingTiny) {
                         Text(hangout.activity)
@@ -123,13 +123,13 @@ struct FriendHangoutsSection: View {
                     }
                     .padding(.vertical, AppTheme.spacingTiny)
                 }
-            } header: {
+            }, header: {
                 Text("Upcoming Hangouts")
                     .font(AppTheme.headlineFont)
                     .foregroundColor(AppColors.label)
                     .textCase(nil)
                     .padding(.bottom, 8)
-            }
+            })
             .listRowBackground(AppColors.secondarySystemBackground)
         }
     }

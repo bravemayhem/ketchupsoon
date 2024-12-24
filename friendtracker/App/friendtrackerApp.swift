@@ -77,15 +77,41 @@ struct friendtrackerApp: App {
     }
     
     var sharedModelContainer: ModelContainer = {
-        let schema = Schema([
-            Friend.self,
-            Hangout.self,
-        ])
-        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
-
+        let isPreview = ProcessInfo.processInfo.isPreview
+        
         do {
-            return try ModelContainer(for: schema, configurations: [modelConfiguration])
+            #if DEBUG
+            print("Creating ModelContainer")
+            #endif
+            
+            let schema = Schema([
+                Friend.self,
+                Hangout.self
+            ])
+            
+            let config = ModelConfiguration(
+                schema: schema,
+                isStoredInMemoryOnly: isPreview
+            )
+            
+            #if DEBUG
+            print("Created configuration")
+            #endif
+            
+            let container = try ModelContainer(
+                for: schema,
+                configurations: config
+            )
+            
+            #if DEBUG
+            print("Created container successfully")
+            #endif
+            
+            return container
         } catch {
+            #if DEBUG
+            print("Failed to create container: \(error)")
+            #endif
             fatalError("Could not create ModelContainer: \(error)")
         }
     }()

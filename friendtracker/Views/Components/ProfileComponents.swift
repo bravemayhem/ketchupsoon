@@ -158,9 +158,22 @@ extension View {
                     .foregroundColor(AppColors.label)
                 
                 HStack(spacing: 24) {
-                    ProfileImage(friend: Friend(name: "John Doe"))
-                    ProfileImage(friend: Friend(name: "Alice Smith"))
-                    ProfileImage(friend: Friend(name: "Bob Wilson"))
+                    ProfileImage(friend: Friend(
+                        name: "John Doe",
+                        location: "Local",
+                        needsToConnectFlag: true
+                    ))
+                    
+                    ProfileImage(friend: Friend(
+                        name: "Alice Smith",
+                        location: "Local",
+                        needsToConnectFlag: false
+                    ))
+                    ProfileImage(friend: Friend(
+                        name: "Bob Wilson",
+                        location: "Local",
+                        needsToConnectFlag: false
+                    ))
                 }
             }
             
@@ -171,8 +184,17 @@ extension View {
                     .foregroundColor(AppColors.label)
                 
                 HStack(spacing: 24) {
-                    LargeProfileImage(friend: Friend(name: "Emma Davis"))
-                    LargeProfileImage(friend: Friend(name: "Mike Brown"))
+                    LargeProfileImage(friend: Friend(
+                        name: "Emma Davis",
+                        location: "Local",
+                        needsToConnectFlag: false
+                    ))
+                    
+                    LargeProfileImage(friend: Friend(
+                        name: "Mike Brown",
+                        location: "Local",
+                        needsToConnectFlag: false
+                    ))
                 }
             }
         }
@@ -183,4 +205,6 @@ extension View {
         )
         .padding(24)
     }
-} 
+    .modelContainer(for: [Friend.self, Hangout.self], inMemory: true)
+}
+

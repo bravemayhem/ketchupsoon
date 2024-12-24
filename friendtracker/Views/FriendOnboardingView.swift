@@ -94,12 +94,16 @@ struct FriendOnboardingView: View {
             lastSeen: hasLastSeen ? lastSeenDate : nil,
             location: FriendLocation.local.rawValue,
             contactIdentifier: contact.identifier,
+            needsToConnectFlag: wantToConnectSoon,
             phoneNumber: isFromContacts ? contact.phoneNumber : (phoneNumber.isEmpty ? nil : phoneNumber),
             photoData: contact.imageData,
-            needsToConnectFlag: wantToConnectSoon,
-            catchUpFrequency: hasCatchUpFrequency ? selectedFrequency.rawValue : nil,
-            customCatchUpDays: hasCatchUpFrequency && selectedFrequency == .custom ? customDays : nil
+            catchUpFrequency: hasCatchUpFrequency ? selectedFrequency : nil
         )
+        
+        //set customCatchUpDays after initialization if needed
+        if hasCatchUpFrequency && selectedFrequency == .custom { friend.customCatchUpDays = customDays
+        }
+        
         modelContext.insert(friend)
     }
-} 
+}

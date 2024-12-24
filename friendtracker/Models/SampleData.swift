@@ -22,35 +22,47 @@ actor SampleData {
             let container = try ModelContainer(for: schema, configurations: [configuration])
             let modelContext = container.mainContext
             
-            // Add sample friends with varying last seen dates
+            // Safely unwrap all date calculations
+            guard let twoMonthsAgo = Calendar.current.date(byAdding: .month, value: -2, to: Date()),
+                  let twoDaysAgo = Calendar.current.date(byAdding: .day, value: -2, to: Date()),
+                  let twentyOneDaysAgo = Calendar.current.date(byAdding: .day, value: -21, to: Date()),
+                  let fiveDaysAgo = Calendar.current.date(byAdding: .day, value: -5, to: Date()),
+                  let oneMonthAgo = Calendar.current.date(byAdding: .month, value: -1, to: Date()),
+                  let twoDaysFuture = Calendar.current.date(byAdding: .day, value: 2, to: Date()),
+                  let fiveDaysFuture = Calendar.current.date(byAdding: .day, value: 5, to: Date())
+            else {
+                fatalError("Date calculation failed in SampleData.createPreviewContainer()")
+            }
+            
+            // Create sample friends with safely unwrapped dates
             let friends = [
                 Friend(
                     name: "Aleah Goldstein",
-                    lastSeen: Calendar.current.date(byAdding: .month, value: -2, to: Date())!,
+                    lastSeen: twoMonthsAgo, // Previously force unwrapped
                     location: "Remote",
                     phoneNumber: "+1234567890"
                 ),
                 Friend(
                     name: "Julian Gamboa",
-                    lastSeen: Calendar.current.date(byAdding: .day, value: -2, to: Date())!,
+                    lastSeen: twoDaysAgo, // Previously force unwrapped
                     location: "Local",
                     phoneNumber: "+1234567891"
                 ),
                 Friend(
                     name: "Maddie Powell",
-                    lastSeen: Calendar.current.date(byAdding: .day, value: -21, to: Date())!,
+                    lastSeen: twentyOneDaysAgo, // Previously force unwrapped
                     location: "Local",
                     phoneNumber: "+1234567892"
                 ),
                 Friend(
                     name: "Maddi Rose",
-                    lastSeen: Calendar.current.date(byAdding: .day, value: -5, to: Date())!,
+                    lastSeen: fiveDaysAgo, // Previously force unwrapped
                     location: "Local",
                     phoneNumber: "+1234567893"
                 ),
                 Friend(
                     name: "Emma Thompson",
-                    lastSeen: Calendar.current.date(byAdding: .month, value: -1, to: Date())!,
+                    lastSeen: oneMonthAgo, // Previously force unwrapped
                     location: "Remote",
                     phoneNumber: "+1234567894"
                 ),
@@ -62,9 +74,9 @@ actor SampleData {
                 )
             ]
             
-            // Add some scheduled hangouts
+            // Add some scheduled hangouts with safely unwrapped dates
             let jamesHangout = Hangout(
-                date: Calendar.current.date(byAdding: .day, value: 2, to: Date())!,
+                date: twoDaysFuture, // Previously force unwrapped
                 activity: "Coffee",
                 location: "Blue Bottle",
                 isScheduled: true,
@@ -73,7 +85,7 @@ actor SampleData {
             friends[5].hangouts.append(jamesHangout)
             
             let maddieHangout = Hangout(
-                date: Calendar.current.date(byAdding: .day, value: 5, to: Date())!,
+                date: fiveDaysFuture, // Previously force unwrapped
                 activity: "Lunch",
                 location: "Italian Place",
                 isScheduled: true,

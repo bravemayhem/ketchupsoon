@@ -84,7 +84,7 @@ struct WishlistView: View {
                 showingFriendSheet = true
             }
             
-            if friend.phoneNumber != nil {
+            if let phoneNumber = friend.phoneNumber {
                 Button("Send Message") {
                     showingMessageSheet = true
                 }
@@ -95,7 +95,7 @@ struct WishlistView: View {
             }
             
             Button("Mark as Seen Today") {
-                friend.updateLastSeen(Date())
+                friend.updateLastSeen()
             }
             
             Button("Remove from Wishlist") {
@@ -115,5 +115,5 @@ struct WishlistView: View {
 
 #Preview {
     WishlistView()
-        .modelContainer(for: Friend.self)
+        .modelContainer(for: [Friend.self, Hangout.self])
 } 

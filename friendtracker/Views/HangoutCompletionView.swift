@@ -35,7 +35,7 @@ struct HangoutCompletionView: View {
     
     private func markHangoutComplete() {
         if let friend = hangout.friend {
-            friend.updateLastSeen(hangout.date)
+            friend.lastSeen = hangout.date // Directly set the date instead of using updateLastSeen()
             friend.needsToConnectFlag = false
         }
         hangout.isCompleted = true
@@ -90,8 +90,14 @@ struct HangoutCompletionView: View {
     let config = ModelConfiguration(isStoredInMemoryOnly: true)
     let container = try! ModelContainer(for: Friend.self, configurations: config)
     let friend = Friend(name: "Test Friend")
-    let hangout = Hangout(activity: "Coffee", friend: friend)
+    let hangout = Hangout(
+        date: Date(),
+        activity: "Coffee",
+        location: "Starbucks",  // Add location
+        isScheduled: true,      // Add isScheduled
+        friend: friend
+    )
     
-    return HangoutCompletionView(hangout: hangout)
+    HangoutCompletionView(hangout: hangout)
         .modelContainer(container)
-} 
+}

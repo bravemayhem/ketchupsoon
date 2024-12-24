@@ -321,58 +321,66 @@ struct SchedulerView: View {
         }
     }
     
+    private func createHangout(for friend: Friend) async throws {
+        // First, check if the time slot is available
+        await calendarManager.fetchBusyTimeSlots(for: selectedDate, friends: [friend])
+        let duration = selectedDuration ?? 7200 // Default 2 hours
+        
+        guard calendarManager.isTimeSlotAvailable(selectedDate, duration: duration) else {
+            throw SchedulerError.timeSlotNotAvailable
+        }
+        
+        // Create calendar event
+        if selectedCalendarType == .google && calendarManager.isGoogleAuthorized {
+            // TODO: Implement Google Calendar event creation
+        } else {
+            _ = try await calendarManager.createHangoutEvent(
+                with: friend,
+                activity: selectedActivity,
+                location: selectedLocation,
+                date: selectedDate,
+                duration: duration
+            )
+        }
+        
+        // Create and insert the hangout
+        let hangout = Hangout(
+            date: selectedDate,
+            activity: selectedActivity,
+            location: selectedLocation,
+            isScheduled: true,
+            friend: friend,
+            duration: duration
+        )
+        modelContext.insert(hangout)
+    }
+    
+    private func handleScheduleCompletion(for friend: Friend) {
+        if friend.needsToConnectFlag {
+            showingWishlistPrompt = true
+        } else {
+            dismiss()
+        }
+    }
+    
     private func scheduleHangout() {
         guard let friend = selectedFriend else { return }
+        
         isLoading = true
         errorMessage = nil
         
-        // Use default duration of 2 hours if none selected
-        let duration = selectedDuration ?? 7200
-        
         Task {
             do {
-                // First, check if the time slot is available
-                await calendarManager.fetchBusyTimeSlots(for: selectedDate, friends: [friend])
-                guard calendarManager.isTimeSlotAvailable(selectedDate, duration: duration) else {
-                    errorMessage = "This time slot is not available. Please select another time."
-                    isLoading = false
-                    return
-                }
-                
-                // Create the calendar event based on selected calendar type
-                if selectedCalendarType == .google && calendarManager.isGoogleAuthorized {
-                    // Use Google Calendar
-                    // TODO: Implement Google Calendar event creation
-                } else {
-                    // Use Apple Calendar
-                    _ = try await calendarManager.createHangoutEvent(
-                        with: friend,
-                        activity: selectedActivity,
-                        location: selectedLocation,
-                        date: selectedDate,
-                        duration: duration
-                    )
-                }
-                
-                // Create and insert the hangout
-                let hangout = Hangout(
-                    date: selectedDate,
-                    activity: selectedActivity,
-                    location: selectedLocation,
-                    isScheduled: true,
-                    duration: duration / 60, // Convert seconds to minutes
-                    friend: friend
-                )
-                modelContext.insert(hangout)
+                try await createHangout(for: friend)
                 
                 await MainActor.run {
                     isLoading = false
-                    // If friend is on wishlist, show prompt
-                    if friend.needsToConnectFlag {
-                        showingWishlistPrompt = true
-                    } else {
-                        dismiss()
-                    }
+                    handleScheduleCompletion(for: friend)
+                }
+            } catch SchedulerError.timeSlotNotAvailable {
+                await MainActor.run {
+                    errorMessage = "This time slot is not available. Please select another time."
+                    isLoading = false
                 }
             } catch {
                 await MainActor.run {
@@ -381,6 +389,10 @@ struct SchedulerView: View {
                 }
             }
         }
+    }
+    
+    private enum SchedulerError: Error {
+        case timeSlotNotAvailable
     }
 }
 
@@ -410,5 +422,5 @@ private struct SelectableButton: View {
 
 #Preview {
     SchedulerView()
-        .modelContainer(for: Friend.self)
+        .modelContainer(for: [Friend.self, Hangout.self])
 }

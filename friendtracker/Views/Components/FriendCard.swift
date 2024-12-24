@@ -41,49 +41,62 @@ struct FriendCard: View {
                         .font(AppTheme.captionFont)
                         .foregroundColor(AppColors.secondaryLabel)
                     
-                    Text(friend.location)
-                        .font(AppTheme.captionFont)
-                        .foregroundColor(AppColors.secondaryLabel)
-                        .lineLimit(1)
+                    if let location = friend.location { // Only show location if it exists
+                        Text(location)
+                            .font(AppTheme.captionFont)
+                            .foregroundColor(AppColors.secondaryLabel)
+                            .lineLimit(1)
+                    }
+                    
+                    Spacer()
                 }
                 
-                Spacer()
+                Button(action: action) {
+                    Text(buttonTitle)
+                        .font(AppTheme.headlineFont)
+                        .foregroundColor(buttonStyle.foregroundColor)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, AppTheme.spacingSmall)
+                        .background(
+                            RoundedRectangle(cornerRadius: AppTheme.cornerRadiusMedium)
+                                .fill(buttonStyle.backgroundColor)
+                        )
+                }
             }
-            
-            Button(action: action) {
-                Text(buttonTitle)
-                    .font(AppTheme.headlineFont)
-                    .foregroundColor(buttonStyle.foregroundColor)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, AppTheme.spacingSmall)
-                    .background(
-                        RoundedRectangle(cornerRadius: AppTheme.cornerRadiusMedium)
-                            .fill(buttonStyle.backgroundColor)
+            .frame(maxWidth: .infinity)
+            .padding(AppTheme.spacingMedium)
+            .background(
+                RoundedRectangle(cornerRadius: AppTheme.cornerRadiusLarge)
+                    .fill(AppColors.secondarySystemBackground)
+                    .shadow(
+                        color: AppTheme.shadowSmall.color,
+                        radius: AppTheme.shadowSmall.radius,
+                        x: AppTheme.shadowSmall.x,
+                        y: AppTheme.shadowSmall.y
                     )
-            }
+            )
         }
-        .frame(maxWidth: .infinity)
-        .padding(AppTheme.spacingMedium)
-        .background(
-            RoundedRectangle(cornerRadius: AppTheme.cornerRadiusLarge)
-                .fill(AppColors.secondarySystemBackground)
-                .shadow(
-                    color: AppTheme.shadowSmall.color,
-                    radius: AppTheme.shadowSmall.radius,
-                    x: AppTheme.shadowSmall.x,
-                    y: AppTheme.shadowSmall.y
-                )
-        )
     }
+    
+    
 }
 
 #Preview {
-    FriendCard(
-        friend: Friend(name: "Preview Friend"),
-        buttonTitle: "Connect",
-        buttonStyle: .primary,
-        action: {}
-    )
-    .padding()
+    ScrollView {
+        FriendCard(
+            friend: Friend(
+                name: "PreviewFriend",
+                lastSeen: Date(),
+                location: "Local",
+                needsToConnectFlag: false,
+                phoneNumber: "562-413-8770"
+            ),
+            buttonTitle: "Connect",
+            buttonStyle: .primary,
+            action: {}
+        )
+        .padding()
+    }
     .background(AppColors.systemBackground)
-} 
+    .modelContainer(for: [Friend.self, Hangout.self], inMemory: true)
+}

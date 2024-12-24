@@ -10,16 +10,40 @@ struct KetchupsView: View {
     @State private var showingCompletionPrompt = false
     @State private var selectedFriend: Friend?
     @State private var showingScheduler = false
+    @State private var showingMessageSheet = false
+    
+    private var scheduledFriendIds: Set<UUID> {
+        Set(upcomingHangouts.compactMap { $0.friend?.id })
+    }
+    
+    private var threeWeeksFromNow: Date {
+        Calendar.current.date(byAdding: .day, value: 21, to: Date()) ?? Date()
+    }
+    
+    private func shouldIncludeInUpcomingCheckIns(_ friend: Friend) -> Bool {
+        // Must have a next connect date
+        guard let nextConnect = friend.nextConnectDate else { return false }
+        
+        // Due within next 3 weeks
+        guard nextConnect <= threeWeeksFromNow else { return false }
+        
+        // Not already scheduled
+        return !scheduledFriendIds.contains(friend.id)
+    }
     
     var upcomingHangouts: [Hangout] {
         hangouts.filter { hangout in
-            hangout.isScheduled && hangout.date > Date() && !(hangout.needsReschedule ?? false)
+            hangout.isScheduled && 
+            hangout.date > Date() && 
+            !hangout.needsReschedule
         }
     }
     
     var pastHangouts: [Hangout] {
         hangouts.filter { hangout in
-            hangout.isScheduled && hangout.endDate <= Date() && !hangout.isCompleted
+            hangout.isScheduled && 
+            hangout.endDate <= Date() && 
+            !hangout.isCompleted
         }
     }
     
@@ -30,35 +54,40 @@ struct KetchupsView: View {
     }
     
     var upcomingCheckIns: [Friend] {
-        let scheduledFriendIds = Set(upcomingHangouts.compactMap { $0.friend?.id })
-        return friends.filter { friend in
-            // Has a frequency set
-            guard let nextConnect = friend.nextConnectDate,
-                  friend.catchUpFrequency != nil else { return false }
-            
-            // Due within next 3 weeks
-            let threeWeeksFromNow = Calendar.current.date(byAdding: .day, value: 21, to: Date()) ?? Date()
-            guard nextConnect <= threeWeeksFromNow else { return false }
-            
-            // Not already scheduled
-            return !scheduledFriendIds.contains(friend.id)
-        }
+        friends.filter(shouldIncludeInUpcomingCheckIns)
     }
     
     var body: some View {
         ScrollView {
-            LazyVStack(spacing: AppTheme.spacingMedium) {
+            LazyVStack(spacing: AppTheme.spacingMedium, pinnedViews: [.sectionHeaders]) {
+                Text("You've got a lot to look forward to")
+                    .font(.subheadline)
+                    .foregroundColor(AppColors.secondaryLabel)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal)
+                    .padding(.top, -15)
+                    .padding(.bottom, 8)
+                
                 if !upcomingCheckIns.isEmpty {
                     Section(header: Text("Needs Scheduling")
                         .font(AppTheme.headlineFont)
                         .foregroundColor(AppColors.label)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal)) {
+                        .padding(.horizontal)
+                        .padding(.vertical, 8)
+                        .background(AppColors.systemBackground)) {
                         ForEach(upcomingCheckIns) { friend in
-                            UnscheduledCheckInCard(friend: friend) {
-                                selectedFriend = friend
-                                showingScheduler = true
-                            }
+                            UnscheduledCheckInCard(
+                                friend: friend,
+                                onScheduleTapped: {
+                                    selectedFriend = friend
+                                    showingScheduler = true
+                                },
+                                onMessageTapped: {
+                                    selectedFriend = friend
+                                    showingMessageSheet = true
+                                }
+                            )
                             .padding(.horizontal)
                         }
                     }
@@ -129,12 +158,18 @@ struct KetchupsView: View {
                 }
             }
         }
+        .sheet(isPresented: $showingMessageSheet) {
+            if let friend = selectedFriend {
+                MessageComposeView(recipient: friend.phoneNumber ?? "")
+            }
+        }
     }
 }
 
 struct UnscheduledCheckInCard: View {
     let friend: Friend
     let onScheduleTapped: () -> Void
+    let onMessageTapped: () -> Void
     
     var body: some View {
         VStack(spacing: AppTheme.spacingMedium) {
@@ -157,16 +192,32 @@ struct UnscheduledCheckInCard: View {
                 Spacer()
             }
             
-            Button(action: onScheduleTapped) {
-                Label("Schedule Ketchup", systemImage: "calendar.badge.plus")
-                    .font(AppTheme.headlineFont)
-                    .foregroundColor(AppColors.accent)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, AppTheme.spacingSmall)
-                    .background(
-                        RoundedRectangle(cornerRadius: AppTheme.cornerRadiusMedium)
-                            .stroke(AppColors.accent, lineWidth: 1)
-                    )
+            HStack(spacing: AppTheme.spacingMedium) {
+                if friend.phoneNumber != nil {
+                    Button(action: onMessageTapped) {
+                        Label("Message", systemImage: "message.fill")
+                            .font(AppTheme.headlineFont)
+                            .foregroundColor(AppColors.accent)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, AppTheme.spacingSmall)
+                            .background(
+                                RoundedRectangle(cornerRadius: AppTheme.cornerRadiusMedium)
+                                    .stroke(AppColors.accent, lineWidth: 1)
+                            )
+                    }
+                }
+                
+                Button(action: onScheduleTapped) {
+                    Label("Schedule", systemImage: "calendar.badge.plus")
+                        .font(AppTheme.headlineFont)
+                        .foregroundColor(AppColors.accent)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, AppTheme.spacingSmall)
+                        .background(
+                            RoundedRectangle(cornerRadius: AppTheme.cornerRadiusMedium)
+                                .stroke(AppColors.accent, lineWidth: 1)
+                        )
+                }
             }
         }
         .frame(maxWidth: .infinity)
@@ -283,7 +334,11 @@ struct HangoutCard: View {
     }
 }
 
-#Preview {
-    KetchupsView()
-        .modelContainer(for: [Friend.self, Hangout.self])
+#if DEBUG
+struct KetchupsView_Previews: PreviewProvider {
+    static var previews: some View {
+        KetchupsView()
+            .modelContainer(for: [Friend.self, Hangout.self], inMemory: true)
+    }
 }
+#endif

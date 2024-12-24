@@ -2,16 +2,40 @@ import SwiftUI
 
 struct FrequencyPickerView: View {
     @Environment(\.dismiss) private var dismiss
-    let friend: Friend
+    @Bindable var friend: Friend
     @State private var customDays: Int = 30
     @State private var showingCustomDaysPicker = false
+    
+    private func updateFrequency(_ frequency: CatchUpFrequency?) {
+        if let frequency = frequency {
+            friend.catchUpFrequency = frequency
+            if frequency != .custom {
+                friend.customCatchUpDays = nil
+            }
+        }
+    }
+    
+    private func handleFrequencySelection(_ frequency: CatchUpFrequency) {
+        if frequency == .custom {
+            showingCustomDaysPicker = true
+        } else {
+            updateFrequency(frequency)
+            dismiss()
+        }
+    }
+    
+    private func handleCustomFrequencySave() {
+        friend.catchUpFrequency = .custom
+        friend.customCatchUpDays = customDays
+        showingCustomDaysPicker = false
+        dismiss()
+    }
     
     var body: some View {
         List {
             Section {
                 Button("No Automatic Reminders") {
-                    friend.updateFrequency(nil)
-                    friend.updateCustomDays(nil)
+                    updateFrequency(nil)
                     dismiss()
                 }
                 .foregroundColor(friend.catchUpFrequency == nil ? AppColors.accent : AppColors.label)
@@ -24,21 +48,14 @@ struct FrequencyPickerView: View {
             }
             
             Section {
-                ForEach(CatchUpFrequency.allCases, id: \.rawValue) { frequency in
+                ForEach(CatchUpFrequency.allCases, id: \.self) { frequency in
                     Button {
-                        if frequency == .custom {
-                            showingCustomDaysPicker = true
-                        } else {
-                            friend.updateFrequency(frequency.rawValue)
-                            friend.updateCustomDays(nil)
-                            dismiss()
-                        }
+                        handleFrequencySelection(frequency)
                     } label: {
                         HStack {
                             Text(frequency.rawValue)
                             Spacer()
-                            if let currentFrequency = friend.catchUpFrequency,
-                               currentFrequency == frequency.rawValue {
+                            if friend.catchUpFrequency == frequency {
                                 Image(systemName: "checkmark")
                                     .foregroundColor(AppColors.accent)
                             }
@@ -82,10 +99,7 @@ struct FrequencyPickerView: View {
                     }
                     ToolbarItem(placement: .confirmationAction) {
                         Button("Save") {
-                            friend.updateFrequency(CatchUpFrequency.custom.rawValue)
-                            friend.updateCustomDays(customDays)
-                            showingCustomDaysPicker = false
-                            dismiss()
+                            handleCustomFrequencySave()
                         }
                     }
                 }

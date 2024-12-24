@@ -1,7 +1,6 @@
 import EventKit
 import SwiftUI
 import GoogleSignIn
-import GoogleSignInSwift
 import GoogleAPIClientForREST_Calendar
 
 @MainActor
@@ -243,19 +242,21 @@ class CalendarManager: ObservableObject {
         return suggestedTimes
     }
     
+    func isTimeSlotAvailable(_ date: Date, duration: TimeInterval) -> Bool {
+        let interval = DateInterval(start: date, duration: duration)
+        return !busyTimeSlots.contains { $0.intersects(interval) }
+    }
+    
     // MARK: - Event Management
     
     enum CalendarError: Error {
         case unauthorized
         case eventCreationFailed
         case eventNotFound
-        case calendarAccessDenied
     }
     
-    func createHangoutEvent(with friend: Friend, activity: String, location: String, date: Date, duration: TimeInterval) async throws -> EKEvent {
-        guard isAuthorized else {
-            throw CalendarError.unauthorized
-        }
+    func createHangoutEvent(with friend: Friend, activity: String, location: String, date: Date, duration: TimeInterval) async throws -> String {
+        guard isAuthorized else { throw CalendarError.unauthorized }
         
         let event = EKEvent(eventStore: eventStore)
         event.title = "\(activity) with \(friend.name)"
@@ -263,39 +264,12 @@ class CalendarManager: ObservableObject {
         event.startDate = date
         event.endDate = date.addingTimeInterval(duration)
         event.calendar = eventStore.defaultCalendarForNewEvents
-        event.notes = "Hangout scheduled via FriendTracker"
         
-        try eventStore.save(event, span: .thisEvent)
-        return event
-    }
-    
-    func deleteHangoutEvent(_ event: EKEvent) throws {
-        try eventStore.remove(event, span: .thisEvent)
-    }
-    
-    func getUpcomingHangouts(with friend: Friend) async -> [EKEvent] {
-        guard isAuthorized else { return [] }
-        
-        let calendar = Calendar.current
-        let now = Date()
-        guard let threeMonthsFromNow = calendar.date(byAdding: .month, value: 3, to: now) else { return [] }
-        
-        let predicate = eventStore.predicateForEvents(
-            withStart: now,
-            end: threeMonthsFromNow,
-            calendars: [eventStore.defaultCalendarForNewEvents].compactMap { $0 }
-        )
-        
-        return eventStore.events(matching: predicate)
-            .filter { $0.title?.contains(friend.name) ?? false }
-            .prefix(5)
-            .map { $0 }
-    }
-    
-    func isTimeSlotAvailable(_ date: Date, duration: TimeInterval = 3600) -> Bool {
-        let proposedInterval = DateInterval(start: date, duration: duration)
-        return !busyTimeSlots.contains { busySlot in
-            busySlot.intersects(proposedInterval)
+        do {
+            try eventStore.save(event, span: .thisEvent)
+            return event.eventIdentifier
+        } catch {
+            throw CalendarError.eventCreationFailed
         }
     }
 }

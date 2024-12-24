@@ -112,7 +112,7 @@ struct FriendsListView: View {
         }
         
         Button("Mark as Seen Today") {
-            friend.updateLastSeen(Date())
+            friend.updateLastSeen()
         }
         
         if friend.needsToConnectFlag {
