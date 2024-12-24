@@ -2,15 +2,11 @@ import SwiftUI
 import SwiftData
 
 struct KetchupsView: View {
-    @Query(
-        sort: [SortDescriptor(\Hangout.date)]
-    ) private var hangouts: [Hangout]
+    @Query(sort: [SortDescriptor(\Hangout.date)]) private var hangouts: [Hangout]
     @Query(sort: [SortDescriptor(\Friend.lastSeen)]) private var friends: [Friend]
     @State private var hangoutToCheck: Hangout?
     @State private var showingCompletionPrompt = false
     @State private var selectedFriend: Friend?
-    @State private var showingScheduler = false
-    @State private var showingMessageSheet = false
     
     private var scheduledFriendIds: Set<UUID> {
         Set(upcomingHangouts.compactMap { $0.friend?.id })
@@ -21,13 +17,8 @@ struct KetchupsView: View {
     }
     
     private func shouldIncludeInUpcomingCheckIns(_ friend: Friend) -> Bool {
-        // Must have a next connect date
         guard let nextConnect = friend.nextConnectDate else { return false }
-        
-        // Due within next 3 weeks
         guard nextConnect <= threeWeeksFromNow else { return false }
-        
-        // Not already scheduled
         return !scheduledFriendIds.contains(friend.id)
     }
     
@@ -81,11 +72,9 @@ struct KetchupsView: View {
                                 friend: friend,
                                 onScheduleTapped: {
                                     selectedFriend = friend
-                                    showingScheduler = true
                                 },
                                 onMessageTapped: {
                                     selectedFriend = friend
-                                    showingMessageSheet = true
                                 }
                             )
                             .padding(.horizontal)
@@ -151,18 +140,7 @@ struct KetchupsView: View {
                 HangoutCompletionView(hangout: hangout)
             }
         }
-        .sheet(isPresented: $showingScheduler) {
-            if let friend = selectedFriend {
-                NavigationStack {
-                    SchedulerView(initialFriend: friend)
-                }
-            }
-        }
-        .sheet(isPresented: $showingMessageSheet) {
-            if let friend = selectedFriend {
-                MessageComposeView(recipient: friend.phoneNumber ?? "")
-            }
-        }
+        .friendSheetPresenter(selectedFriend: $selectedFriend)
     }
 }
 
@@ -237,14 +215,13 @@ struct UnscheduledCheckInCard: View {
 
 struct HangoutCard: View {
     let hangout: Hangout
-    @State private var showingMessageSheet = false
-    @State private var showingFriendDetails = false
+    @State private var selectedFriend: Friend?
     
     var body: some View {
         VStack(spacing: AppTheme.spacingMedium) {
             if let friend = hangout.friend {
                 Button(action: {
-                    showingFriendDetails = true
+                    selectedFriend = friend
                 }) {
                     HStack(spacing: AppTheme.spacingMedium) {
                         ProfileImage(friend: friend)
@@ -253,54 +230,16 @@ struct HangoutCard: View {
                             Text(friend.name)
                                 .font(AppTheme.headlineFont)
                                 .foregroundColor(AppColors.label)
-                                .lineLimit(1)
                             
-                            Text(hangout.activity)
-                                .font(AppTheme.captionFont)
-                                .foregroundColor(AppColors.secondaryLabel)
-                                .lineLimit(1)
-                            
-                            HStack(spacing: AppTheme.spacingMedium) {
-                                Label {
-                                    Text(hangout.date.formatted(.relative(presentation: .named)))
-                                        .lineLimit(1)
-                                } icon: {
-                                    Image(systemName: "calendar")
-                                }
-                                .font(AppTheme.captionFont)
-                                
-                                Label {
-                                    Text(hangout.location)
-                                        .lineLimit(1)
-                                } icon: {
-                                    Image(systemName: "mappin.and.ellipse")
-                                }
-                                .font(AppTheme.captionFont)
+                            if let date = hangout.date {
+                                Text(date.formatted(date: .abbreviated, time: .shortened))
+                                    .font(AppTheme.captionFont)
+                                    .foregroundColor(AppColors.secondaryLabel)
                             }
-                            .foregroundColor(AppColors.secondaryLabel)
                         }
                         
                         Spacer()
-                        
-                        Image(systemName: "chevron.right")
-                            .foregroundColor(AppColors.secondaryLabel)
                     }
-                }
-            }
-            
-            if let friend = hangout.friend, friend.phoneNumber != nil {
-                Button(action: {
-                    showingMessageSheet = true
-                }) {
-                    Label("Message", systemImage: "message")
-                        .font(AppTheme.headlineFont)
-                        .foregroundColor(AppColors.accent)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, AppTheme.spacingSmall)
-                        .background(
-                            RoundedRectangle(cornerRadius: AppTheme.cornerRadiusMedium)
-                                .stroke(AppColors.accent, lineWidth: 1)
-                        )
                 }
             }
         }
@@ -316,21 +255,7 @@ struct HangoutCard: View {
                     y: AppTheme.shadowSmall.y
                 )
         )
-        .sheet(isPresented: $showingMessageSheet) {
-            if let friend = hangout.friend, let phoneNumber = friend.phoneNumber {
-                MessageComposeView(recipient: phoneNumber)
-            }
-        }
-        .sheet(isPresented: $showingFriendDetails) {
-            if let friend = hangout.friend {
-                NavigationStack {
-                    FriendDetailView(
-                        friend: friend,
-                        presentationMode: .sheet($showingFriendDetails)
-                    )
-                }
-            }
-        }
+        .friendSheetPresenter(selectedFriend: $selectedFriend)
     }
 }
 
