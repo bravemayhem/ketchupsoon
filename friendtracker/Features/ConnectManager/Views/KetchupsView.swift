@@ -1,6 +1,19 @@
+/*
+
+ KetchupsView is the view that serves as a central hub for managing social connections and meetups, combining calendar functionality with relationship management features.
+ 
+- Upcoming hangouts
+- Past hangouts
+- Completed hangouts
+- Upcoming check-ins that need scheduling
+
+*/
+
 import SwiftUI
 import SwiftData
 
+/// The main view for managing and displaying scheduled hangouts, past hangouts,
+/// completed hangouts, and upcoming check-ins that need scheduling.
 struct KetchupsView: View {
     @Query(sort: [SortDescriptor(\Hangout.date)]) private var hangouts: [Hangout]
     @Query(sort: [SortDescriptor(\Friend.lastSeen)]) private var friends: [Friend]
@@ -144,126 +157,7 @@ struct KetchupsView: View {
     }
 }
 
-struct UnscheduledCheckInCard: View {
-    let friend: Friend
-    let onScheduleTapped: () -> Void
-    let onMessageTapped: () -> Void
-    
-    var body: some View {
-        VStack(spacing: AppTheme.spacingMedium) {
-            HStack(spacing: AppTheme.spacingMedium) {
-                ProfileImage(friend: friend)
-                
-                VStack(alignment: .leading, spacing: AppTheme.spacingSmall) {
-                    Text(friend.name)
-                        .font(AppTheme.headlineFont)
-                        .foregroundColor(AppColors.label)
-                        .lineLimit(1)
-                    
-                    if let frequency = friend.catchUpFrequency {
-                        Text("Due for \(frequency) catch-up")
-                            .font(AppTheme.captionFont)
-                            .foregroundColor(AppColors.secondaryLabel)
-                    }
-                }
-                
-                Spacer()
-            }
-            
-            HStack(spacing: AppTheme.spacingMedium) {
-                if friend.phoneNumber != nil {
-                    Button(action: onMessageTapped) {
-                        Label("Message", systemImage: "message.fill")
-                            .font(AppTheme.headlineFont)
-                            .foregroundColor(AppColors.accent)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, AppTheme.spacingSmall)
-                            .background(
-                                RoundedRectangle(cornerRadius: AppTheme.cornerRadiusMedium)
-                                    .stroke(AppColors.accent, lineWidth: 1)
-                            )
-                    }
-                }
-                
-                Button(action: onScheduleTapped) {
-                    Label("Schedule", systemImage: "calendar.badge.plus")
-                        .font(AppTheme.headlineFont)
-                        .foregroundColor(AppColors.accent)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, AppTheme.spacingSmall)
-                        .background(
-                            RoundedRectangle(cornerRadius: AppTheme.cornerRadiusMedium)
-                                .stroke(AppColors.accent, lineWidth: 1)
-                        )
-                }
-            }
-        }
-        .frame(maxWidth: .infinity)
-        .padding(AppTheme.spacingMedium)
-        .background(
-            RoundedRectangle(cornerRadius: AppTheme.cornerRadiusLarge)
-                .fill(AppColors.secondarySystemBackground)
-                .shadow(
-                    color: AppTheme.shadowSmall.color,
-                    radius: AppTheme.shadowSmall.radius,
-                    x: AppTheme.shadowSmall.x,
-                    y: AppTheme.shadowSmall.y
-                )
-        )
-    }
+#Preview {
+    KetchupsView()
+        .modelContainer(for: [Friend.self, Hangout.self], inMemory: true)
 }
-
-struct HangoutCard: View {
-    let hangout: Hangout
-    @State private var selectedFriend: Friend?
-    
-    var body: some View {
-        VStack(spacing: AppTheme.spacingMedium) {
-            if let friend = hangout.friend {
-                Button(action: {
-                    selectedFriend = friend
-                }) {
-                    HStack(spacing: AppTheme.spacingMedium) {
-                        ProfileImage(friend: friend)
-                        
-                        VStack(alignment: .leading, spacing: AppTheme.spacingSmall) {
-                            Text(friend.name)
-                                .font(AppTheme.headlineFont)
-                                .foregroundColor(AppColors.label)
-                            
-                            if let date = hangout.date {
-                                Text(date.formatted(date: .abbreviated, time: .shortened))
-                                    .font(AppTheme.captionFont)
-                                    .foregroundColor(AppColors.secondaryLabel)
-                            }
-                        }
-                        
-                        Spacer()
-                    }
-                }
-            }
-        }
-        .frame(maxWidth: .infinity)
-        .padding(AppTheme.spacingMedium)
-        .background(
-            RoundedRectangle(cornerRadius: AppTheme.cornerRadiusLarge)
-                .fill(AppColors.secondarySystemBackground)
-                .shadow(
-                    color: AppTheme.shadowSmall.color,
-                    radius: AppTheme.shadowSmall.radius,
-                    x: AppTheme.shadowSmall.x,
-                    y: AppTheme.shadowSmall.y
-                )
-        )
-        .friendSheetPresenter(selectedFriend: $selectedFriend)
-    }
-}
-
-#if DEBUG
-struct KetchupsView_Previews: PreviewProvider {
-    static var previews: some View {
-        KetchupsView()
-            .modelContainer(for: [Friend.self, Hangout.self], inMemory: true)
-    }
-}
-#endif

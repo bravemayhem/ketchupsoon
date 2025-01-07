@@ -1,3 +1,7 @@
+// This is a singleton that provides the colors of the app
+// It is used in the App.swift file
+// The file is specifically focused on color definitions and color-related utilities
+
 import SwiftUI
 
 enum AppColors {

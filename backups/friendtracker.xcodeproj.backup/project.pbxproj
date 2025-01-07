@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		F44D7B992D1D24E0008C00CC /* ViewInspector in Frameworks */ = {isa = PBXBuildFile; productRef = F44D7B982D1D24E0008C00CC /* ViewInspector */; };
 		F486A1D52D139CE00011CC59 /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = F486A1D42D139CE00011CC59 /* GoogleSignInSwift */; };
 		F486A1D82D139D710011CC59 /* GoogleAPIClientForREST_Calendar in Frameworks */ = {isa = PBXBuildFile; productRef = F486A1D72D139D710011CC59 /* GoogleAPIClientForREST_Calendar */; };
 /* End PBXBuildFile section */
@@ -85,7 +84,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				F44D7B992D1D24E0008C00CC /* ViewInspector in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -166,7 +164,6 @@
 			);
 			name = friendtrackerTests;
 			packageProductDependencies = (
-				F44D7B982D1D24E0008C00CC /* ViewInspector */,
 			);
 			productName = friendtrackerTests;
 			productReference = F4070A382D0A184000B11C0B /* friendtrackerTests.xctest */;
@@ -230,7 +227,6 @@
 			packageReferences = (
 				F486A1D32D139CE00011CC59 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
 				F486A1D62D139D710011CC59 /* XCRemoteSwiftPackageReference "google-api-objectivec-client-for-rest" */,
-				F44D7B972D1D24E0008C00CC /* XCRemoteSwiftPackageReference "ViewInspector" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = F4070A292D0A183C00B11C0B /* Products */;
@@ -603,14 +599,6 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		F44D7B972D1D24E0008C00CC /* XCRemoteSwiftPackageReference "ViewInspector" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/nalexn/ViewInspector";
-			requirement = {
-				kind = upToNextMinorVersion;
-				minimumVersion = 0.10.1;
-			};
-		};
 		F486A1D32D139CE00011CC59 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/google/GoogleSignIn-iOS.git";
@@ -630,11 +618,6 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		F44D7B982D1D24E0008C00CC /* ViewInspector */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = F44D7B972D1D24E0008C00CC /* XCRemoteSwiftPackageReference "ViewInspector" */;
-			productName = ViewInspector;
-		};
 		F486A1D42D139CE00011CC59 /* GoogleSignInSwift */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = F486A1D32D139CE00011CC59 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;

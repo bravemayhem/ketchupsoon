@@ -1,3 +1,8 @@
+// Theme: Handles the theme of the app
+// This is a singleton that provides the theme of the app
+// It is used in the App.swift file
+// The file handles broader design system elements like spacing, shadows, typography, and component styles
+
 import SwiftUI
 
 enum AppTheme {

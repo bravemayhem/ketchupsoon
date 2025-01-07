@@ -18,6 +18,11 @@ final class Friend {
     var calendarIntegrationEnabled: Bool
     @Attribute(.externalStorage) var calendarVisibilityPreference: CalendarVisibilityPreference
     @Relationship(deleteRule: .cascade) var hangouts: [Hangout]
+    // Cache for frequently accessed computed properties
+    @Transient private var _lastSeenTextCache: (Date, String)?
+        // Lazy loading for hangouts
+    @Transient private var _scheduledHangoutsCache: [Hangout]?
+
     
     init(name: String,
          lastSeen: Date? = nil,
@@ -40,19 +45,35 @@ final class Friend {
         self.calendarIntegrationEnabled = false
         self.calendarVisibilityPreference = .none
         self.hangouts = []
+        self._lastSeenTextCache = nil
+        self._scheduledHangoutsCache = nil
     }
     
     var lastSeenText: String {
+        if let cache = _lastSeenTextCache,
+           let lastSeen = self.lastSeen,
+           cache.0 == lastSeen {
+            return cache.1
+        }
+        
         guard let lastSeen = lastSeen else {
             return "Never"
         }
+        
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .full
-        return formatter.localizedString(for: lastSeen, relativeTo: Date())
+        let result = formatter.localizedString(for: lastSeen, relativeTo: Date())
+        _lastSeenTextCache = (lastSeen, result)
+        return result
     }
     
     var scheduledHangouts: [Hangout] {
-        return hangouts.filter { $0.isScheduled }
+        if let cached = _scheduledHangoutsCache {
+            return cached
+        }
+        let result = hangouts.filter { $0.isScheduled }
+        _scheduledHangoutsCache = result
+        return result
     }
     
     var nextConnectDate: Date? {
@@ -92,5 +113,35 @@ extension Friend {
         static func == (lhs: ConnectedCalendar, rhs: ConnectedCalendar) -> Bool {
             lhs.id == rhs.id
         }
+    }
+}
+
+// MARK: - Batch Operations
+extension Friend {
+    static func batchUpdate(_ friends: [Friend], with context: ModelContext) {
+        // Use direct insert
+        for friend in friends {
+            context.insert(friend)
+        }
+        // Save changes if needed
+        try? context.save()
+    }
+    
+    static func batchDelete(_ friends: [Friend], with context: ModelContext) {
+        // Use direct delete
+        for friend in friends {
+            context.delete(friend)
+        }
+        // Save changes if needed
+        try? context.save()
+    }
+}
+
+// MARK: - Performance Optimizations
+extension Friend {
+    // Reset caches when data changes
+    func invalidateCaches() {
+        _lastSeenTextCache = nil
+        _scheduledHangoutsCache = nil
     }
 }
