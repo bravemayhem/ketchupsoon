@@ -26,6 +26,18 @@ struct FriendCard: View {
         }
     }
     
+    var lastSeenText: String? {
+        guard let lastSeen = friend.lastSeen else {
+            return nil
+        }
+        
+        if Calendar.current.isDateInToday(lastSeen) {
+            return "Last Seen: Today"
+        } else {
+            return "Last Seen: \(lastSeen.formatted(.relative(presentation: .named)))"
+        }
+    }
+    
     var body: some View {
         VStack(spacing: AppTheme.spacingMedium) {
             HStack(spacing: AppTheme.spacingMedium) {
@@ -37,15 +49,28 @@ struct FriendCard: View {
                         .foregroundColor(AppColors.label)
                         .lineLimit(1)
                     
-                    Text(friend.lastSeenText)
-                        .font(AppTheme.captionFont)
-                        .foregroundColor(AppColors.secondaryLabel)
+                    if let location = friend.location {
+                        HStack(spacing: 4) {
+                            Image(systemName: "mappin.and.ellipse")
+                                .font(AppTheme.captionFont)
+                                .foregroundColor(AppColors.secondaryLabel)
+                            Text(location)
+                                .font(AppTheme.captionFont)
+                                .foregroundColor(AppColors.secondaryLabel)
+                                .lineLimit(1)
+                        }
+                    }
                     
-                    if let location = friend.location { // Only show location if it exists
-                        Text(location)
+                    if let frequency = friend.catchUpFrequency {
+                        Text(frequency.displayText)
                             .font(AppTheme.captionFont)
                             .foregroundColor(AppColors.secondaryLabel)
-                            .lineLimit(1)
+                    }
+                    
+                    if let lastSeen = lastSeenText {
+                        Text(lastSeen)
+                            .font(AppTheme.captionFont)
+                            .foregroundColor(AppColors.secondaryLabel)
                     }
                     
                     Spacer()
@@ -77,24 +102,38 @@ struct FriendCard: View {
             )
         }
     }
-    
-    
 }
 
 #Preview {
     ScrollView {
-        FriendCard(
-            friend: Friend(
-                name: "PreviewFriend",
-                lastSeen: Date(),
-                location: "Local",
-                needsToConnectFlag: false,
-                phoneNumber: "562-413-8770"
-            ),
-            buttonTitle: "Connect",
-            buttonStyle: .primary,
-            action: {}
-        )
+        VStack(spacing: 20) {
+            // Friend with all details
+            FriendCard(
+                friend: Friend(
+                    name: "PreviewFriend",
+                    lastSeen: Date(),
+                    location: "San Francisco",
+                    needsToConnectFlag: false,
+                    phoneNumber: "562-413-8770",
+                    catchUpFrequency: .monthly
+                ),
+                buttonTitle: "Connect",
+                buttonStyle: .primary,
+                action: {}
+            )
+            
+            // Friend with only location
+            FriendCard(
+                friend: Friend(
+                    name: "Another Friend",
+                    location: "Los Angeles",
+                    phoneNumber: "562-413-8770"
+                ),
+                buttonTitle: "Connect",
+                buttonStyle: .primary,
+                action: {}
+            )
+        }
         .padding()
     }
     .background(AppColors.systemBackground)

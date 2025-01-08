@@ -14,7 +14,22 @@ struct HangoutCard: View {
                     selectedFriend = friend
                 }) {
                     CardContentView(friend: friend) {
-                        Text(hangout.formattedDate).cardSecondaryText()
+                        VStack(alignment: .leading, spacing: 4) {
+                            if let location = friend.location {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "mappin.and.ellipse")
+                                        .font(AppTheme.captionFont)
+                                        .foregroundColor(AppColors.secondaryLabel)
+                                    Text(location).cardSecondaryText()
+                                }
+                            }
+                            
+                            if let frequency = friend.catchUpFrequency {
+                                Text(frequency.displayText).cardSecondaryText()
+                            }
+                            
+                            Text(hangout.formattedDate).cardSecondaryText()
+                        }
                     }
                 }
             }
@@ -24,16 +39,38 @@ struct HangoutCard: View {
 }
 
 #Preview {
-    let friend = Friend(name: "Test Friend", phoneNumber: "123-456-7890")
-    let hangout = Hangout(
-        date: Date(),
-        activity: "Coffee",
-        location: "Local Cafe",
-        isScheduled: true,
-        friend: friend
-    )
-    
-    return HangoutCard(hangout: hangout)
-        .padding()
-        .background(AppColors.systemBackground)
+    VStack(spacing: 20) {
+        // Friend with all details
+        let friendWithDetails = Friend(
+            name: "Test Friend",
+            location: "San Francisco",
+            phoneNumber: "123-456-7890",
+            catchUpFrequency: .monthly
+        )
+        let hangoutWithDetails = Hangout(
+            date: Date(),
+            activity: "Coffee",
+            location: "Local Cafe",
+            isScheduled: true,
+            friend: friendWithDetails
+        )
+        HangoutCard(hangout: hangoutWithDetails)
+        
+        // Friend with only location
+        let friendWithLocation = Friend(
+            name: "Another Friend",
+            location: "Los Angeles",
+            phoneNumber: "123-456-7890"
+        )
+        let hangoutWithLocation = Hangout(
+            date: Date(),
+            activity: "Lunch",
+            location: "Restaurant",
+            isScheduled: true,
+            friend: friendWithLocation
+        )
+        HangoutCard(hangout: hangoutWithLocation)
+    }
+    .padding()
+    .background(AppColors.systemBackground)
 } 

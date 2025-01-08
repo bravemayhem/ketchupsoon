@@ -7,13 +7,40 @@ struct UnscheduledCheckInCard: View {
     let onScheduleTapped: () -> Void
     let onMessageTapped: () -> Void
     
+    var lastSeenText: String? {
+        guard let lastSeen = friend.lastSeen else {
+            return nil
+        }
+        
+        if Calendar.current.isDateInToday(lastSeen) {
+            return "Last Seen: Today"
+        } else {
+            return "Last Seen: \(lastSeen.formatted(.relative(presentation: .named)))"
+        }
+    }
+    
     var body: some View {
         BaseCardView {
             VStack(spacing: AppTheme.spacingMedium) {
                 CardContentView(friend: friend, showChevron: false) {
-                    if let frequency = friend.catchUpFrequency {
-                        Text("Due for \(frequency.displayText) catch-up")
-                            .cardSecondaryText()
+                    VStack(alignment: .leading, spacing: 4) {
+                        if let location = friend.location {
+                            HStack(spacing: 4) {
+                                Image(systemName: "mappin.and.ellipse")
+                                    .font(AppTheme.captionFont)
+                                    .foregroundColor(AppColors.secondaryLabel)
+                                Text(location).cardSecondaryText()
+                            }
+                        }
+                        
+                        if let frequency = friend.catchUpFrequency {
+                            Text("Due for \(frequency.displayText) catch-up")
+                                .cardSecondaryText()
+                        }
+                        
+                        if let lastSeen = lastSeenText {
+                            Text(lastSeen).cardSecondaryText()
+                        }
                     }
                 }
                 
@@ -50,11 +77,31 @@ struct UnscheduledCheckInCard: View {
 }
 
 #Preview {
-    UnscheduledCheckInCard(
-        friend: Friend(name: "Test Friend", phoneNumber: "123-456-7890"),
-        onScheduleTapped: {},
-        onMessageTapped: {}
-    )
+    VStack(spacing: 20) {
+        // Friend with all details
+        UnscheduledCheckInCard(
+            friend: Friend(
+                name: "Test Friend",
+                lastSeen: Date(),
+                location: "San Francisco",
+                phoneNumber: "123-456-7890",
+                catchUpFrequency: .monthly
+            ),
+            onScheduleTapped: {},
+            onMessageTapped: {}
+        )
+        
+        // Friend with only location
+        UnscheduledCheckInCard(
+            friend: Friend(
+                name: "Another Friend",
+                location: "Los Angeles",
+                phoneNumber: "123-456-7890"
+            ),
+            onScheduleTapped: {},
+            onMessageTapped: {}
+        )
+    }
     .padding()
     .background(AppColors.systemBackground)
 } 
