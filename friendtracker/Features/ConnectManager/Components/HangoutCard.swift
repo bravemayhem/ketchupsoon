@@ -7,6 +7,26 @@ struct HangoutCard: View {
     let hangout: Hangout
     @State private var selectedFriend: Friend?
     
+    var statusColor: Color {
+        if hangout.isCompleted {
+            return .green
+        } else if hangout.date <= Date() {
+            return .orange
+        } else {
+            return AppColors.accent
+        }
+    }
+    
+    var statusText: String {
+        if hangout.isCompleted {
+            return "Completed"
+        } else if hangout.date <= Date() {
+            return "Needs Confirmation"
+        } else {
+            return "Upcoming"
+        }
+    }
+    
     var body: some View {
         BaseCardView {
             if let friend = hangout.friend {
@@ -15,12 +35,28 @@ struct HangoutCard: View {
                 }) {
                     CardContentView(friend: friend) {
                         VStack(alignment: .leading, spacing: 4) {
-                            if let location = friend.location {
+                            HStack {
+                                Text(hangout.activity)
+                                    .font(AppTheme.headlineFont)
+                                    .foregroundColor(AppColors.label)
+                                Spacer()
+                                Text(statusText)
+                                    .font(AppTheme.captionFont)
+                                    .foregroundColor(statusColor)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .background(
+                                        Capsule()
+                                            .fill(statusColor.opacity(0.1))
+                                    )
+                            }
+                            
+                            if !hangout.location.isEmpty {
                                 HStack(spacing: 4) {
                                     Image(systemName: "mappin.and.ellipse")
                                         .font(AppTheme.captionFont)
                                         .foregroundColor(AppColors.secondaryLabel)
-                                    Text(location).cardSecondaryText()
+                                    Text(hangout.location).cardSecondaryText()
                                 }
                             }
                             

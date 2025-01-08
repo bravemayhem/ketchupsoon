@@ -47,7 +47,7 @@ struct KetchupsView: View {
     var pastHangouts: [Hangout] {
         hangouts.filter { hangout in
             hangout.isScheduled && 
-            hangout.endDate <= Date() && 
+            hangout.date <= Date() && 
             !hangout.isCompleted
         }
     }
@@ -65,22 +65,65 @@ struct KetchupsView: View {
     var body: some View {
         ScrollView {
             LazyVStack(spacing: AppTheme.spacingMedium, pinnedViews: [.sectionHeaders]) {
-                Text("You've got a lot to look forward to")
-                    .font(.subheadline)
-                    .foregroundColor(AppColors.secondaryLabel)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal)
-                    .padding(.top, -15)
-                    .padding(.bottom, 8)
+                if !upcomingHangouts.isEmpty {
+                    Section {
+                        ForEach(upcomingHangouts) { hangout in
+                            HangoutCard(hangout: hangout)
+                                .padding(.horizontal)
+                        }
+                    } header: {
+                        Text("Upcoming Ketchups")
+                            .font(AppTheme.headlineFont)
+                            .foregroundColor(AppColors.label)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal)
+                            .padding(.vertical, 8)
+                            .background(AppColors.systemBackground)
+                    }
+                }
+                
+                if !pastHangouts.isEmpty {
+                    Section {
+                        ForEach(pastHangouts) { hangout in
+                            HangoutCard(hangout: hangout)
+                                .padding(.horizontal)
+                                .onAppear {
+                                    if !hangout.isCompleted {
+                                        hangoutToCheck = hangout
+                                        showingCompletionPrompt = true
+                                    }
+                                }
+                        }
+                    } header: {
+                        Text("Past Ketchups - Need Confirmation")
+                            .font(AppTheme.headlineFont)
+                            .foregroundColor(AppColors.label)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal)
+                            .padding(.vertical, 8)
+                            .background(AppColors.systemBackground)
+                    }
+                }
+                
+                if !completedHangouts.isEmpty {
+                    Section {
+                        ForEach(completedHangouts) { hangout in
+                            HangoutCard(hangout: hangout)
+                                .padding(.horizontal)
+                        }
+                    } header: {
+                        Text("Completed Ketchups")
+                            .font(AppTheme.headlineFont)
+                            .foregroundColor(AppColors.label)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal)
+                            .padding(.vertical, 8)
+                            .background(AppColors.systemBackground)
+                    }
+                }
                 
                 if !upcomingCheckIns.isEmpty {
-                    Section(header: Text("Needs Scheduling")
-                        .font(AppTheme.headlineFont)
-                        .foregroundColor(AppColors.label)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal)
-                        .padding(.vertical, 8)
-                        .background(AppColors.systemBackground)) {
+                    Section {
                         ForEach(upcomingCheckIns) { friend in
                             UnscheduledCheckInCard(
                                 friend: friend,
@@ -93,55 +136,20 @@ struct KetchupsView: View {
                             )
                             .padding(.horizontal)
                         }
-                    }
-                }
-                
-                if !completedHangouts.isEmpty {
-                    Section(header: Text("Past Hangouts")
-                        .font(AppTheme.headlineFont)
-                        .foregroundColor(AppColors.label)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal)) {
-                        ForEach(completedHangouts) { hangout in
-                            HangoutCard(hangout: hangout)
-                                .padding(.horizontal)
-                        }
-                    }
-                }
-                
-                if !pastHangouts.isEmpty {
-                    Section(header: Text("Did this ketchup happen?")
-                        .font(AppTheme.headlineFont)
-                        .foregroundColor(AppColors.label)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal)) {
-                        ForEach(pastHangouts) { hangout in
-                            HangoutCard(hangout: hangout)
-                                .padding(.horizontal)
-                                .onAppear {
-                                    if !hangout.isCompleted {
-                                        hangoutToCheck = hangout
-                                        showingCompletionPrompt = true
-                                    }
-                                }
-                        }
+                    } header: {
+                        Text("Needs Scheduling")
+                            .font(AppTheme.headlineFont)
+                            .foregroundColor(AppColors.label)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal)
+                            .padding(.vertical, 8)
+                            .background(AppColors.systemBackground)
                     }
                 }
                 
                 if upcomingHangouts.isEmpty && pastHangouts.isEmpty && completedHangouts.isEmpty && upcomingCheckIns.isEmpty {
                     ContentUnavailableView("No Ketchups", systemImage: "calendar.badge.plus")
                         .foregroundColor(AppColors.label)
-                } else if !upcomingHangouts.isEmpty {
-                    Section(header: Text("Scheduled Ketchups")
-                        .font(AppTheme.headlineFont)
-                        .foregroundColor(AppColors.label)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal)) {
-                        ForEach(upcomingHangouts) { hangout in
-                            HangoutCard(hangout: hangout)
-                                .padding(.horizontal)
-                        }
-                    }
                 }
             }
             .padding(.vertical)
