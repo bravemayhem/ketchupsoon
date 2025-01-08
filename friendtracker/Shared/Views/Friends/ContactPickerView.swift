@@ -9,7 +9,7 @@ struct ContactPickerView: View {
     @State private var searchText = ""
     @State private var contacts: [CNContact] = []
     @State private var isLoading = true
-    @State private var selectedContact: (name: String, identifier: String?, phoneNumber: String?, imageData: Data?)?
+    @State private var selectedContact: (name: String, identifier: String?, phoneNumber: String?, imageData: Data?, city: String?)?
     @State private var showingOnboarding = false
     
     var body: some View {
@@ -44,11 +44,13 @@ struct ContactPickerView: View {
     private var contactsList: some View {
         List(filteredContacts, id: \.identifier) { contact in
             Button {
+                let city = contact.postalAddresses.first?.value.city
                 selectedContact = (
                     name: "\(contact.givenName) \(contact.familyName)",
                     identifier: contact.identifier,
                     phoneNumber: contact.phoneNumbers.first?.value.stringValue,
-                    imageData: contact.thumbnailImageData
+                    imageData: contact.thumbnailImageData,
+                    city: city
                 )
                 showingOnboarding = true
             } label: {
@@ -72,6 +74,11 @@ struct ContactPickerView: View {
                             .foregroundColor(AppColors.label)
                         if let phoneNumber = contact.phoneNumbers.first?.value.stringValue {
                             Text(phoneNumber)
+                                .foregroundColor(AppColors.secondaryLabel)
+                                .font(.subheadline)
+                        }
+                        if let city = contact.postalAddresses.first?.value.city {
+                            Text(city)
                                 .foregroundColor(AppColors.secondaryLabel)
                                 .font(.subheadline)
                         }

@@ -151,7 +151,7 @@ struct ImportOptionsView: View {
                 }
                 .listRowBackground(AppColors.systemBackground)
                 
-                NavigationLink(destination: FriendOnboardingView(contact: ("", nil, nil, nil))) {
+                NavigationLink(destination: FriendOnboardingView(contact: (name: "", identifier: nil, phoneNumber: nil, imageData: nil, city: nil))) {
                     Label("Add from Memory", systemImage: "brain")
                         .foregroundColor(AppColors.label)
                 }

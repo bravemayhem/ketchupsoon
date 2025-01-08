@@ -4,10 +4,12 @@ import SwiftData
 struct FriendOnboardingView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
-    let contact: (name: String, identifier: String?, phoneNumber: String?, imageData: Data?)
+    let contact: (name: String, identifier: String?, phoneNumber: String?, imageData: Data?, city: String?)
     
     @State private var friendName = ""
     @State private var phoneNumber = ""
+    @State private var citySearchText = ""
+    @State private var selectedCity: String?
     @State private var hasLastSeen = false
     @State private var lastSeenDate = Date()
     @State private var hasCatchUpFrequency = false
@@ -21,11 +23,29 @@ struct FriendOnboardingView: View {
     var body: some View {
         NavigationStack {
             Form {
-                if !isFromContacts {
-                    Section("Friend Details") {
+                Section("Friend Details") {
+                    if !isFromContacts {
                         TextField("Name", text: $friendName)
                         TextField("Phone Number (Optional)", text: $phoneNumber)
+                    } else {
+                        HStack {
+                            Text("Name")
+                            Spacer()
+                            Text(contact.name)
+                                .foregroundColor(AppColors.secondaryLabel)
+                        }
+                        
+                        if let phone = contact.phoneNumber {
+                            HStack {
+                                Text("Phone")
+                                Spacer()
+                                Text(phone)
+                                    .foregroundColor(AppColors.secondaryLabel)
+                            }
+                        }
                     }
+                    
+                    CitySearchField(searchText: $citySearchText, selectedCity: $selectedCity)
                 }
                 
                 Section("Connect Soon") {
@@ -73,6 +93,12 @@ struct FriendOnboardingView: View {
                     .disabled(!isFromContacts && friendName.isEmpty)
                 }
             }
+            .onAppear {
+                if let contactCity = contact.city {
+                    citySearchText = contactCity
+                    selectedCity = contactCity
+                }
+            }
         }
     }
     
@@ -80,7 +106,7 @@ struct FriendOnboardingView: View {
         let friend = Friend(
             name: isFromContacts ? contact.name : friendName,
             lastSeen: hasLastSeen ? lastSeenDate : nil,
-            location: FriendLocation.local.rawValue,
+            location: selectedCity,
             contactIdentifier: contact.identifier,
             needsToConnectFlag: wantToConnectSoon,
             phoneNumber: isFromContacts ? contact.phoneNumber : (phoneNumber.isEmpty ? nil : phoneNumber),

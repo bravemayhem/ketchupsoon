@@ -27,7 +27,8 @@ class ContactsManager: ObservableObject {
             CNContactFamilyNameKey,
             CNContactPhoneNumbersKey,
             CNContactImageDataKey,
-            CNContactThumbnailImageDataKey
+            CNContactThumbnailImageDataKey,
+            CNContactPostalAddressesKey
         ] as [CNKeyDescriptor]
         
         let request = CNContactFetchRequest(keysToFetch: keys)

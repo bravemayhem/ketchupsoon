@@ -20,11 +20,14 @@ struct FriendInfoSection: View {
             
             // Location
             HStack {
-                Text("Location")
+                Text("City")
                     .foregroundColor(AppColors.label)
                 Spacer()
                 if let location = friend.location {
                     Text(location)
+                        .foregroundColor(AppColors.secondaryLabel)
+                } else {
+                    Text("Not set")
                         .foregroundColor(AppColors.secondaryLabel)
                 }
             }
