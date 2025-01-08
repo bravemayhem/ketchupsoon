@@ -4,7 +4,7 @@ import SwiftData
 import Contacts
 
 @Model
-final class Friend {
+final class Friend: Identifiable {
     @Attribute(.unique) var id: UUID
     var name: String
     var lastSeen: Date?
@@ -13,8 +13,7 @@ final class Friend {
     var needsToConnectFlag: Bool
     var phoneNumber: String?
     var photoData: Data?
-    @Attribute(.externalStorage) var catchUpFrequency: CatchUpFrequency?
-    var customCatchUpDays: Int?
+    var catchUpFrequency: CatchUpFrequency?
     var calendarIntegrationEnabled: Bool
     @Attribute(.externalStorage) var calendarVisibilityPreference: CalendarVisibilityPreference
     @Relationship(deleteRule: .cascade) var hangouts: [Hangout]
@@ -31,7 +30,7 @@ final class Friend {
          needsToConnectFlag: Bool = false,
          phoneNumber: String? = nil,
          photoData: Data? = nil,
-         catchUpFrequency: CatchUpFrequency? = .monthly) {
+         catchUpFrequency: CatchUpFrequency? = nil) {
         self.id = UUID()
         self.name = name
         self.lastSeen = lastSeen
@@ -40,7 +39,6 @@ final class Friend {
         self.phoneNumber = phoneNumber
         self.photoData = photoData
         self.catchUpFrequency = catchUpFrequency
-        self.customCatchUpDays = nil
         self.needsToConnectFlag = needsToConnectFlag
         self.calendarIntegrationEnabled = false
         self.calendarVisibilityPreference = .none
@@ -78,12 +76,13 @@ final class Friend {
     
     var nextConnectDate: Date? {
         guard let lastSeen = lastSeen else { return nil }
-        let days = customCatchUpDays ?? (catchUpFrequency?.days ?? 30) // // provides a default value  
+        let days = catchUpFrequency?.days ?? 30  // Default to monthly if no frequency set
         return Calendar.current.date(byAdding: .day, value: days, to: lastSeen)
     }
     
-    func updateLastSeen() {
-        lastSeen = Date()
+    func updateLastSeen(to date: Date? = nil) {
+        lastSeen = date ?? Date()
+        invalidateCaches()  // Reset caches since we're updating lastSeen
     }
 }
 

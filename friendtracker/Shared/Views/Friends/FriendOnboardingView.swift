@@ -12,7 +12,6 @@ struct FriendOnboardingView: View {
     @State private var lastSeenDate = Date()
     @State private var hasCatchUpFrequency = false
     @State private var selectedFrequency: CatchUpFrequency = .monthly
-    @State private var customDays: Int?
     @State private var wantToConnectSoon = false
     
     private var isFromContacts: Bool {
@@ -29,8 +28,24 @@ struct FriendOnboardingView: View {
                     }
                 }
                 
+                Section("Connect Soon") {
+                    Toggle("Want to connect soon?", isOn: $wantToConnectSoon)
+                }
+                
+                Section("Catch Up Frequency") {
+                    Toggle("Set catch up goal?", isOn: $hasCatchUpFrequency)
+                    
+                    if hasCatchUpFrequency {
+                        Picker("Frequency", selection: $selectedFrequency) {
+                            ForEach(CatchUpFrequency.allCases, id: \.self) { frequency in
+                                Text(frequency.displayText).tag(frequency)
+                            }
+                        }
+                    }
+                }
+                
                 Section("Last Seen") {
-                    Toggle("Have you met before?", isOn: $hasLastSeen)
+                    Toggle("Add last seen date?", isOn: $hasLastSeen)
                     
                     if hasLastSeen {
                         DatePicker(
@@ -40,33 +55,6 @@ struct FriendOnboardingView: View {
                             displayedComponents: [.date]
                         )
                     }
-                }
-                
-                Section("Catch Up Frequency") {
-                    Toggle("Set catch up goal?", isOn: $hasCatchUpFrequency)
-                    
-                    if hasCatchUpFrequency {
-                        Picker("Frequency", selection: $selectedFrequency) {
-                            ForEach(CatchUpFrequency.allCases, id: \.self) { frequency in
-                                Text(frequency.rawValue).tag(frequency)
-                            }
-                        }
-                        
-                        if selectedFrequency == .custom {
-                            Stepper(
-                                "Every \(customDays ?? 30) days",
-                                value: Binding(
-                                    get: { customDays ?? 30 },
-                                    set: { customDays = $0 }
-                                ),
-                                in: 1...365
-                            )
-                        }
-                    }
-                }
-                
-                Section("Connect Soon") {
-                    Toggle("Want to connect soon?", isOn: $wantToConnectSoon)
                 }
             }
             .navigationTitle("Add Friend Details")
@@ -99,10 +87,6 @@ struct FriendOnboardingView: View {
             photoData: contact.imageData,
             catchUpFrequency: hasCatchUpFrequency ? selectedFrequency : nil
         )
-        
-        //set customCatchUpDays after initialization if needed
-        if hasCatchUpFrequency && selectedFrequency == .custom { friend.customCatchUpDays = customDays
-        }
         
         modelContext.insert(friend)
     }

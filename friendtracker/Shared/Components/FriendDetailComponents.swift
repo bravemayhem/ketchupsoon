@@ -44,13 +44,8 @@ struct FriendInfoSection: View {
                     .foregroundColor(AppColors.label)
                 Spacer()
                 if let frequency = friend.catchUpFrequency {
-                    if frequency == .custom, let days = friend.customCatchUpDays {
-                        Text("Every \(days) days")
-                            .foregroundColor(AppColors.secondaryLabel)
-                    } else {
-                        Text(frequency.rawValue)
-                            .foregroundColor(AppColors.secondaryLabel)
-                    }
+                    Text(frequency.displayText)
+                        .foregroundColor(AppColors.secondaryLabel)
                 } else {
                     Text("Not set")
                         .foregroundColor(AppColors.secondaryLabel)

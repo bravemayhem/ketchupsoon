@@ -15,8 +15,9 @@ import SwiftData
 /// The main view for managing and displaying scheduled hangouts, past hangouts,
 /// completed hangouts, and upcoming check-ins that need scheduling.
 struct KetchupsView: View {
-    @Query(sort: [SortDescriptor(\Hangout.date)]) private var hangouts: [Hangout]
-    @Query(sort: [SortDescriptor(\Friend.lastSeen)]) private var friends: [Friend]
+    @Environment(\.modelContext) private var modelContext
+    @Query(sort: [SortDescriptor(\Hangout.date, order: .forward)]) private var hangouts: [Hangout]
+    @Query(sort: [SortDescriptor(\Friend.lastSeen, order: .forward)]) private var friends: [Friend]
     @State private var hangoutToCheck: Hangout?
     @State private var showingCompletionPrompt = false
     @State private var selectedFriend: Friend?

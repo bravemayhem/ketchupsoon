@@ -2,7 +2,7 @@ import Foundation
 import SwiftData
 
 @Model
-final class Hangout {
+final class Hangout: Identifiable {
     @Attribute(.unique) var id: UUID
     var date: Date
     var endDate: Date

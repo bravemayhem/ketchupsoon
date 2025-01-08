@@ -36,7 +36,7 @@ struct FriendListCard: View {
                         .lineLimit(1)
                     
                     if let frequency = friend.catchUpFrequency {
-                        Text(frequency.rawValue) // This will use the string values you defined ("Weekly", "Bi-weekly", etc.) in CatchUpFrequency.swift
+                        Text(frequency.displayText)
                             .font(AppTheme.captionFont)
                             .foregroundColor(AppColors.secondaryLabel)
                             .lineLimit(1)

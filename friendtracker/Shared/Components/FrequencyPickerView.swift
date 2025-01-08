@@ -3,32 +3,9 @@ import SwiftUI
 struct FrequencyPickerView: View {
     @Environment(\.dismiss) private var dismiss
     @Bindable var friend: Friend
-    @State private var customDays: Int = 30
-    @State private var showingCustomDaysPicker = false
     
     private func updateFrequency(_ frequency: CatchUpFrequency?) {
-        if let frequency = frequency {
-            friend.catchUpFrequency = frequency
-            if frequency != .custom {
-                friend.customCatchUpDays = nil
-            }
-        }
-    }
-    
-    private func handleFrequencySelection(_ frequency: CatchUpFrequency) {
-        if frequency == .custom {
-            showingCustomDaysPicker = true
-        } else {
-            updateFrequency(frequency)
-            dismiss()
-        }
-    }
-    
-    private func handleCustomFrequencySave() {
-        friend.catchUpFrequency = .custom
-        friend.customCatchUpDays = customDays
-        showingCustomDaysPicker = false
-        dismiss()
+        friend.catchUpFrequency = frequency
     }
     
     var body: some View {
@@ -50,10 +27,11 @@ struct FrequencyPickerView: View {
             Section {
                 ForEach(CatchUpFrequency.allCases, id: \.self) { frequency in
                     Button {
-                        handleFrequencySelection(frequency)
+                        updateFrequency(frequency)
+                        dismiss()
                     } label: {
                         HStack {
-                            Text(frequency.rawValue)
+                            Text(frequency.displayText)
                             Spacer()
                             if friend.catchUpFrequency == frequency {
                                 Image(systemName: "checkmark")
@@ -82,29 +60,5 @@ struct FrequencyPickerView: View {
             }
         }
         .background(AppColors.systemBackground)
-        .sheet(isPresented: $showingCustomDaysPicker) {
-            NavigationStack {
-                Form {
-                    Section {
-                        Stepper("Every \(customDays) days", value: $customDays, in: 1...365)
-                    }
-                }
-                .navigationTitle("Custom Frequency")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button("Cancel") {
-                            showingCustomDaysPicker = false
-                        }
-                    }
-                    ToolbarItem(placement: .confirmationAction) {
-                        Button("Save") {
-                            handleCustomFrequencySave()
-                        }
-                    }
-                }
-            }
-            .presentationDetents([.medium])
-        }
     }
 } 

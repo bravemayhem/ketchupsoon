@@ -82,7 +82,7 @@ struct ContactPickerView: View {
         }
         .scrollContentBackground(.hidden)
         .background(AppColors.systemBackground)
-        .searchable(text: $searchText, prompt: Text("Search contacts").foregroundColor(AppColors.secondaryLabel))
+        .searchable(text: $searchText, prompt: Text("Search contacts"))
         .tint(AppColors.accent)
     }
     

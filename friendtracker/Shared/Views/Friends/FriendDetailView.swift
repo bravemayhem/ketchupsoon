@@ -15,7 +15,11 @@ class FriendDetailViewModel {
     }
     
     func markAsSeen() {
-        friend.lastSeen = Date()
+        friend.updateLastSeen()
+    }
+    
+    func updateLastSeenDate(to date: Date) {
+        friend.updateLastSeen(to: date)
     }
 }
 
@@ -90,7 +94,7 @@ struct FriendDetailView: View {
                     }
                     ToolbarItem(placement: .confirmationAction) {
                         Button("Save") {
-                            viewModel.friend.lastSeen = viewModel.lastSeenDate
+                            viewModel.updateLastSeenDate(to: viewModel.lastSeenDate)
                             viewModel.showingDatePicker = false
                         }
                         .foregroundColor(AppColors.accent)

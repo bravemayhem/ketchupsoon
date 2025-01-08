@@ -19,7 +19,7 @@ struct UnscheduledCheckInCard: View {
                         .lineLimit(1)
                     
                     if let frequency = friend.catchUpFrequency {
-                        Text("Due for \(frequency) catch-up")
+                        Text("Due for \(frequency.displayText) catch-up")
                             .font(AppTheme.captionFont)
                             .foregroundColor(AppColors.secondaryLabel)
                     }
