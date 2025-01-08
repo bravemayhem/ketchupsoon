@@ -8,30 +8,32 @@ struct UnscheduledCheckInCard: View {
     let onMessageTapped: () -> Void
     
     var body: some View {
-        VStack(spacing: AppTheme.spacingMedium) {
-            HStack(spacing: AppTheme.spacingMedium) {
-                ProfileImage(friend: friend)
-                
-                VStack(alignment: .leading, spacing: AppTheme.spacingSmall) {
-                    Text(friend.name)
-                        .font(AppTheme.headlineFont)
-                        .foregroundColor(AppColors.label)
-                        .lineLimit(1)
-                    
+        BaseCardView {
+            VStack(spacing: AppTheme.spacingMedium) {
+                CardContentView(friend: friend, showChevron: false) {
                     if let frequency = friend.catchUpFrequency {
                         Text("Due for \(frequency.displayText) catch-up")
-                            .font(AppTheme.captionFont)
-                            .foregroundColor(AppColors.secondaryLabel)
+                            .cardSecondaryText()
                     }
                 }
                 
-                Spacer()
-            }
-            
-            HStack(spacing: AppTheme.spacingMedium) {
-                if friend.phoneNumber != nil {
-                    Button(action: onMessageTapped) {
-                        Label("Message", systemImage: "message.fill")
+                HStack(spacing: AppTheme.spacingMedium) {
+                    if friend.phoneNumber != nil {
+                        Button(action: onMessageTapped) {
+                            Label("Message", systemImage: "message.fill")
+                                .font(AppTheme.headlineFont)
+                                .foregroundColor(AppColors.accent)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, AppTheme.spacingSmall)
+                                .background(
+                                    RoundedRectangle(cornerRadius: AppTheme.cornerRadiusMedium)
+                                        .stroke(AppColors.accent, lineWidth: 1)
+                                )
+                        }
+                    }
+                    
+                    Button(action: onScheduleTapped) {
+                        Label("Schedule", systemImage: "calendar.badge.plus")
                             .font(AppTheme.headlineFont)
                             .foregroundColor(AppColors.accent)
                             .frame(maxWidth: .infinity)
@@ -42,32 +44,8 @@ struct UnscheduledCheckInCard: View {
                             )
                     }
                 }
-                
-                Button(action: onScheduleTapped) {
-                    Label("Schedule", systemImage: "calendar.badge.plus")
-                        .font(AppTheme.headlineFont)
-                        .foregroundColor(AppColors.accent)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, AppTheme.spacingSmall)
-                        .background(
-                            RoundedRectangle(cornerRadius: AppTheme.cornerRadiusMedium)
-                                .stroke(AppColors.accent, lineWidth: 1)
-                        )
-                }
             }
         }
-        .frame(maxWidth: .infinity)
-        .padding(AppTheme.spacingMedium)
-        .background(
-            RoundedRectangle(cornerRadius: AppTheme.cornerRadiusLarge)
-                .fill(AppColors.secondarySystemBackground)
-                .shadow(
-                    color: AppTheme.shadowSmall.color,
-                    radius: AppTheme.shadowSmall.radius,
-                    x: AppTheme.shadowSmall.x,
-                    y: AppTheme.shadowSmall.y
-                )
-        )
     }
 }
 

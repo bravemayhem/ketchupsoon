@@ -8,41 +8,17 @@ struct HangoutCard: View {
     @State private var selectedFriend: Friend?
     
     var body: some View {
-        VStack(spacing: AppTheme.spacingMedium) {
+        BaseCardView {
             if let friend = hangout.friend {
                 Button(action: {
                     selectedFriend = friend
                 }) {
-                    HStack(spacing: AppTheme.spacingMedium) {
-                        ProfileImage(friend: friend)
-                        
-                        VStack(alignment: .leading, spacing: AppTheme.spacingSmall) {
-                            Text(friend.name)
-                                .font(AppTheme.headlineFont)
-                                .foregroundColor(AppColors.label)
-                            
-                            Text(hangout.formattedDate)
-                                .font(AppTheme.captionFont)
-                                .foregroundColor(AppColors.secondaryLabel)
-                        }
-                        
-                        Spacer()
+                    CardContentView(friend: friend) {
+                        Text(hangout.formattedDate).cardSecondaryText()
                     }
                 }
             }
         }
-        .frame(maxWidth: .infinity)
-        .padding(AppTheme.spacingMedium)
-        .background(
-            RoundedRectangle(cornerRadius: AppTheme.cornerRadiusLarge)
-                .fill(AppColors.secondarySystemBackground)
-                .shadow(
-                    color: AppTheme.shadowSmall.color,
-                    radius: AppTheme.shadowSmall.radius,
-                    x: AppTheme.shadowSmall.x,
-                    y: AppTheme.shadowSmall.y
-                )
-        )
         .friendSheetPresenter(selectedFriend: $selectedFriend)
     }
 }

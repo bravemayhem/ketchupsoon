@@ -16,52 +16,26 @@ struct FriendListCard: View {
     }
     
     var body: some View {
-        HStack(spacing: AppTheme.spacingMedium) {
-            ProfileImage(friend: friend)
-            
-            VStack(alignment: .leading, spacing: AppTheme.spacingSmall) {
-                Text(friend.name)
-                    .font(AppTheme.headlineFont)
-                    .foregroundColor(AppColors.label)
-                    .lineLimit(1)
-                
-                Text(lastSeenText)
-                    .font(AppTheme.captionFont)
-                    .foregroundColor(AppColors.secondaryLabel)
-                
-                if let location = friend.location {
-                    Text(location)
-                        .font(AppTheme.captionFont)
-                        .foregroundColor(AppColors.secondaryLabel)
-                        .lineLimit(1)
+        BaseCardView {
+            CardContentView(friend: friend) {
+                VStack(alignment: .leading) {
+                    Text(lastSeenText).cardSecondaryText()
                     
-                    if let frequency = friend.catchUpFrequency {
-                        Text(frequency.displayText)
-                            .font(AppTheme.captionFont)
-                            .foregroundColor(AppColors.secondaryLabel)
-                            .lineLimit(1)
+                    if let location = friend.location {
+                        Text(location).cardSecondaryText()
+                        
+                        if let frequency = friend.catchUpFrequency {
+                            Text(frequency.displayText).cardSecondaryText()
+                        }
                     }
                 }
-                
-                Spacer()
-                
-                Image(systemName: "chevron.right")
-                    .foregroundColor(AppColors.secondaryLabel)
-                    .font(.system(size: 14, weight: .semibold))
             }
-            .frame(maxWidth: .infinity)
-            .padding(.horizontal, AppTheme.spacingMedium)
-            .padding(.vertical, AppTheme.spacingSmall)
-            .background(
-                RoundedRectangle(cornerRadius: AppTheme.cornerRadiusLarge)
-                    .fill(AppColors.secondarySystemBackground)
-                    .shadow(
-                        color: AppTheme.shadowSmall.color,
-                        radius: AppTheme.shadowSmall.radius,
-                        x: AppTheme.shadowSmall.x,
-                        y: AppTheme.shadowSmall.y
-                    )
-            )
         }
     }
+}
+
+#Preview {
+    FriendListCard(friend: Friend(name: "Test Friend", phoneNumber: "123-456-7890"))
+        .padding()
+        .background(AppColors.systemBackground)
 }
