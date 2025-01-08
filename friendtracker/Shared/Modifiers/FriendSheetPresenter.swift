@@ -15,7 +15,9 @@ struct FriendSheetPresenter: ViewModifier {
     
     func body(content: Content) -> some View {
         content
-            .sheet(isPresented: $showingFriendSheet) {
+            .sheet(isPresented: $showingFriendSheet, onDismiss: {
+                selectedFriend = nil
+            }) {
                 if let friend = selectedFriend {
                     NavigationStack {
                         FriendDetailView(
@@ -62,6 +64,9 @@ struct FriendSheetPresenter: ViewModifier {
                 Button("Set Frequency") {
                     showingFrequencyPicker = true
                 }
+            }
+            .onChange(of: selectedFriend) { _, newValue in
+                showingFriendSheet = newValue != nil
             }
     }
     

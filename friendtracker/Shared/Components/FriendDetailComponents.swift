@@ -68,25 +68,33 @@ struct FriendActionSection: View {
             if !(friend.phoneNumber?.isEmpty ?? true) {
                 Button(action: onMessageTap) {
                     Label("Send Message", systemImage: "message.fill")
-                        .foregroundColor(AppColors.accent)
+                        .actionLabelStyle()
                 }
             }
             
             Button(action: onScheduleTap) {
                 Label("Schedule Hangout", systemImage: "calendar")
-                    .foregroundColor(AppColors.accent)
+                    .actionLabelStyle()
             }
             
             Button(action: onMarkSeenTap) {
                 Label("Mark as Seen Today", systemImage: "checkmark.circle.fill")
-                    .foregroundColor(AppColors.accent)
+                    .actionLabelStyle()
             }
             
-            Toggle(isOn: $friend.needsToConnectFlag) {
-                Label(friend.needsToConnectFlag ? "Remove from Wishlist" : "Add to Wishlist",
-                      systemImage: friend.needsToConnectFlag ? "star.slash" : "star")
+            Button {
+                friend.needsToConnectFlag.toggle()
+            } label: {
+                HStack {
+                    Label(friend.needsToConnectFlag ? "Remove from Wishlist" : "Add to Wishlist",
+                          systemImage: friend.needsToConnectFlag ? "star.slash" : "star")
+                        .actionLabelStyle()
+                    Spacer()
+                    Toggle("", isOn: $friend.needsToConnectFlag)
+                        .labelsHidden()
+                        .tint(AppColors.accent)
+                }
             }
-            .tint(AppColors.accent)
         }, header: {
             Text("Actions")
                 .font(AppTheme.headlineFont)

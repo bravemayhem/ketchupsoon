@@ -21,6 +21,7 @@ struct FriendsListView: View {
                             #if DEBUG
                             debugLog("Tapped friend card: \(friend.name)")
                             #endif
+                            selectedFriend = nil  // Reset first to ensure onChange triggers
                             selectedFriend = friend
                         }
                         .swipeActions(edge: .leading, allowsFullSwipe: true) {
