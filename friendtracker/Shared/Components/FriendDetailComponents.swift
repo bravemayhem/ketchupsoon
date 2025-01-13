@@ -4,6 +4,7 @@ import SwiftData
 struct FriendInfoSection: View {
     let friend: Friend
     let onLastSeenTap: () -> Void
+    let onCityTap: () -> Void
     
     var body: some View {
         Section(content: {
@@ -12,25 +13,35 @@ struct FriendInfoSection: View {
                 Text("Last Seen")
                     .foregroundColor(AppColors.label)
                 Spacer()
-                Button(friend.lastSeenText) {
+                Button {
                     onLastSeenTap()
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "hourglass")
+                            .font(AppTheme.captionFont)
+                            .foregroundColor(AppColors.secondaryLabel)
+                        Text(friend.lastSeenText)
+                            .foregroundColor(AppColors.secondaryLabel)
+                    }
                 }
-                .foregroundColor(AppColors.secondaryLabel)
             }
             
             // Location
-            HStack {
-                Text("City")
-                    .foregroundColor(AppColors.label)
-                Spacer()
-                if let location = friend.location {
-                    Text(location)
-                        .foregroundColor(AppColors.secondaryLabel)
-                } else {
-                    Text("Not set")
-                        .foregroundColor(AppColors.secondaryLabel)
+            Button(action: onCityTap) {
+                HStack {
+                    Text("City")
+                        .foregroundColor(AppColors.label)
+                    Spacer()
+                    if let location = friend.location {
+                        Text(location)
+                            .foregroundColor(AppColors.secondaryLabel)
+                    } else {
+                        Text("Not set")
+                            .foregroundColor(AppColors.secondaryLabel)
+                    }
                 }
             }
+            .foregroundColor(.primary)
             
             if let phoneNumber = friend.phoneNumber {
                 HStack {
@@ -47,8 +58,13 @@ struct FriendInfoSection: View {
                     .foregroundColor(AppColors.label)
                 Spacer()
                 if let frequency = friend.catchUpFrequency {
-                    Text(frequency.displayText)
-                        .foregroundColor(AppColors.secondaryLabel)
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.triangle.2.circlepath")
+                            .font(AppTheme.captionFont)
+                            .foregroundColor(AppColors.secondaryLabel)
+                        Text(frequency.displayText)
+                            .foregroundColor(AppColors.secondaryLabel)
+                    }
                 } else {
                     Text("Not set")
                         .foregroundColor(AppColors.secondaryLabel)

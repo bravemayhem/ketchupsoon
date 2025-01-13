@@ -32,9 +32,9 @@ struct FriendCard: View {
         }
         
         if Calendar.current.isDateInToday(lastSeen) {
-            return "Last Seen: Today"
+            return "Last seen: Today"
         } else {
-            return "Last Seen: \(lastSeen.formatted(.relative(presentation: .named)))"
+            return "Last seen: \(lastSeen.formatted(.relative(presentation: .named)))"
         }
     }
     
@@ -62,15 +62,25 @@ struct FriendCard: View {
                     }
                     
                     if let frequency = friend.catchUpFrequency {
-                        Text(frequency.displayText)
-                            .font(AppTheme.captionFont)
-                            .foregroundColor(AppColors.secondaryLabel)
+                        HStack(spacing: 4) {
+                            Image(systemName: "arrow.triangle.2.circlepath")
+                                .font(AppTheme.captionFont)
+                                .foregroundColor(AppColors.secondaryLabel)
+                            Text(frequency.displayText)
+                                .font(AppTheme.captionFont)
+                                .foregroundColor(AppColors.secondaryLabel)
+                        }
                     }
                     
                     if let lastSeen = lastSeenText {
-                        Text(lastSeen)
-                            .font(AppTheme.captionFont)
-                            .foregroundColor(AppColors.secondaryLabel)
+                        HStack(spacing: 4) {
+                            Image(systemName: "hourglass")
+                                .font(AppTheme.captionFont)
+                                .foregroundColor(AppColors.secondaryLabel)
+                            Text(lastSeen)
+                                .font(AppTheme.captionFont)
+                                .foregroundColor(AppColors.secondaryLabel)
+                        }
                     }
                     
                     Spacer()

@@ -13,9 +13,9 @@ struct UnscheduledCheckInCard: View {
         }
         
         if Calendar.current.isDateInToday(lastSeen) {
-            return "Last Seen: Today"
+            return "Last seen: Today"
         } else {
-            return "Last Seen: \(lastSeen.formatted(.relative(presentation: .named)))"
+            return "Last seen: \(lastSeen.formatted(.relative(presentation: .named)))"
         }
     }
     

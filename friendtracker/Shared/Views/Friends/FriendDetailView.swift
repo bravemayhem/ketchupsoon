@@ -8,10 +8,15 @@ class FriendDetailViewModel {
     var showingDatePicker = false
     var showingScheduler = false
     var showingMessageSheet = false
+    var showingCityPicker = false
     var lastSeenDate = Date()
+    var citySearchText = ""
+    var selectedCity: String?
     
     init(friend: Friend) {
         self.friend = friend
+        self.citySearchText = friend.location ?? ""
+        self.selectedCity = friend.location
     }
     
     func markAsSeen() {
@@ -20,6 +25,10 @@ class FriendDetailViewModel {
     
     func updateLastSeenDate(to date: Date) {
         friend.updateLastSeen(to: date)
+    }
+    
+    func updateCity() {
+        friend.location = selectedCity
     }
 }
 
@@ -46,6 +55,9 @@ struct FriendDetailView: View {
                 onLastSeenTap: {
                     viewModel.lastSeenDate = viewModel.friend.lastSeen ?? Date()
                     viewModel.showingDatePicker = true
+                },
+                onCityTap: {
+                    viewModel.showingCityPicker = true
                 }
             )
             
@@ -96,6 +108,31 @@ struct FriendDetailView: View {
                         Button("Save") {
                             viewModel.updateLastSeenDate(to: viewModel.lastSeenDate)
                             viewModel.showingDatePicker = false
+                        }
+                        .foregroundColor(AppColors.accent)
+                    }
+                }
+            }
+            .presentationDetents([.medium])
+        }
+        .sheet(isPresented: $viewModel.showingCityPicker) {
+            NavigationStack {
+                Form {
+                    CitySearchField(searchText: $viewModel.citySearchText, selectedCity: $viewModel.selectedCity)
+                }
+                .navigationTitle("Update City")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Cancel") {
+                            viewModel.showingCityPicker = false
+                        }
+                        .foregroundColor(AppColors.accent)
+                    }
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Save") {
+                            viewModel.updateCity()
+                            viewModel.showingCityPicker = false
                         }
                         .foregroundColor(AppColors.accent)
                     }

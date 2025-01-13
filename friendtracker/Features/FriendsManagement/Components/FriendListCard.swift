@@ -9,9 +9,9 @@ struct FriendListCard: View {
         }
         
         if Calendar.current.isDateInToday(lastSeen) {
-            return "Last Seen: Today"
+            return "Last seen: Today"
         } else {
-            return "Last Seen: \(lastSeen.formatted(.relative(presentation: .named)))"
+            return "Last seen: \(lastSeen.formatted(.relative(presentation: .named)))"
         }
     }
     
@@ -29,11 +29,23 @@ struct FriendListCard: View {
                     }
                     
                     if let frequency = friend.catchUpFrequency {
-                        Text(frequency.displayText).cardSecondaryText()
+                        HStack(spacing: 4) {
+                            Image(systemName: "arrow.triangle.2.circlepath")
+                                .font(AppTheme.captionFont)
+                                .foregroundColor(AppColors.secondaryLabel)
+                            Text(frequency.displayText)
+                                .cardSecondaryText()
+                        }
                     }
                     
                     if let lastSeen = lastSeenText {
-                        Text(lastSeen).cardSecondaryText()
+                        HStack(spacing: 4) {
+                            Image(systemName: "hourglass")
+                                .font(AppTheme.captionFont)
+                                .foregroundColor(AppColors.secondaryLabel)
+                            Text(lastSeen)
+                                .cardSecondaryText()
+                        }
                     }
                 }
             }

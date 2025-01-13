@@ -72,7 +72,7 @@ struct KetchupsView: View {
                                 .padding(.horizontal)
                         }
                     } header: {
-                        Text("Upcoming Ketchups")
+                        Text("Upcoming")
                             .font(AppTheme.headlineFont)
                             .foregroundColor(AppColors.label)
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -112,7 +112,7 @@ struct KetchupsView: View {
                                 .padding(.horizontal)
                         }
                     } header: {
-                        Text("Completed Ketchups")
+                        Text("Completed")
                             .font(AppTheme.headlineFont)
                             .foregroundColor(AppColors.label)
                             .frame(maxWidth: .infinity, alignment: .leading)

@@ -37,7 +37,7 @@ struct HangoutCard: View {
                         VStack(alignment: .leading, spacing: 4) {
                             HStack {
                                 Text(hangout.activity)
-                                    .font(AppTheme.headlineFont)
+                                    .font(.subheadline)
                                     .foregroundColor(AppColors.label)
                                 Spacer()
                                 Text(statusText)
