@@ -6,11 +6,13 @@ struct FriendsListView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: [SortDescriptor(\Friend.name)]) private var friends: [Friend]
     @State private var selectedFriend: Friend?
+    @State private var showingAddFriend = false
     
     var body: some View {
         List {
             if friends.isEmpty {
-                emptyStateView
+                ContentUnavailableView("No Friends Added", systemImage: "person.2.badge.plus")
+                    .foregroundColor(AppColors.label)
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
             } else {
@@ -18,10 +20,6 @@ struct FriendsListView: View {
                     FriendListCard(friend: friend)
                         .friendCardStyle()
                         .onTapGesture {
-                            #if DEBUG
-                            debugLog("Tapped friend card: \(friend.name)")
-                            #endif
-                            selectedFriend = nil  // Reset first to ensure onChange triggers
                             selectedFriend = friend
                         }
                         .swipeActions(edge: .leading, allowsFullSwipe: true) {
@@ -38,21 +36,29 @@ struct FriendsListView: View {
         }
         .friendListStyle()
         .friendSheetPresenter(selectedFriend: $selectedFriend)
-        .onAppear {
-            #if DEBUG
-            debugLog("FriendsListView appeared with \(friends.count) friends")
-            #endif
+        .navigationTitle("Friends")
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button {
+                    showingAddFriend = true
+                } label: {
+                    Image(systemName: "plus")
+                        .font(AppTheme.headlineFont)
+                        .foregroundColor(AppColors.accent)
+                }
+            }
         }
-    }
-    
-    @ViewBuilder
-    private var emptyStateView: some View {
-        ContentUnavailableView("No Friends Added", systemImage: "person.2.badge.plus")
-            .foregroundColor(AppColors.label)
+        .sheet(isPresented: $showingAddFriend) {
+            NavigationStack {
+                ContactPickerView()
+            }
+        }
     }
 }
 
 #Preview {
-    FriendsListView()
-        .modelContainer(for: Friend.self)
+    NavigationStack {
+        FriendsListView()
+            .modelContainer(for: Friend.self)
+    }
 }

@@ -9,6 +9,7 @@ class FriendDetailViewModel {
     var showingScheduler = false
     var showingMessageSheet = false
     var showingCityPicker = false
+    var showingTagsManager = false
     var lastSeenDate = Date()
     var citySearchText = ""
     var selectedCity: String?
@@ -60,6 +61,38 @@ struct FriendDetailView: View {
                     viewModel.showingCityPicker = true
                 }
             )
+            
+            Section("Tags") {
+                if viewModel.friend.tags.isEmpty {
+                    Text("No tags added")
+                        .foregroundColor(AppColors.secondaryLabel)
+                } else {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(viewModel.friend.tags) { tag in
+                                Text("#\(tag.name)")
+                                    .font(AppTheme.captionFont)
+                                    .foregroundColor(AppColors.accent)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 8)
+                                            .fill(AppColors.accent.opacity(0.1))
+                                    )
+                            }
+                        }
+                        .padding(.vertical, 4)
+                    }
+                }
+                
+                Button {
+                    viewModel.showingTagsManager = true
+                } label: {
+                    Label("Manage Tags", systemImage: "tag")
+                        .foregroundColor(AppColors.accent)
+                }
+            }
+            .listRowBackground(AppColors.secondarySystemBackground)
             
             FriendActionSection(
                 friend: viewModel.friend,
@@ -147,6 +180,11 @@ struct FriendDetailView: View {
         }
         .sheet(isPresented: $viewModel.showingMessageSheet) {
             MessageComposeView(recipient: viewModel.friend.phoneNumber ?? "")
+        }
+        .sheet(isPresented: $viewModel.showingTagsManager) {
+            NavigationStack {
+                TagsManagementView(friend: viewModel.friend)
+            }
         }
         .background(AppColors.systemBackground)
     }

@@ -76,42 +76,17 @@ struct friendtrackerApp: App {
         UITabBar.appearance().tintColor = UIColor(AppColors.accent)
     }
     
-    var sharedModelContainer: ModelContainer = {
-        let isPreview = ProcessInfo.processInfo.isPreview
-        
+    let modelContainer: ModelContainer = {
+        let schema = Schema([
+            Friend.self,
+            Hangout.self,
+            Tag.self
+        ])
+        let modelConfiguration = ModelConfiguration(schema: schema)
+
         do {
-            #if DEBUG
-            print("Creating ModelContainer")
-            #endif
-            
-            let schema = Schema([
-                Friend.self,
-                Hangout.self
-            ])
-            
-            let config = ModelConfiguration(
-                schema: schema,
-                isStoredInMemoryOnly: isPreview
-            )
-            
-            #if DEBUG
-            print("Created configuration")
-            #endif
-            
-            let container = try ModelContainer(
-                for: schema,
-                configurations: config
-            )
-            
-            #if DEBUG
-            print("Created container successfully")
-            #endif
-            
-            return container
+            return try ModelContainer(for: schema, configurations: [modelConfiguration])
         } catch {
-            #if DEBUG
-            print("Failed to create container: \(error)")
-            #endif
             fatalError("Could not create ModelContainer: \(error)")
         }
     }()
@@ -120,7 +95,7 @@ struct friendtrackerApp: App {
         WindowGroup {
             ContentView()
         }
-        .modelContainer(sharedModelContainer)
+        .modelContainer(modelContainer)
     }
 }
 
