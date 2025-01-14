@@ -130,7 +130,8 @@ struct FriendHangoutsSection: View {
     
     var body: some View {
         if !hangouts.isEmpty {
-            Section(content: {
+            Section {
+                // Content
                 ForEach(hangouts) { hangout in
                     VStack(alignment: .leading, spacing: AppTheme.spacingTiny) {
                         Text(hangout.activity)
@@ -145,14 +146,79 @@ struct FriendHangoutsSection: View {
                     }
                     .padding(.vertical, AppTheme.spacingTiny)
                 }
-            }, header: {
+            } header: {
+                // Header
                 Text("Upcoming Hangouts")
                     .font(AppTheme.headlineFont)
                     .foregroundColor(AppColors.label)
                     .textCase(nil)
                     .padding(.bottom, 8)
-            })
+            }
             .listRowBackground(AppColors.secondarySystemBackground)
         }
     }
-} 
+}
+
+struct FriendTagsSection: View {
+    @Bindable var friend: Friend
+    let onManageTags: () -> Void
+    
+    private var tagsContent: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(friend.tags) { tag in
+                    TagView(tag: tag)
+                }
+            }
+            .padding(.horizontal, 4)
+        }
+    }
+    
+    private var manageTags: some View {
+        Button(action: onManageTags) {
+            Label("Manage Tags", systemImage: "tag")
+                .actionLabelStyle()
+        }
+    }
+    
+    var body: some View {
+        Section {
+            if friend.tags.isEmpty {
+                Text("No tags added")
+                    .foregroundColor(AppColors.secondaryLabel)
+            } else {
+                tagsContent
+            }
+            manageTags
+        } header: {
+            Text("Tags")
+                .font(AppTheme.headlineFont)
+                .foregroundColor(AppColors.label)
+                .textCase(nil)
+                .padding(.bottom, 8)
+        }
+        .listRowBackground(AppColors.secondarySystemBackground)
+    }
+}
+
+// Helper view for individual tags
+struct TagView: View {
+    let tag: Tag
+    
+    var body: some View {
+        HStack(spacing: 4) {
+            Text("#\(tag.name)")
+                .font(AppTheme.captionFont)
+                .foregroundColor(AppColors.label)
+            if tag.isPredefined {
+                Image(systemName: "checkmark.seal.fill")
+                    .font(AppTheme.captionFont)
+                    .foregroundColor(AppColors.accent)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(AppColors.systemBackground)  // Changed to systemBackground (F2F2F7)
+        .clipShape(Capsule())
+    }
+}

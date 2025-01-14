@@ -83,14 +83,31 @@ struct friendtrackerApp: App {
             Tag.self
         ])
         let modelConfiguration = ModelConfiguration(schema: schema)
-
+        
         do {
-            return try ModelContainer(for: schema, configurations: [modelConfiguration])
+            let container = try ModelContainer(for: schema, configurations: modelConfiguration)
+            
+            // Create predefined tags if they don't exist
+            let context = container.mainContext
+            let tagDescriptor = FetchDescriptor<Tag>(predicate: #Predicate<Tag> { tag in
+                tag.isPredefined == true
+            })
+            
+            if let existingTags = try? context.fetch(tagDescriptor), existingTags.isEmpty {
+                // Create predefined tags
+                Tag.predefinedTags.forEach { tagName in
+                    let tag = Tag.createPredefinedTag(tagName)
+                    context.insert(tag)
+                }
+                try? context.save()
+            }
+            
+            return container
         } catch {
             fatalError("Could not create ModelContainer: \(error)")
         }
     }()
-
+    
     var body: some Scene {
         WindowGroup {
             ContentView()

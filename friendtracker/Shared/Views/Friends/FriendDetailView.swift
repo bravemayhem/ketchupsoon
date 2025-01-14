@@ -62,37 +62,12 @@ struct FriendDetailView: View {
                 }
             )
             
-            Section("Tags") {
-                if viewModel.friend.tags.isEmpty {
-                    Text("No tags added")
-                        .foregroundColor(AppColors.secondaryLabel)
-                } else {
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 8) {
-                            ForEach(viewModel.friend.tags) { tag in
-                                Text("#\(tag.name)")
-                                    .font(AppTheme.captionFont)
-                                    .foregroundColor(AppColors.accent)
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 4)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 8)
-                                            .fill(AppColors.accent.opacity(0.1))
-                                    )
-                            }
-                        }
-                        .padding(.vertical, 4)
-                    }
-                }
-                
-                Button {
+            FriendTagsSection(
+                friend: viewModel.friend,
+                onManageTags: {
                     viewModel.showingTagsManager = true
-                } label: {
-                    Label("Manage Tags", systemImage: "tag")
-                        .foregroundColor(AppColors.accent)
                 }
-            }
-            .listRowBackground(AppColors.secondarySystemBackground)
+            )
             
             FriendActionSection(
                 friend: viewModel.friend,

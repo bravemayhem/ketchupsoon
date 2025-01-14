@@ -5,7 +5,7 @@ struct TagsManagementView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     @Bindable var friend: Friend
-    @Query(sort: [SortDescriptor(\Tag.name)]) private var allTags: [Tag]
+    @Query(sort: [SortDescriptor<Tag>(\.name)]) private var allTags: [Tag]
     @State private var newTagName = ""
     
     var body: some View {

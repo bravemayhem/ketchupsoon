@@ -17,7 +17,7 @@ final class Friend: Identifiable {
     var calendarIntegrationEnabled: Bool
     @Attribute(.externalStorage) var calendarVisibilityPreference: CalendarVisibilityPreference
     @Relationship(deleteRule: .cascade) var hangouts: [Hangout]
-    @Relationship var tags: [Tag]
+    @Relationship(deleteRule: .nullify) var tags: [Tag]
     // Cache for frequently accessed computed properties
     @Transient private var _lastSeenTextCache: (Date, String)?
         // Lazy loading for hangouts
@@ -31,8 +31,7 @@ final class Friend: Identifiable {
          needsToConnectFlag: Bool = false,
          phoneNumber: String? = nil,
          photoData: Data? = nil,
-         catchUpFrequency: CatchUpFrequency? = nil, 
-         tags: [Tag] = []) {
+         catchUpFrequency: CatchUpFrequency? = nil) {
         self.id = UUID()
         self.name = name
         self.lastSeen = lastSeen

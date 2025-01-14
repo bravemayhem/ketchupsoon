@@ -1,3 +1,10 @@
+//
+//  Tag.swift
+//  friendtracker
+//
+//  Created by Amineh Beltran on 1/13/25.
+//
+
 import Foundation
 import SwiftData
 
@@ -30,3 +37,5 @@ extension Tag {
         Tag(name: name, isPredefined: true)
     }
 }
+
+
