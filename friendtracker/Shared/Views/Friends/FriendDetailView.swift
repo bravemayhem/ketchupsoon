@@ -158,7 +158,7 @@ struct FriendDetailView: View {
         }
         .sheet(isPresented: $viewModel.showingTagsManager) {
             NavigationStack {
-                TagsManagementView(friend: viewModel.friend)
+                TagsSelectionView(friend: viewModel.friend)
             }
         }
         .background(AppColors.systemBackground)

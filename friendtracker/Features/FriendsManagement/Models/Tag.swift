@@ -26,7 +26,8 @@ final class Tag: Identifiable {
 // MARK: - Predefined Tags
 extension Tag {
     static let predefinedTags = [
-        "closefriends",
+        "local",
+        "longdistance",
         "work",
         "family",
         "school",

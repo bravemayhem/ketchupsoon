@@ -174,5 +174,5 @@ struct ImportOptionsView: View {
 
 #Preview {
     ContentView()
-        .modelContainer(for: [Friend.self, Hangout.self], inMemory: true)
-} 
+        .modelContainer(for: [Friend.self, Hangout.self, Tag.self], inMemory: true)
+}

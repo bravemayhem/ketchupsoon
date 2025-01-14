@@ -5,21 +5,65 @@
 //  Created by Amineh Beltran on 12/11/24.
 //
 
+//
+//  friendtrackerApp.swift
+//  friendtracker
+//
+//  Created by Amineh Beltran on 12/11/24.
+//
+
 import SwiftUI
 import SwiftData
 
 @main
 struct friendtrackerApp: App {
+    let modelContainer: ModelContainer
+    
     init() {
-        // Debug: Print all available fonts
-        #if DEBUG
-        for family in UIFont.familyNames.sorted() {
-            print("Family: \(family)")
-            for name in UIFont.fontNames(forFamilyName: family) {
-                print("   Font: \(name)")
+        // Initialize ModelContainer
+        do {
+            // Define the schema
+            let schema = Schema([
+                Friend.self,
+                Hangout.self,
+                Tag.self
+            ])
+            
+            // Create configuration
+            let modelConfiguration = ModelConfiguration(
+                schema: schema,
+                isStoredInMemoryOnly: ProcessInfo.processInfo.isPreview,
+                allowsSave: true
+            )
+            
+            // Create container
+            let container = try ModelContainer(
+                for: schema,
+                configurations: [modelConfiguration]
+            )
+            
+            // Initialize predefined tags if needed
+            if ProcessInfo.processInfo.isPreview == false {
+                Task { @MainActor in
+                    let context = container.mainContext
+                    let tagDescriptor = FetchDescriptor<Tag>(predicate: #Predicate<Tag> { tag in
+                        tag.isPredefined == true
+                    })
+                    
+                    if let existingTags = try? context.fetch(tagDescriptor), existingTags.isEmpty {
+                        Tag.predefinedTags.forEach { tagName in
+                            let tag = Tag.createPredefinedTag(tagName)
+                            context.insert(tag)
+                        }
+                        try? context.save()
+                    }
+                }
             }
+            
+            self.modelContainer = container
+        } catch {
+            fatalError("Could not initialize ModelContainer: \(error)")
         }
-        #endif
         
         configureAppearance()
     }
@@ -38,15 +82,6 @@ struct friendtrackerApp: App {
         let titleTextAttributes: [NSAttributedString.Key: Any] = [
             .foregroundColor: UIColor(AppColors.label),
             .font: UIFont(name: "Cabin-Bold", size: 20) ?? {
-                #if DEBUG
-                print("Available fonts:")
-                for family in UIFont.familyNames.sorted() {
-                    print("\(family):")
-                    for name in UIFont.fontNames(forFamilyName: family) {
-                        print("   \(name)")
-                    }
-                }
-                #endif
                 return .systemFont(ofSize: 20, weight: .bold)
             }()
         ]
@@ -75,38 +110,6 @@ struct friendtrackerApp: App {
         UITabBar.appearance().unselectedItemTintColor = UIColor(AppColors.secondaryLabel)
         UITabBar.appearance().tintColor = UIColor(AppColors.accent)
     }
-    
-    let modelContainer: ModelContainer = {
-        let schema = Schema([
-            Friend.self,
-            Hangout.self,
-            Tag.self
-        ])
-        let modelConfiguration = ModelConfiguration(schema: schema)
-        
-        do {
-            let container = try ModelContainer(for: schema, configurations: modelConfiguration)
-            
-            // Create predefined tags if they don't exist
-            let context = container.mainContext
-            let tagDescriptor = FetchDescriptor<Tag>(predicate: #Predicate<Tag> { tag in
-                tag.isPredefined == true
-            })
-            
-            if let existingTags = try? context.fetch(tagDescriptor), existingTags.isEmpty {
-                // Create predefined tags
-                Tag.predefinedTags.forEach { tagName in
-                    let tag = Tag.createPredefinedTag(tagName)
-                    context.insert(tag)
-                }
-                try? context.save()
-            }
-            
-            return container
-        } catch {
-            fatalError("Could not create ModelContainer: \(error)")
-        }
-    }()
     
     var body: some Scene {
         WindowGroup {
