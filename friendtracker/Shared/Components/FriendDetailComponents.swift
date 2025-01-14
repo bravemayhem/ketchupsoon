@@ -210,11 +210,6 @@ struct TagView: View {
             Text("#\(tag.name)")
                 .font(AppTheme.captionFont)
                 .foregroundColor(AppColors.label)
-            if tag.isPredefined {
-                Image(systemName: "checkmark.seal.fill")
-                    .font(AppTheme.captionFont)
-                    .foregroundColor(AppColors.accent)
-            }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 6)

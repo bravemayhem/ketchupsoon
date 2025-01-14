@@ -20,10 +20,6 @@ struct TagsManagementView: View {
                             Text("#\(tag.name)")
                                 .foregroundColor(AppColors.label)
                             Spacer()
-                            if tag.isPredefined {
-                                Image(systemName: "checkmark.seal.fill")
-                                    .foregroundColor(AppColors.accent)
-                            }
                         }
                     }
                     .onDelete { indexSet in
@@ -66,10 +62,6 @@ struct TagsManagementView: View {
                                 Text("#\(tag.name)")
                                     .foregroundColor(AppColors.label)
                                 Spacer()
-                                if tag.isPredefined {
-                                    Image(systemName: "checkmark.seal.fill")
-                                        .foregroundColor(AppColors.accent)
-                                }
                             }
                         }
                     }
