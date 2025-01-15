@@ -9,69 +9,40 @@ struct TagsSelectionView: View {
     @State private var showingAddTagSheet = false
     
     var body: some View {
-        VStack(spacing: 16) {
-            // Predefined Tags Grid
-            ScrollView {
-                LazyVGrid(columns: [
-                    GridItem(.adaptive(minimum: 100, maximum: 200), spacing: 12)
-                ], spacing: 12) {
-                    ForEach(allTags.filter(\.isPredefined)) { tag in
-                        TagCapsuleView(
-                            tag: tag,
-                            isSelected: friend.tags.contains(tag),
-                            onTap: { toggleTag(tag) }
-                        )
+        Form {
+            Section("TAGS") {
+                VStack(alignment: .leading) {
+                    FlowLayout(spacing: 8) {
+                        // Regular tag capsules
+                        ForEach(allTags) { tag in
+                            SelectableTagView(
+                                name: tag.name,
+                                isSelected: friend.tags.contains(tag)
+                            ) {
+                                toggleTag(tag)
+                            }
+                        }
                     }
                     
-                    // Add New Tag Button
+                    // Create Tag button
                     Button(action: { showingAddTagSheet = true }) {
                         HStack {
                             Image(systemName: "plus.circle.fill")
                             Text("Create Tag")
+                                .font(.body)
                         }
                         .padding(.horizontal, 12)
                         .padding(.vertical, 6)
-                        .background(AppColors.secondarySystemBackground)
                         .foregroundColor(AppColors.label)
+                        .background(AppColors.systemBackground)
                         .clipShape(Capsule())
                     }
                 }
-                .padding()
-                
-                // Custom Tags List
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Custom Tags")
-                        .font(AppTheme.headlineFont)
-                        .padding(.horizontal)
-                    
-                    List {
-                        ForEach(allTags.filter { !$0.isPredefined }) { tag in
-                            HStack {
-                                Text("#\(tag.name)")
-                                    .font(AppTheme.bodyFont)
-                                Spacer()
-                                if friend.tags.contains(tag) {
-                                    Image(systemName: "checkmark")
-                                        .foregroundColor(AppColors.accent)
-                                }
-                            }
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                toggleTag(tag)
-                            }
-                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                                Button(role: .destructive) {
-                                    deleteTag(tag)
-                                } label: {
-                                    Label("Delete", systemImage: "trash")
-                                }
-                            }
-                        }
-                    }
-                    .listStyle(.plain)
-                }
+                .padding(.vertical, 8)
             }
         }
+        .scrollContentBackground(.hidden)
+        .background(AppColors.systemBackground)
         .navigationTitle("Manage Tags")
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showingAddTagSheet) {
@@ -87,23 +58,18 @@ struct TagsSelectionView: View {
         }
         try? modelContext.save()
     }
-    
-    private func deleteTag(_ tag: Tag) {
-        friend.tags.removeAll { $0.id == tag.id }
-        modelContext.delete(tag)
-        try? modelContext.save()
-    }
 }
 
-private struct TagCapsuleView: View {
-    let tag: Tag
+struct SelectableTagView: View {
+    let name: String
     let isSelected: Bool
-    let onTap: () -> Void
+    let action: () -> Void
     
     var body: some View {
-        Button(action: onTap) {
+        Button(action: action) {
             HStack {
-                Text("#\(tag.name)")
+                Text("#\(name)")
+                    .font(.body)
                 if isSelected {
                     Image(systemName: "checkmark")
                         .font(.caption)
@@ -111,9 +77,64 @@ private struct TagCapsuleView: View {
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
-            .background(isSelected ? AppColors.accent : AppColors.secondarySystemBackground)
+            .background(
+                Capsule()
+                    .fill(isSelected ? AppColors.accent : AppColors.systemBackground)
+            )
             .foregroundColor(isSelected ? .white : AppColors.label)
-            .clipShape(Capsule())
+        }
+    }
+}
+
+struct FlowLayout: Layout {
+    var spacing: CGFloat = 8
+    
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let width = proposal.width ?? 0
+        
+        var height: CGFloat = 0
+        var x: CGFloat = 0
+        var y: CGFloat = 0
+        var maxHeight: CGFloat = 0
+        
+        for view in subviews {
+            let size = view.sizeThatFits(.unspecified)
+            
+            if x + size.width > width {
+                x = 0
+                y += maxHeight + spacing
+                maxHeight = 0
+            }
+            
+            x += size.width + spacing
+            maxHeight = max(maxHeight, size.height)
+            height = y + maxHeight
+        }
+        
+        return CGSize(width: width, height: height)
+    }
+    
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        var x = bounds.minX
+        var y = bounds.minY
+        var maxHeight: CGFloat = 0
+        
+        for view in subviews {
+            let size = view.sizeThatFits(.unspecified)
+            
+            if x + size.width > bounds.maxX {
+                x = bounds.minX
+                y += maxHeight + spacing
+                maxHeight = 0
+            }
+            
+            view.place(
+                at: CGPoint(x: x, y: y),
+                proposal: ProposedViewSize(size)
+            )
+            
+            x += size.width + spacing
+            maxHeight = max(maxHeight, size.height)
         }
     }
 }
@@ -130,7 +151,10 @@ private struct AddTagSheet: View {
                 TextField("Tag name", text: $tagName)
                     .autocapitalization(.none)
                     .autocorrectionDisabled()
+                    .font(.body)
             }
+            .scrollContentBackground(.hidden)
+            .background(AppColors.systemBackground)
             .navigationTitle("Create Tag")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
