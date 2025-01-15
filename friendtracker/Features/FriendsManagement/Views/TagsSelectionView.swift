@@ -11,67 +11,16 @@ struct TagsSelectionView: View {
     @State private var selectedTagsToDelete: Set<Tag.ID> = []
     
     var body: some View {
-        Form {
-            Section("TAGS") {
-                VStack(alignment: .leading, spacing: 12) {
-                    FlowLayout(spacing: 8) {
-                        ForEach(allTags) { tag in
-                            let isSelected = friend.tags.contains(where: { $0.id == tag.id })
-                            TagButton(
-                                tag: tag,
-                                isSelected: isSelected,
-                                isEditMode: isEditMode,
-                                isMarkedForDeletion: selectedTagsToDelete.contains(tag.id),
-                                onSelect: { 
-                                    if isEditMode {
-                                        toggleTagDeletion(tag)
-                                    } else {
-                                        handleTagSelection(tag)
-                                    }
-                                }
-                            )
-                        }
-                    }
-                    
-                    if !isEditMode {
-                        CreateTagButton(action: {
-                            showingAddTagSheet = true
-                        })
-                    }
-                }
-                .padding(.vertical, 8)
-            }
-        }
-        .scrollContentBackground(.hidden)
-        .background(AppColors.systemBackground)
-        .navigationTitle("Manage Tags")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                if !allTags.isEmpty {
-                    Button(isEditMode ? "Done" : "Edit") {
-                        isEditMode.toggle()
-                        if !isEditMode {
-                            selectedTagsToDelete.removeAll()
-                        }
-                    }
-                }
-            }
-            
-            ToolbarItem(placement: .bottomBar) {
-                if isEditMode && !selectedTagsToDelete.isEmpty {
-                    Button(role: .destructive) {
-                        deleteTags()
-                    } label: {
-                        Text("Delete Selected (\(selectedTagsToDelete.count))")
-                            .foregroundColor(.red)
-                    }
-                }
-            }
-        }
-        .sheet(isPresented: $showingAddTagSheet) {
-            AddTagSheet(friend: friend)
-        }
+        TagsContentView(
+            friend: friend,
+            allTags: allTags,
+            isEditMode: $isEditMode,
+            showingAddTagSheet: $showingAddTagSheet,
+            selectedTagsToDelete: $selectedTagsToDelete,
+            onTagSelection: handleTagSelection,
+            onTagDeletion: toggleTagDeletion,
+            onDeleteSelected: deleteTags
+        )
     }
     
     private func toggleTagDeletion(_ tag: Tag) {
@@ -92,10 +41,8 @@ struct TagsSelectionView: View {
     }
     
     private func deleteTags() {
-        // Get all tags marked for deletion
         let tagsToDelete = allTags.filter { selectedTagsToDelete.contains($0.id) }
         
-        // Remove tags from all friends that have them
         for tag in tagsToDelete {
             for friend in tag.friends {
                 friend.tags.removeAll(where: { $0.id == tag.id })
@@ -109,7 +56,107 @@ struct TagsSelectionView: View {
     }
 }
 
-private struct TagButton: View {
+struct TagsContentView: View { // Removed 'private'
+    let friend: Friend
+    let allTags: [Tag]
+    @Binding var isEditMode: Bool
+    @Binding var showingAddTagSheet: Bool
+    @Binding var selectedTagsToDelete: Set<Tag.ID>
+    let onTagSelection: (Tag) -> Void
+    let onTagDeletion: (Tag) -> Void
+    let onDeleteSelected: () -> Void
+    
+    var body: some View {
+        Form {
+            Section("TAGS") {
+                TagsSection(
+                    friend: friend,
+                    allTags: allTags,
+                    isEditMode: isEditMode,
+                    showingAddTagSheet: $showingAddTagSheet,
+                    selectedTagsToDelete: selectedTagsToDelete,
+                    onTagSelection: onTagSelection,
+                    onTagDeletion: onTagDeletion
+                )
+            }
+        }
+        .scrollContentBackground(.hidden)
+        .background(AppColors.systemBackground)
+        .navigationTitle("Manage Tags")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) { // Corrected placement
+                if !allTags.isEmpty {
+                    Button(isEditMode ? "Done" : "Edit") {
+                        withAnimation {
+                            isEditMode.toggle()
+                            if !isEditMode {
+                                selectedTagsToDelete.removeAll()
+                            }
+                        }
+                    }
+                }
+            }
+            ToolbarItem(placement: .bottomBar) {
+                if isEditMode && !selectedTagsToDelete.isEmpty {
+                    Button(role: .destructive) {
+                        onDeleteSelected()
+                    } label: {
+                        Text("Delete Selected (\(selectedTagsToDelete.count))")
+                            .foregroundColor(.red)
+                            .padding()
+                    }
+                }
+            }
+        }
+        .sheet(isPresented: $showingAddTagSheet) {
+            AddTagSheet(friend: friend)
+        }
+    }
+}
+
+struct TagsSection: View { // Removed 'private'
+    let friend: Friend
+    let allTags: [Tag]
+    let isEditMode: Bool
+    @Binding var showingAddTagSheet: Bool
+    let selectedTagsToDelete: Set<Tag.ID>
+    let onTagSelection: (Tag) -> Void
+    let onTagDeletion: (Tag) -> Void
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            FlowLayout(spacing: 8) {
+                ForEach(allTags) { tag in
+                    let isSelected = friend.tags.contains(where: { $0.id == tag.id })
+                    TagButton(
+                        tag: tag,
+                        isSelected: isSelected,
+                        isEditMode: isEditMode,
+                        isMarkedForDeletion: selectedTagsToDelete.contains(tag.id),
+                        onSelect: {
+                            if isEditMode {
+                                onTagDeletion(tag)
+                            } else {
+                                onTagSelection(tag)
+                            }
+                        }
+                    )
+                }
+            }
+            .background(Color.yellow.opacity(0.2))
+            
+            if !isEditMode {
+                CreateTagButton(action: {
+                    showingAddTagSheet = true
+                })
+            }
+        }
+        .padding(.vertical, 8)
+    }
+}
+
+struct TagButton: View { // Removed 'private'
     let tag: Tag
     let isSelected: Bool
     let isEditMode: Bool
@@ -144,7 +191,7 @@ private struct TagButton: View {
     }
 }
 
-private struct CreateTagButton: View {
+struct CreateTagButton: View { // Removed 'private'
     let action: () -> Void
     
     var body: some View {
@@ -163,7 +210,7 @@ private struct CreateTagButton: View {
     }
 }
 
-private struct AddTagSheet: View {
+struct AddTagSheet: View { // Removed 'private'
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     @Bindable var friend: Friend
@@ -273,30 +320,32 @@ struct FlowLayout: Layout {
     }
 }
 
-#Preview {
-    let config = ModelConfiguration(isStoredInMemoryOnly: true)
-    let container = try! ModelContainer(for: Friend.self, Tag.self, configurations: config)
-    
-    // Create test friend
-    let friend = Friend(name: "Test Friend")
-    
-    let context = container.mainContext
-    context.insert(friend)
-    
-    // Create and insert predefined tags
-    for tagName in Tag.predefinedTags {
-        let tag = Tag.createPredefinedTag(tagName)
-        context.insert(tag)
+struct TagsSelectionView_Previews: PreviewProvider { // Changed #Preview to TagsSelectionView_Previews
+    static var previews: some View {
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        let container = try! ModelContainer(for: Friend.self, Tag.self, configurations: config)
+        
+        // Create test friend
+        let friend = Friend(name: "Test Friend")
+        
+        let context = container.mainContext
+        context.insert(friend)
+        
+        // Create and insert predefined tags
+        for tagName in Tag.predefinedTags {
+            let tag = Tag.createPredefinedTag(tagName)
+            context.insert(tag)
+        }
+        
+        // Create and insert some custom tags
+        for tagName in ["book club", "coffee", "hiking"] {
+            let tag = Tag(name: tagName)
+            context.insert(tag)
+        }
+        
+        return NavigationStack {
+            TagsSelectionView(friend: friend)
+        }
+        .modelContainer(container)
     }
-    
-    // Create and insert some custom tags
-    for tagName in ["book club", "coffee", "hiking"] {
-        let tag = Tag(name: tagName)
-        context.insert(tag)
-    }
-    
-    return NavigationStack {
-        TagsSelectionView(friend: friend)
-    }
-    .modelContainer(container)
 }
