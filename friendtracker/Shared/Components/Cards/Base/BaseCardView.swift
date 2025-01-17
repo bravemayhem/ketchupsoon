@@ -24,16 +24,7 @@ struct BaseCardView<Content: View>: View {
         content
             .frame(maxWidth: .infinity)
             .padding(padding)
-            .background(
-                RoundedRectangle(cornerRadius: AppTheme.cornerRadiusLarge)
-                    .fill(AppColors.secondarySystemBackground)
-                    .shadow(
-                        color: AppTheme.shadowSmall.color,
-                        radius: AppTheme.shadowSmall.radius,
-                        x: AppTheme.shadowSmall.x,
-                        y: AppTheme.shadowSmall.y
-                    )
-            )
+            .cardBackground()
     }
 }
 
@@ -54,7 +45,7 @@ struct BaseCardView<Content: View>: View {
                     Text("Complex Card")
                         .font(AppTheme.headlineFont)
                     Text("With multiple elements")
-                        .font(AppTheme.captionFont)
+                        .cardSecondaryText()
                 }
             }
         }

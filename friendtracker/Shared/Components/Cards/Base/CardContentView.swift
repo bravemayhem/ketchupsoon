@@ -42,16 +42,6 @@ struct CardContentView<SecondaryContent: View>: View {
     }
 }
 
-// Convenience extension for common text styling
-extension Text {
-    func cardSecondaryText() -> some View {
-        self
-            .font(AppTheme.captionFont)
-            .foregroundColor(AppColors.secondaryLabel)
-            .lineLimit(1)
-    }
-}
-
 #Preview {
     VStack(spacing: 20) {
         // Basic usage
