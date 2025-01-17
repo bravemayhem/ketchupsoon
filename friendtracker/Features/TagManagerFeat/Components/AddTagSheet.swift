@@ -15,7 +15,7 @@ enum TagError: LocalizedError {
 struct AddTagSheet: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
-    @Bindable var friend: Friend
+    let friend: Friend?
     @State private var tagName = ""
     @State private var error: TagError?
     @State private var showingError = false
@@ -78,7 +78,14 @@ struct AddTagSheet: View {
                 return
             }
             
-            _ = try Tag.createTag(name: normalizedName, friend: friend, context: modelContext)
+            let tag = Tag(name: normalizedName, isPredefined: false)
+            modelContext.insert(tag)
+            
+            // If we have a friend, associate the tag with them
+            if let friend = friend {
+                friend.tags.append(tag)
+            }
+            
             dismiss()
         } catch {
             print("Error creating tag: \(error)")

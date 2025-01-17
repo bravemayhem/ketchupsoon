@@ -1,9 +1,14 @@
 // FriendSheetPresenter: Handles all sheet presentations and state management -  STATE and LOGIC
 // This is a modifier that allows us to present different sheets for a friend
-// It is used in the FriendsListView and FriendDetailView
+// It is used in the FriendsListView and FriendExistingView
 
 import SwiftUI
 import SwiftData
+import MessageUI
+
+// FriendSheetPresenter: Handles all sheet presentations and state management -  STATE and LOGIC
+// This is a modifier that allows us to present different sheets for a friend
+// It is used in the FriendsListView and FriendExistingView
 
 struct FriendSheetPresenter: ViewModifier {
     @Binding var selectedFriend: Friend?
@@ -20,9 +25,9 @@ struct FriendSheetPresenter: ViewModifier {
             }) {
                 if let friend = selectedFriend {
                     NavigationStack {
-                        FriendDetailView(
+                        FriendExistingView(
                             friend: friend,
-                            presentationMode: .sheet($showingFriendSheet)
+                            presentationStyle: .sheet($showingFriendSheet)
                         )
                     }
                 }
