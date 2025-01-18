@@ -21,4 +21,10 @@ struct CreateTagButton: View {
             .contentShape(Capsule())
         }
     }
+}
+
+#Preview {
+    CreateTagButton(action: {})
+        .padding()
+        .background(AppColors.secondarySystemBackground)
 } 

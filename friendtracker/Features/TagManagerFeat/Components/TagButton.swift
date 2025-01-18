@@ -37,4 +37,49 @@ struct TagButton: View {
         }
         .buttonStyle(PlainButtonStyle())
     }
+}
+
+#Preview("TagButton States") {
+    VStack(alignment: .leading, spacing: 20) {
+        Group {
+            // Normal state
+            TagButton(
+                tag: Tag(name: "hiking"),
+                isSelected: false,
+                isEditMode: false,
+                isMarkedForDeletion: false,
+                onSelect: {}
+            )
+            
+            // Selected state
+            TagButton(
+                tag: Tag(name: "book club"),
+                isSelected: true,
+                isEditMode: false,
+                isMarkedForDeletion: false,
+                onSelect: {}
+            )
+            
+            // Edit mode
+            TagButton(
+                tag: Tag(name: "coffee"),
+                isSelected: false,
+                isEditMode: true,
+                isMarkedForDeletion: false,
+                onSelect: {}
+            )
+            
+            // Marked for deletion
+            TagButton(
+                tag: Tag(name: "movies"),
+                isSelected: false,
+                isEditMode: true,
+                isMarkedForDeletion: true,
+                onSelect: {}
+            )
+        }
+    }
+    .padding()
+    .background(AppColors.secondarySystemBackground)
+    .modelContainer(for: Tag.self)
 } 

@@ -73,4 +73,62 @@ struct FlowLayout: Layout {
             maxHeight = max(maxHeight, size.height)
         }
     }
+}
+
+struct FlowLayoutView<Content: View>: View {
+    let spacing: CGFloat
+    let content: () -> Content
+    
+    init(spacing: CGFloat = 8, @ViewBuilder content: @escaping () -> Content) {
+        self.spacing = spacing
+        self.content = content
+    }
+    
+    var body: some View {
+        FlowLayout(spacing: spacing) {
+            content()
+        }
+        .padding()
+        .background(Color.gray.opacity(0.1))
+        .cornerRadius(8)
+    }
+}
+
+#Preview("Simple Tags") {
+    FlowLayoutView {
+        ForEach(["SwiftUI", "iOS", "Swift", "Xcode"], id: \.self) { tag in
+            Text("#\(tag)")
+                .font(.caption)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(Color.blue.opacity(0.1))
+                .foregroundColor(.blue)
+                .clipShape(Capsule())
+        }
+    }
+}
+
+#Preview("Numbered Items") {
+    FlowLayoutView(spacing: 16) {
+        ForEach(1...6, id: \.self) { number in
+            Text("Item \(number)")
+                .padding(8)
+                .background(Color.green.opacity(0.1))
+                .foregroundColor(.green)
+                .cornerRadius(8)
+        }
+    }
+}
+
+#Preview("Emoji Items") {
+    FlowLayoutView(spacing: 12) {
+        ForEach(["🎨", "📱", "💻", "🎮"], id: \.self) { emoji in
+            Text(emoji)
+                .font(.title2)
+                .padding(8)
+                .background(Color.orange.opacity(0.1))
+                .foregroundColor(.orange)
+                .cornerRadius(8)
+        }
+    }
 } 

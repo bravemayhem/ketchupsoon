@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 
 struct TagsContentView: View {
     let friend: Friend
@@ -67,4 +68,71 @@ struct TagsContentView: View {
             AddTagSheet(friend: friend)
         }
     }
+}
+
+struct TagsPreviewContainer: View {
+    let friend: Friend
+    let tags: [Tag]
+    let isEditMode: Bool
+    let selectedTagsToDelete: Set<Tag.ID>
+    let container: ModelContainer
+    
+    init(isEditMode: Bool = false) {
+        let schema = Schema([Friend.self, Tag.self, Hangout.self])
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        let container = try! ModelContainer(for: schema, configurations: config)
+        let context = container.mainContext
+        
+        // Create sample friend
+        let friend = Friend(
+            name: "Emma Thompson",
+            lastSeen: Date(),
+            location: "San Francisco"
+        )
+        
+        // Create sample tags
+        let tags = [
+            Tag(name: "college"),
+            Tag(name: "book club"),
+            Tag(name: "hiking"),
+            Tag(name: "coffee buddy")
+        ]
+        
+        // Add some tags to friend
+        friend.tags = [tags[0], tags[2]]  // college and hiking
+        
+        // Insert into context
+        context.insert(friend)
+        tags.forEach { context.insert($0) }
+        
+        self.friend = friend
+        self.tags = tags
+        self.isEditMode = isEditMode
+        self.selectedTagsToDelete = isEditMode ? [tags[0].id] : []
+        self.container = container
+    }
+    
+    var body: some View {
+        NavigationStack {
+            TagsContentView(
+                friend: friend,
+                allTags: tags,
+                isEditMode: .constant(isEditMode),
+                showingAddTagSheet: .constant(false),
+                selectedTagsToDelete: .constant(selectedTagsToDelete),
+                onTagSelection: { _ in },
+                onTagDeletion: { _ in },
+                onDeleteSelected: {}
+            )
+        }
+        .modelContainer(container)
+    }
+}
+
+#Preview("TagsContentView - Normal Mode") {
+    TagsPreviewContainer(isEditMode: false)
+}
+
+#Preview("TagsContentView - Edit Mode") {
+    TagsPreviewContainer(isEditMode: true)
 } 

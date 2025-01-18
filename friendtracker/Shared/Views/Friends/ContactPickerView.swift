@@ -117,4 +117,89 @@ struct ContactPickerView: View {
         }
         isLoading = false
     }
+}
+
+struct ContactPickerPreviewContainer: View {
+    enum PreviewState {
+        case loading
+        case empty
+        case withContacts
+    }
+    
+    let state: PreviewState
+    
+    var body: some View {
+        let schema = Schema([Friend.self, Tag.self, Hangout.self])
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        let container = try! ModelContainer(for: schema, configurations: config)
+        
+        ContactPickerView()
+            .modelContainer(container)
+            .onAppear {
+                // Mock the contacts manager for preview
+                if state == .withContacts {
+                    let mockContacts = [
+                        createMockContact(
+                            givenName: "Emma",
+                            familyName: "Thompson",
+                            phoneNumber: "(415) 555-0123",
+                            city: "San Francisco"
+                        ),
+                        createMockContact(
+                            givenName: "James",
+                            familyName: "Wilson",
+                            phoneNumber: "(555) 123-4567",
+                            city: "Oakland"
+                        ),
+                        createMockContact(
+                            givenName: "Sarah",
+                            familyName: "Chen",
+                            phoneNumber: "(650) 555-0199",
+                            city: "Mountain View"
+                        ),
+                        createMockContact(
+                            givenName: "Alex",
+                            familyName: "Rodriguez",
+                            phoneNumber: "(510) 555-0145",
+                            city: "Berkeley"
+                        )
+                    ]
+                    ContactsManager.shared.previewContacts = mockContacts
+                }
+            }
+    }
+    
+    private func createMockContact(
+        givenName: String,
+        familyName: String,
+        phoneNumber: String,
+        city: String
+    ) -> CNContact {
+        let contact = CNMutableContact()
+        contact.givenName = givenName
+        contact.familyName = familyName
+        
+        // Add phone number
+        let phoneNumberValue = CNPhoneNumber(stringValue: phoneNumber)
+        contact.phoneNumbers = [CNLabeledValue(label: CNLabelHome, value: phoneNumberValue)]
+        
+        // Add address
+        let address = CNMutablePostalAddress()
+        address.city = city
+        contact.postalAddresses = [CNLabeledValue(label: CNLabelHome, value: address)]
+        
+        return contact.copy() as! CNContact
+    }
+}
+
+#Preview("Loading State") {
+    ContactPickerPreviewContainer(state: .loading)
+}
+
+#Preview("Empty State") {
+    ContactPickerPreviewContainer(state: .empty)
+}
+
+#Preview("With Contacts") {
+    ContactPickerPreviewContainer(state: .withContacts)
 } 

@@ -217,3 +217,130 @@ struct TagView: View {
         .clipShape(Capsule())
     }
 }
+
+#Preview("FriendInfoSection") {
+    NavigationStack {
+        List {
+            FriendInfoSection(
+                friend: Friend(
+                    name: "Emma Thompson",
+                    lastSeen: Calendar.current.date(byAdding: .day, value: -5, to: Date())!,
+                    location: "San Francisco",
+                    phoneNumber: "(415) 555-0123",
+                    catchUpFrequency: .monthly
+                ),
+                onLastSeenTap: {},
+                onCityTap: {}
+            )
+        }
+        .listStyle(.insetGrouped)
+    }
+    .modelContainer(for: [Friend.self, Tag.self, Hangout.self])
+}
+
+#Preview("FriendActionSection") {
+    NavigationStack {
+        List {
+            FriendActionSection(
+                friend: Friend(
+                    name: "John Doe",
+                    lastSeen: Date(),
+                    location: "New York",
+                    needsToConnectFlag: true,
+                    phoneNumber: "(212) 555-0123",
+                    catchUpFrequency: .weekly
+                ),
+                onMessageTap: {},
+                onScheduleTap: {},
+                onMarkSeenTap: {}
+            )
+        }
+        .listStyle(.insetGrouped)
+    }
+    .modelContainer(for: [Friend.self, Tag.self, Hangout.self])
+}
+
+#Preview("FriendHangoutsSection - With Hangouts") {
+    let schema = Schema([Friend.self, Tag.self, Hangout.self])
+    let config = ModelConfiguration(isStoredInMemoryOnly: true)
+    let container = try! ModelContainer(for: schema, configurations: config)
+    let context = container.mainContext
+    
+    let friend = Friend(
+        name: "Alice Smith",
+        lastSeen: Date(),
+        location: "Local",
+        phoneNumber: "(555) 123-4567"
+    )
+    context.insert(friend)
+    
+    let hangouts = [
+        Hangout(
+            date: Calendar.current.date(byAdding: .day, value: 2, to: Date())!,
+            activity: "Coffee",
+            location: "Starbucks",
+            isScheduled: true,
+            friend: friend
+        ),
+        Hangout(
+            date: Calendar.current.date(byAdding: .day, value: 7, to: Date())!,
+            activity: "Lunch",
+            location: "Italian Restaurant",
+            isScheduled: true,
+            friend: friend
+        )
+    ]
+    hangouts.forEach { context.insert($0) }
+    
+    return NavigationStack {
+        List {
+            FriendHangoutsSection(hangouts: hangouts)
+        }
+        .listStyle(.insetGrouped)
+    }
+    .modelContainer(container)
+}
+
+#Preview("FriendTagsSection") {
+    let schema = Schema([Friend.self, Tag.self, Hangout.self])
+    let config = ModelConfiguration(isStoredInMemoryOnly: true)
+    let container = try! ModelContainer(for: schema, configurations: config)
+    let context = container.mainContext
+    
+    let friend = Friend(
+        name: "Bob Wilson",
+        lastSeen: Date(),
+        location: "Remote"
+    )
+    
+    let tags = [
+        Tag(name: "college"),
+        Tag(name: "book club"),
+        Tag(name: "hiking")
+    ]
+    tags.forEach { context.insert($0) }
+    friend.tags = tags
+    context.insert(friend)
+    
+    return NavigationStack {
+        List {
+            FriendTagsSection(
+                friend: friend,
+                onManageTags: {}
+            )
+        }
+        .listStyle(.insetGrouped)
+    }
+    .modelContainer(container)
+}
+
+#Preview("TagView") {
+    HStack {
+        TagView(tag: Tag(name: "college"))
+        TagView(tag: Tag(name: "book club"))
+        TagView(tag: Tag(name: "hiking"))
+    }
+    .padding()
+    .background(AppColors.secondarySystemBackground)
+    .modelContainer(for: [Tag.self])
+}
