@@ -8,6 +8,7 @@ struct FriendOnboardingView: View {
     @State private var viewModel: FriendDetail.OnboardingViewModel
     @State private var showingTagsSheet = false
     @Query(sort: [SortDescriptor<Tag>(\.name)]) private var allTags: [Tag]
+    @State private var temporaryFriend: Friend?
     
     init(contact: (name: String, identifier: String?, phoneNumber: String?, imageData: Data?, city: String?)) {
         let input = FriendDetail.NewFriendInput(
@@ -20,69 +21,61 @@ struct FriendOnboardingView: View {
         self._viewModel = State(initialValue: FriendDetail.OnboardingViewModel(input: input))
     }
     
+    private func handleCancel() {
+        // Clean up temporary friend if it exists
+        if let friend = temporaryFriend {
+            modelContext.delete(friend)
+        }
+        dismiss()
+    }
+    
+    private func handleAdd() {
+        // If we have a temporary friend, update it instead of creating a new one
+        if let existingFriend = temporaryFriend {
+            viewModel.updateFriend(existingFriend)
+        } else {
+            viewModel.addFriend(to: modelContext)
+        }
+        dismiss()
+    }
+    
+    private func createTemporaryFriend() {
+        if temporaryFriend == nil {
+            let newFriend = Friend(
+                name: viewModel.isFromContacts ? viewModel.input!.name : viewModel.friendName,
+                location: viewModel.selectedCity
+            )
+            modelContext.insert(newFriend)
+            temporaryFriend = newFriend
+        }
+    }
+    
     var body: some View {
         NavigationStack {
             Form {
-                // Basic Info
-                Section("Friend Details") {
-                    if !viewModel.isFromContacts {
-                        TextField("Name", text: $viewModel.friendName)
-                        TextField("Phone Number (Optional)", text: $viewModel.phoneNumber)
-                    } else {
-                        HStack {
-                            Text("Name")
-                            Spacer()
-                            Text(viewModel.input?.name ?? "")
-                                .foregroundColor(AppColors.secondaryLabel)
-                        }
-                        
-                        if let phone = viewModel.input?.phoneNumber {
-                            HStack {
-                                Text("Phone")
-                                Spacer()
-                                Text(phone)
-                                    .foregroundColor(AppColors.secondaryLabel)
-                            }
-                        }
+                if temporaryFriend == nil {
+                    Color.clear.onAppear {
+                        createTemporaryFriend()
                     }
+                }
+                
+                if let friend = temporaryFriend {
+                    FriendInfoSection(
+                        friend: friend,
+                        onLastSeenTap: {},
+                        onCityTap: {}
+                    )
                     
-                    CitySearchField(
-                        searchText: $viewModel.citySearchText,
-                        selectedCity: $viewModel.selectedCity
+                    FriendTagsSection(
+                        friend: friend,
+                        onManageTags: { showingTagsSheet = true }
                     )
                 }
                 
-                // Tags
-                Section("Tags") {
-                    Button(action: { showingTagsSheet = true }) {
-                        HStack {
-                            Text(viewModel.selectedTags.isEmpty ? "Add Tags" : "Manage Tags")
-                            Spacer()
-                            if !viewModel.selectedTags.isEmpty {
-                                Text("\(viewModel.selectedTags.count) selected")
-                                    .foregroundColor(AppColors.secondaryLabel)
-                            }
-                        }
-                    }
-                    
-                    if !viewModel.selectedTags.isEmpty {
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 8) {
-                                ForEach(Array(viewModel.selectedTags)) { tag in
-                                    TagView(tag: tag)
-                                }
-                            }
-                            .padding(.horizontal, 4)
-                        }
-                    }
-                }
-                
-                // Connect Soon
                 Section("Connect Soon") {
                     Toggle("Want to connect soon?", isOn: $viewModel.wantToConnectSoon)
                 }
                 
-                // Catch Up Frequency
                 Section("Catch Up Frequency") {
                     Toggle("Set catch up goal?", isOn: $viewModel.hasCatchUpFrequency)
                     
@@ -95,7 +88,6 @@ struct FriendOnboardingView: View {
                     }
                 }
                 
-                // Last Seen
                 Section("Last Seen") {
                     Toggle("Add last seen date?", isOn: $viewModel.hasLastSeen)
                     
@@ -112,111 +104,34 @@ struct FriendOnboardingView: View {
             .navigationTitle("Add Friend Details")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel", action: handleCancel)
                 }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Add") {
-                        viewModel.addFriend(to: modelContext)
-                        dismiss()
-                    }
-                    .disabled(!viewModel.isFromContacts && viewModel.friendName.isEmpty)
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Add", action: handleAdd)
+                        .disabled(!viewModel.isFromContacts && viewModel.friendName.isEmpty)
                 }
             }
             .sheet(isPresented: $showingTagsSheet) {
-                NavigationStack {
-                    TagSelectionSheet(selectedTags: $viewModel.selectedTags, allTags: allTags)
+                if let friend = temporaryFriend {
+                    TagsSelectionView(friend: friend)
                 }
             }
         }
     }
 }
 
-struct TagSelectionSheet: View {
-    @Environment(\.dismiss) private var dismiss
-    @Binding var selectedTags: Set<Tag>
-    let allTags: [Tag]
-    @State private var showingAddTagSheet = false
-    
-    var body: some View {
-        List {
-            ForEach(allTags) { tag in
-                Button {
-                    if selectedTags.contains(tag) {
-                        selectedTags.remove(tag)
-                    } else {
-                        selectedTags.insert(tag)
-                    }
-                } label: {
-                    HStack {
-                        Text("#\(tag.name)")
-                            .foregroundColor(AppColors.label)
-                        Spacer()
-                        if selectedTags.contains(tag) {
-                            Image(systemName: "checkmark")
-                                .foregroundColor(AppColors.accent)
-                        }
-                    }
-                }
-            }
-        }
-        .navigationTitle("Select Tags")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .cancellationAction) {
-                Button("Cancel") {
-                    dismiss()
-                }
-            }
-            ToolbarItem(placement: .confirmationAction) {
-                Button("Done") {
-                    dismiss()
-                }
-            }
-            ToolbarItem(placement: .bottomBar) {
-                Button {
-                    showingAddTagSheet = true
-                } label: {
-                    Label("Add Tag", systemImage: "plus.circle.fill")
-                }
-            }
-        }
-        .sheet(isPresented: $showingAddTagSheet) {
-            AddTagSheet(friend: nil)
-        }
-    }
-}
-
-#Preview {
+#Preview("Friend Onboarding") {
     NavigationStack {
-        // From Contacts Preview
         FriendOnboardingView(
             contact: (
-                name: "Aleah Smith",
-                identifier: "123",
-                phoneNumber: "(512) 348-4182",
-                imageData: nil,
-                city: "Austin"
-            )
-        )
-    }
-    .modelContainer(for: [Friend.self, Tag.self], inMemory: true)
-}
-
-#Preview("Manual Entry") {
-    NavigationStack {
-        // Manual Entry Preview
-        FriendOnboardingView(
-            contact: (
-                name: "",
+                name: "John Doe",
                 identifier: nil,
-                phoneNumber: nil,
+                phoneNumber: "(555) 123-4567",
                 imageData: nil,
-                city: nil
+                city: "San Francisco"
             )
         )
     }
     .modelContainer(for: [Friend.self, Tag.self], inMemory: true)
-} 
+}
