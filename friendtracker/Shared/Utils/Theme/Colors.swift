@@ -100,3 +100,89 @@ extension Color {
         )
     }
 } 
+
+#Preview("Colors") {
+    ScrollView {
+        VStack(alignment: .leading, spacing: 20) {
+            Group {
+                Text("Brand Colors")
+                    .font(.headline)
+                HStack {
+                    colorPreview(AppColors.accent, "Accent")
+                    colorPreview(AppColors.accentLight, "Accent Light")
+                }
+            }
+            
+            Group {
+                Text("Background Colors")
+                    .font(.headline)
+                HStack {
+                    colorPreview(AppColors.systemBackground, "System")
+                    colorPreview(AppColors.secondarySystemBackground, "Secondary")
+                }
+            }
+            
+            Group {
+                Text("Text Colors")
+                    .font(.headline)
+                HStack {
+                    colorPreview(AppColors.label, "Label")
+                    colorPreview(AppColors.secondaryLabel, "Secondary")
+                    colorPreview(AppColors.tertiaryLabel, "Tertiary")
+                }
+            }
+            
+            Group {
+                Text("Semantic Colors")
+                    .font(.headline)
+                HStack {
+                    colorPreview(AppColors.success, "Success")
+                    colorPreview(AppColors.warning, "Warning")
+                    colorPreview(AppColors.error, "Error")
+                }
+            }
+            
+            Group {
+                Text("Gradients")
+                    .font(.headline)
+                VStack {
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(AppColors.backgroundGradient)
+                        .frame(height: 60)
+                        .overlay(Text("Background").foregroundColor(.black))
+                    
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(AppColors.accentGradient)
+                        .frame(height: 60)
+                        .overlay(Text("Accent").foregroundColor(.white))
+                }
+            }
+            
+            Group {
+                Text("Avatar Colors")
+                    .font(.headline)
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack {
+                        ForEach(AppColors.avatarColors, id: \.self) { color in
+                            Circle()
+                                .fill(color)
+                                .frame(width: 40, height: 40)
+                        }
+                    }
+                }
+            }
+        }
+        .padding()
+    }
+    .background(Color(.systemBackground))
+}
+
+private func colorPreview(_ color: Color, _ name: String) -> some View {
+    VStack {
+        RoundedRectangle(cornerRadius: 8)
+            .fill(color)
+            .frame(width: 60, height: 60)
+        Text(name)
+            .font(.caption)
+    }
+} 

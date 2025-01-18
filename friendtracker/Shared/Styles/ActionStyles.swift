@@ -29,4 +29,37 @@ extension Label {
     func actionLabelStyle() -> some View {
         self.labelStyle(ActionLabelStyle())
     }
+}
+
+#Preview("Action Styles") {
+    VStack(alignment: .leading, spacing: AppTheme.spacingLarge) {
+        VStack(alignment: .leading, spacing: AppTheme.spacingMedium) {
+            Text("Action Buttons")
+                .font(AppTheme.headlineFont)
+            
+            Button("Action Button") {}
+                .actionButtonStyle()
+            
+            Button(action: {}) {
+                Image(systemName: "star.fill")
+            }
+            .actionButtonStyle()
+        }
+        
+        VStack(alignment: .leading, spacing: AppTheme.spacingMedium) {
+            Text("Action Labels")
+                .font(AppTheme.headlineFont)
+            
+            Label("Star Item", systemImage: "star.fill")
+                .actionLabelStyle()
+            
+            Label("Add to Calendar", systemImage: "calendar.badge.plus")
+                .actionLabelStyle()
+            
+            Label("Share", systemImage: "square.and.arrow.up")
+                .actionLabelStyle()
+        }
+    }
+    .padding()
+    .background(AppColors.systemBackground)
 } 

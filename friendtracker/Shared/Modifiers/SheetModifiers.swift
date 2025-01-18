@@ -67,3 +67,75 @@ extension View {
         }
     }
 } 
+
+struct SheetModifierPreview: View {
+    @State private var showDatePicker = false
+    @State private var showCityPicker = false
+    @State private var selectedDate = Date()
+    @State private var searchText = ""
+    @State private var selectedCity: String?
+    
+    var body: some View {
+        VStack(spacing: AppTheme.spacingLarge) {
+            VStack(alignment: .leading, spacing: AppTheme.spacingMedium) {
+                Text("Date Picker Sheet")
+                    .font(AppTheme.headlineFont)
+                
+                VStack(alignment: .leading, spacing: AppTheme.spacingSmall) {
+                    Text("Selected Date:")
+                        .font(AppTheme.bodyFont)
+                    Text(selectedDate.formatted(date: .long, time: .omitted))
+                        .cardSecondaryText()
+                }
+                .padding()
+                .cardBackground()
+                
+                Button("Show Date Picker") {
+                    showDatePicker = true
+                }
+                .cardButton(style: .primary)
+            }
+            
+            VStack(alignment: .leading, spacing: AppTheme.spacingMedium) {
+                Text("City Picker Sheet")
+                    .font(AppTheme.headlineFont)
+                
+                VStack(alignment: .leading, spacing: AppTheme.spacingSmall) {
+                    Text("Selected City:")
+                        .font(AppTheme.bodyFont)
+                    Text(selectedCity ?? "No city selected")
+                        .cardSecondaryText()
+                }
+                .padding()
+                .cardBackground()
+                
+                Button("Show City Picker") {
+                    showCityPicker = true
+                }
+                .cardButton(style: .primary)
+            }
+        }
+        .padding()
+        .datePickerSheet(
+            isPresented: $showDatePicker,
+            date: $selectedDate
+        ) { newDate in
+            selectedDate = newDate
+        }
+        .cityPickerSheet(
+            isPresented: $showCityPicker,
+            searchText: $searchText,
+            selectedCity: $selectedCity
+        ) {
+            // Handle city save
+        }
+    }
+}
+
+#Preview("Sheet Modifiers") {
+    NavigationStack {
+        SheetModifierPreview()
+            .navigationTitle("Sheet Modifiers")
+    }
+    .background(AppColors.systemBackground)
+} 
