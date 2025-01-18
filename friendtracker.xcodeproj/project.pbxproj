@@ -33,7 +33,6 @@
 		F4070A282D0A183C00B11C0B /* friendtracker.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = friendtracker.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F4070A382D0A184000B11C0B /* friendtrackerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = friendtrackerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		F4070A422D0A184000B11C0B /* friendtrackerUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = friendtrackerUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		F4F9E5492D3B465100E4840E /* MyPlayground.playground */ = {isa = PBXFileReference; lastKnownFileType = file.playground; path = MyPlayground.playground; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.swift; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -103,7 +102,6 @@
 		F4070A1F2D0A183C00B11C0B = {
 			isa = PBXGroup;
 			children = (
-				F4F9E5492D3B465100E4840E /* MyPlayground.playground */,
 				F4070A2A2D0A183C00B11C0B /* friendtracker */,
 				F4070A3B2D0A184000B11C0B /* friendtrackerTests */,
 				F4070A452D0A184000B11C0B /* friendtrackerUITests */,

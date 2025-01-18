@@ -7,7 +7,7 @@ struct FriendInfoSection: View {
     let onCityTap: () -> Void
     
     var body: some View {
-        Section(content: {
+        Section("Friend Details") {
             // Last Seen
             HStack {
                 Text("Last Seen")
@@ -41,36 +41,7 @@ struct FriendInfoSection: View {
                     }
                 }
             }
-            .foregroundColor(.primary)
-            
-            if let phoneNumber = friend.phoneNumber {
-                HStack {
-                    Text("Phone")
-                        .foregroundColor(AppColors.label)
-                    Spacer()
-                    Text(phoneNumber)
-                        .foregroundColor(AppColors.secondaryLabel)
-                }
-            }
-            
-            HStack {
-                Text("Catch-up Frequency")
-                    .foregroundColor(AppColors.label)
-                Spacer()
-                if let frequency = friend.catchUpFrequency {
-                    HStack(spacing: 4) {
-                        Image(systemName: "arrow.triangle.2.circlepath")
-                            .font(AppTheme.captionFont)
-                            .foregroundColor(AppColors.secondaryLabel)
-                        Text(frequency.displayText)
-                            .foregroundColor(AppColors.secondaryLabel)
-                    }
-                } else {
-                    Text("Not set")
-                        .foregroundColor(AppColors.secondaryLabel)
-                }
-            }
-        })
+        }
         .listRowBackground(AppColors.secondarySystemBackground)
     }
 }
@@ -83,7 +54,7 @@ struct FriendActionSection: View {
     let onMarkSeenTap: () -> Void
     
     var body: some View {
-        Section(content: {
+        Section("Actions") {
             if !(friend.phoneNumber?.isEmpty ?? true) {
                 Button(action: onMessageTap) {
                     Label("Send Message", systemImage: "message.fill")
@@ -114,13 +85,7 @@ struct FriendActionSection: View {
                         .tint(AppColors.accent)
                 }
             }
-        }, header: {
-            Text("Actions")
-                .font(AppTheme.headlineFont)
-                .foregroundColor(AppColors.label)
-                .textCase(nil)
-                .padding(.bottom, 8)
-        })
+        }
         .listRowBackground(AppColors.secondarySystemBackground)
     }
 }
@@ -130,8 +95,7 @@ struct FriendHangoutsSection: View {
     
     var body: some View {
         if !hangouts.isEmpty {
-            Section {
-                // Content
+            Section("Upcoming Hangouts") {
                 ForEach(hangouts) { hangout in
                     VStack(alignment: .leading, spacing: AppTheme.spacingTiny) {
                         Text(hangout.activity)
@@ -146,13 +110,6 @@ struct FriendHangoutsSection: View {
                     }
                     .padding(.vertical, AppTheme.spacingTiny)
                 }
-            } header: {
-                // Header
-                Text("Upcoming Hangouts")
-                    .font(AppTheme.headlineFont)
-                    .foregroundColor(AppColors.label)
-                    .textCase(nil)
-                    .padding(.bottom, 8)
             }
             .listRowBackground(AppColors.secondarySystemBackground)
         }
@@ -182,7 +139,7 @@ struct FriendTagsSection: View {
     }
     
     var body: some View {
-        Section {
+        Section("Tags") {
             if friend.tags.isEmpty {
                 Text("No tags added")
                     .foregroundColor(AppColors.secondaryLabel)
@@ -190,12 +147,6 @@ struct FriendTagsSection: View {
                 tagsContent
             }
             manageTags
-        } header: {
-            Text("Tags")
-                .font(AppTheme.headlineFont)
-                .foregroundColor(AppColors.label)
-                .textCase(nil)
-                .padding(.bottom, 8)
         }
         .listRowBackground(AppColors.secondarySystemBackground)
     }

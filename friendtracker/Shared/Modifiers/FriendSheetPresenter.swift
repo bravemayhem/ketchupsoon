@@ -102,8 +102,85 @@ struct FriendSheetPresenter: ViewModifier {
     }
 }
 
+private struct FriendSheetPresenterKey: EnvironmentKey {
+    static let defaultValue: FriendSheetPresenter? = nil
+}
+
+extension EnvironmentValues {
+    var friendSheetPresenter: FriendSheetPresenter? {
+        get { self[FriendSheetPresenterKey.self] }
+        set { self[FriendSheetPresenterKey.self] = newValue }
+    }
+}
+
 extension View {
     func friendSheetPresenter(selectedFriend: Binding<Friend?>) -> some View {
-        modifier(FriendSheetPresenter(selectedFriend: selectedFriend))
+        let presenter = FriendSheetPresenter(selectedFriend: selectedFriend)
+        return modifier(presenter)
+            .environment(\.friendSheetPresenter, presenter)
+    }
+}
+
+struct FriendSheetPresenterPreview: View {
+    @State private var selectedFriend: Friend?
+    @Environment(\.friendSheetPresenter) private var presenter
+    
+    // Sample friend for preview
+    private let previewFriend = Friend(
+        name: "John Doe",
+        phoneNumber: "123-456-7890"
+    )
+    
+    var body: some View {
+        VStack(spacing: AppTheme.spacingLarge) {
+            Text("Friend Sheet Presenter")
+                .font(AppTheme.titleFont)
+            
+            VStack(alignment: .leading, spacing: AppTheme.spacingMedium) {
+                Text("Direct Actions")
+                    .font(AppTheme.headlineFont)
+                
+                VStack(spacing: AppTheme.spacingSmall) {
+                    Button("Show Friend Details") {
+                        presenter?.showFriendDetails(for: previewFriend)
+                    }
+                    .cardButton(style: .primary)
+                    
+                    Button("Show Scheduler") {
+                        presenter?.showScheduler(for: previewFriend)
+                    }
+                    .cardButton(style: .primary)
+                    
+                    Button("Show Message Composer") {
+                        presenter?.showMessage(for: previewFriend)
+                    }
+                    .cardButton(style: .primary)
+                    
+                    Button("Show Frequency Picker") {
+                        presenter?.showFrequencyPicker(for: previewFriend)
+                    }
+                    .cardButton(style: .primary)
+                }
+            }
+            
+            VStack(alignment: .leading, spacing: AppTheme.spacingMedium) {
+                Text("Action Sheet")
+                    .font(AppTheme.headlineFont)
+                
+                Button("Show Action Sheet") {
+                    presenter?.showActionSheet(for: previewFriend)
+                }
+                .cardButton(style: .primary)
+            }
+        }
+        .padding()
+        .background(AppColors.systemBackground)
+        .friendSheetPresenter(selectedFriend: $selectedFriend)
+    }
+}
+
+#Preview("Friend Sheet Presenter") {
+    NavigationStack {
+        FriendSheetPresenterPreview()
     }
 } 
