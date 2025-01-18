@@ -5,9 +5,28 @@ import SwiftData
 /// This component provides a consistent layout and styling for friend-related forms
 /// across the app.
 ///
-/// Used by:
-/// - FriendExistingView: For viewing and editing existing friends
-/// - FriendOnboardingView: For adding new friends
+/// # Overview
+/// The form adapts its content based on whether it's being used for existing friends
+/// or onboarding new friends:
+///
+/// For existing friends (`FriendExistingView`):
+/// - Shows friend details (last seen, city)
+/// - Displays and manages tags
+/// - Provides action buttons (message, schedule, mark as seen)
+/// - Lists upcoming hangouts
+///
+/// For new friends (`FriendOnboardingView`):
+/// - Collects basic information
+/// - Allows setting initial preferences through toggles:
+///   - Connect Soon preference
+///   - Catch Up Frequency
+///   - Last Seen date
+///
+/// # Usage
+/// The form should be used differently depending on the context:
+/// - For existing friends, use it with action callbacks
+/// - For new friends, use it with toggle bindings
+///
 struct FriendDetailForm: View {
     @Bindable var friend: Friend
     let onLastSeenTap: () -> Void
@@ -46,6 +65,8 @@ struct FriendDetailForm: View {
         .background(AppColors.systemBackground)
     }
 }
+
+// MARK: - Previews
 
 struct FriendDetailPreviewContainer: View {
     enum PreviewType {

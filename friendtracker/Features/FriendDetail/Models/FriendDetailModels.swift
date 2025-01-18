@@ -73,6 +73,18 @@ enum FriendDetail {
             
             modelContext.insert(friend)
         }
+        
+        func updateFriend(_ friend: Friend) {
+            friend.name = isFromContacts ? input!.name : friendName
+            friend.lastSeen = hasLastSeen ? lastSeenDate : nil
+            friend.location = selectedCity
+            friend.contactIdentifier = input?.identifier
+            friend.needsToConnectFlag = wantToConnectSoon
+            friend.phoneNumber = isFromContacts ? input?.phoneNumber : (phoneNumber.isEmpty ? nil : phoneNumber)
+            friend.photoData = input?.imageData
+            friend.catchUpFrequency = hasCatchUpFrequency ? selectedFrequency : nil
+            friend.tags = Array(selectedTags)
+        }
     }
     
     @Observable
