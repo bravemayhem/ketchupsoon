@@ -43,34 +43,19 @@ struct FriendOnboardingView: View {
                 )
                 .listRowBackground(AppColors.secondarySystemBackground)
                 
-                Section("Connect Soon") {
-                    Toggle("Want to connect soon?", isOn: $viewModel.wantToConnectSoon)
-                }
+                FriendConnectSection(
+                                    wantToConnectSoon: $viewModel.wantToConnectSoon
+                                )
                 
-                Section("Catch Up Frequency") {
-                    Toggle("Set catch up goal?", isOn: $viewModel.hasCatchUpFrequency)
-                    
-                    if viewModel.hasCatchUpFrequency {
-                        Picker("Frequency", selection: $viewModel.selectedFrequency) {
-                            ForEach(CatchUpFrequency.allCases, id: \.self) { frequency in
-                                Text(frequency.displayText).tag(frequency)
-                            }
-                        }
-                    }
-                }
+                FriendCatchUpSection(
+                                    hasCatchUpFrequency: $viewModel.hasCatchUpFrequency,
+                                    selectedFrequency: $viewModel.selectedFrequency
+                                )
                 
-                Section("Last Seen") {
-                    Toggle("Add last seen date?", isOn: $viewModel.hasLastSeen)
-                    
-                    if viewModel.hasLastSeen {
-                        DatePicker(
-                            "Last Seen Date",
-                            selection: $viewModel.lastSeenDate,
-                            in: ...Date(),
-                            displayedComponents: [.date]
-                        )
-                    }
-                }
+                FriendLastSeenSection(
+                                    hasLastSeen: $viewModel.hasLastSeen,
+                                    lastSeenDate: $viewModel.lastSeenDate
+                                )
             }
             .navigationTitle("Add Friend Details")
             .navigationBarTitleDisplayMode(.inline)

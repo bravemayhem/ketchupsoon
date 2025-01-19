@@ -1,6 +1,8 @@
 import SwiftUI
 import SwiftData
 
+// MARK: - CURRENTLY USED FOR NEW FRIENDS
+//USED FOR IMPORTING NEW CONTACTS NAMES FROM THE CONTACT LIST OR MANUALLY FOR THE FIRST TIME
 struct FriendNameSection: View {
     let isFromContacts: Bool
     let contactName: String?
@@ -25,6 +27,63 @@ struct FriendNameSection: View {
     }
 }
 
+//USED FOR SETTING UP ADDING SOMEONE TO THE "WISH LIST" FOR THE FIRST TIME
+struct FriendConnectSection: View {
+    @Binding var wantToConnectSoon: Bool
+    
+    var body: some View {
+        Section("Connect Soon") {
+            Toggle("Want to connect soon?", isOn: $wantToConnectSoon)
+        }
+        .listRowBackground(AppColors.secondarySystemBackground)
+    }
+}
+
+//USED FOR SETTING UP CATCH UP FREQUENCY FOR THE FIRST TIME
+struct FriendCatchUpSection: View {
+    @Binding var hasCatchUpFrequency: Bool
+    @Binding var selectedFrequency: CatchUpFrequency
+    
+    var body: some View {
+        Section("Catch Up Frequency") {
+            Toggle("Set catch up goal?", isOn: $hasCatchUpFrequency)
+            
+            if hasCatchUpFrequency {
+                Picker("Frequency", selection: $selectedFrequency) {
+                    ForEach(CatchUpFrequency.allCases, id: \.self) { frequency in
+                        Text(frequency.displayText).tag(frequency)
+                    }
+                }
+            }
+        }
+        .listRowBackground(AppColors.secondarySystemBackground)
+    }
+}
+
+//USED FOR SETTING UP LAST SEEN DATE FOR THE FIRST TIME
+struct FriendLastSeenSection: View {
+    @Binding var hasLastSeen: Bool
+    @Binding var lastSeenDate: Date
+    
+    var body: some View {
+        Section("Last Seen") {
+            Toggle("Add last seen date?", isOn: $hasLastSeen)
+            
+            if hasLastSeen {
+                DatePicker(
+                    "Last Seen Date",
+                    selection: $lastSeenDate,
+                    in: ...Date(),
+                    displayedComponents: [.date]
+                )
+            }
+        }
+        .listRowBackground(AppColors.secondarySystemBackground)
+    }
+}
+
+
+// MARK: - CURRENTLY USED FOR EXISTING FRIENDS
 struct FriendInfoSection: View {
     let friend: Friend
     let onLastSeenTap: () -> Void
@@ -140,6 +199,7 @@ struct FriendHangoutsSection: View {
     }
 }
 
+// MARK: - USED FOR BOTH EXISTING AND NEW FRIENDS
 struct FriendTagsSection: View {
     private var displayTags: [Tag]  // Store the tags directly
     let onManageTags: () -> Void
@@ -205,6 +265,8 @@ struct TagView: View {
     }
 }
 
+
+// MARK: - PREVIEW SECTION
 #Preview("FriendInfoSection") {
     NavigationStack {
         List {
