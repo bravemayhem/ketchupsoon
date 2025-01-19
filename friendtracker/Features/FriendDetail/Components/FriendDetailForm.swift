@@ -44,6 +44,7 @@ struct FriendDetailForm: View {
                 onCityTap: onCityTap
             )
             
+            // Use new initializer that takes a Set<Tag>
             FriendTagsSection(
                 friend: friend,
                 onManageTags: onManageTags

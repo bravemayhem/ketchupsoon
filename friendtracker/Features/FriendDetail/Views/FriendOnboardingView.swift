@@ -1,14 +1,12 @@
 import SwiftUI
 import SwiftData
 
-/// View for adding new friends to the app, either manually or from contacts.
 struct FriendOnboardingView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     @State private var viewModel: FriendDetail.OnboardingViewModel
     @State private var showingTagsSheet = false
     @Query(sort: [SortDescriptor<Tag>(\.name)]) private var allTags: [Tag]
-    @State private var temporaryFriend: Friend?
     
     init(contact: (name: String, identifier: String?, phoneNumber: String?, imageData: Data?, city: String?)) {
         let input = FriendDetail.NewFriendInput(
@@ -22,55 +20,28 @@ struct FriendOnboardingView: View {
     }
     
     private func handleCancel() {
-        // Clean up temporary friend if it exists
-        if let friend = temporaryFriend {
-            modelContext.delete(friend)
-        }
         dismiss()
     }
     
     private func handleAdd() {
-        // If we have a temporary friend, update it instead of creating a new one
-        if let existingFriend = temporaryFriend {
-            viewModel.updateFriend(existingFriend)
-        } else {
-            viewModel.addFriend(to: modelContext)
-        }
+        viewModel.createFriend(in: modelContext)
         dismiss()
-    }
-    
-    private func createTemporaryFriend() {
-        if temporaryFriend == nil {
-            let newFriend = Friend(
-                name: viewModel.isFromContacts ? viewModel.input!.name : viewModel.friendName,
-                location: viewModel.selectedCity
-            )
-            modelContext.insert(newFriend)
-            temporaryFriend = newFriend
-        }
     }
     
     var body: some View {
         NavigationStack {
             Form {
-                if temporaryFriend == nil {
-                    Color.clear.onAppear {
-                        createTemporaryFriend()
-                    }
-                }
+                FriendNameSection(
+                    isFromContacts: viewModel.isFromContacts,
+                    contactName: viewModel.input?.name,
+                    manualName: $viewModel.friendName
+                )
                 
-                if let friend = temporaryFriend {
-                    FriendInfoSection(
-                        friend: friend,
-                        onLastSeenTap: {},
-                        onCityTap: {}
-                    )
-                    
-                    FriendTagsSection(
-                        friend: friend,
-                        onManageTags: { showingTagsSheet = true }
-                    )
-                }
+                FriendTagsSection(
+                    tags: viewModel.selectedTags,
+                    onManageTags: { showingTagsSheet = true }
+                )
+                .listRowBackground(AppColors.secondarySystemBackground)
                 
                 Section("Connect Soon") {
                     Toggle("Want to connect soon?", isOn: $viewModel.wantToConnectSoon)
@@ -113,9 +84,7 @@ struct FriendOnboardingView: View {
                 }
             }
             .sheet(isPresented: $showingTagsSheet) {
-                if let friend = temporaryFriend {
-                    TagsSelectionView(friend: friend)
-                }
+                TagsSelectionView(selectedTags: $viewModel.selectedTags)
             }
         }
     }

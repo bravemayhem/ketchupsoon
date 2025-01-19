@@ -1,6 +1,30 @@
 import SwiftUI
 import SwiftData
 
+struct FriendNameSection: View {
+    let isFromContacts: Bool
+    let contactName: String?
+    @Binding var manualName: String
+    
+    var body: some View {
+        Section("Name") {
+            if isFromContacts {
+                HStack {
+                    Text("Name")
+                        .foregroundColor(AppColors.label)
+                    Spacer()
+                    Text(contactName ?? "")
+                        .foregroundColor(AppColors.secondaryLabel)
+                }
+            } else {
+                TextField("Name", text: $manualName)
+                    .foregroundColor(AppColors.label)
+            }
+        }
+        .listRowBackground(AppColors.secondarySystemBackground)
+    }
+}
+
 struct FriendInfoSection: View {
     let friend: Friend
     let onLastSeenTap: () -> Void
@@ -45,7 +69,6 @@ struct FriendInfoSection: View {
         .listRowBackground(AppColors.secondarySystemBackground)
     }
 }
-            
 
 struct FriendActionSection: View {
     @Bindable var friend: Friend
@@ -90,6 +113,7 @@ struct FriendActionSection: View {
     }
 }
 
+
 struct FriendHangoutsSection: View {
     let hangouts: [Hangout]
     
@@ -117,13 +141,25 @@ struct FriendHangoutsSection: View {
 }
 
 struct FriendTagsSection: View {
-    @Bindable var friend: Friend
+    private var displayTags: [Tag]  // Store the tags directly
     let onManageTags: () -> Void
+    
+    // Init for existing friends
+    init(friend: Friend, onManageTags: @escaping () -> Void) {
+        self.displayTags = friend.tags
+        self.onManageTags = onManageTags
+    }
+    
+    // Init for new friends (onboarding)
+    init(tags: Set<Tag>, onManageTags: @escaping () -> Void) {
+        self.displayTags = Array(tags)
+        self.onManageTags = onManageTags
+    }
     
     private var tagsContent: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
-                ForEach(friend.tags) { tag in
+                ForEach(displayTags) { tag in
                     TagView(tag: tag)
                 }
             }
@@ -140,7 +176,7 @@ struct FriendTagsSection: View {
     
     var body: some View {
         Section("Tags") {
-            if friend.tags.isEmpty {
+            if displayTags.isEmpty {
                 Text("No tags added")
                     .foregroundColor(AppColors.secondaryLabel)
             } else {

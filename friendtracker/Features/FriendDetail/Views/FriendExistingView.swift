@@ -8,20 +8,7 @@ import MessageUI
 /// This view serves as the primary interface for managing an existing friend's information.
 /// It can be presented either through navigation or as a modal sheet, and provides
 /// full editing capabilities for all friend properties.
-///
-/// # Features
-/// - Friend information editing
-/// - Last seen date updates
-/// - City selection
-/// - Tag management
-/// - Hangout scheduling
-/// - Message sending
-///
-/// # Dependencies
-/// - FriendDetailForm: Shared form component for friend information
-/// - TagsSelectionView: Tag management
-/// - SchedulerView: Hangout scheduling
-/// - CitySearchField: Location updates
+
 
 struct FriendExistingView: View {
     @Environment(\.modelContext) private var modelContext
@@ -93,9 +80,9 @@ struct FriendExistingView: View {
     NavigationStack {
         FriendExistingView(
             friend: Friend(
-                name: "Preview Friend",
+                name: "Aleah Goldstein",
                 lastSeen: Date(),
-                location: "Local",
+                location: "Los Angeles, CA",
                 phoneNumber: "+1234567890"
             ),
             presentationStyle: .navigation
