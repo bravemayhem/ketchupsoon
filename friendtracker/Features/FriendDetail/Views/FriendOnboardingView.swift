@@ -44,7 +44,7 @@ struct FriendOnboardingView: View {
                 .listRowBackground(AppColors.secondarySystemBackground)
                 
                 FriendConnectSection(
-                                    wantToConnectSoon: $viewModel.wantToConnectSoon
+                    wantToConnectSoon: $viewModel.wantToConnectSoon
                                 )
                 
                 FriendCatchUpSection(
