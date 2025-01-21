@@ -96,6 +96,7 @@ struct FriendLastSeenSection: View {
 
 
 // MARK: - CURRENTLY USED FOR EXISTING FRIENDS
+
 struct FriendInfoSection: View {
     let friend: Friend
     let onLastSeenTap: () -> Void
@@ -103,6 +104,15 @@ struct FriendInfoSection: View {
     
     var body: some View {
         Section("Friend Details") {
+            // Name
+            HStack {
+                Text("Name")
+                    .foregroundColor(AppColors.label)
+                Spacer()
+                Text(friend.name)
+                    .foregroundColor(AppColors.secondaryLabel)
+            }
+            
             // Last Seen
             HStack {
                 Text("Last Seen")

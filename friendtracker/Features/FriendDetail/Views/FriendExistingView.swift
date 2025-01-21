@@ -26,11 +26,10 @@ struct FriendExistingView: View {
     var body: some View {
         BaseFriendForm(configuration: FormConfiguration.existing) { config in
             Group {
-                if config.showsLocation || config.showsLastSeen {
+                if config.showsLocation || config.showsLastSeen || config.showsName {
                     FriendInfoSection(
                         friend: viewModel.friend,
                         onLastSeenTap: {
-                            viewModel.lastSeenDate = viewModel.friend.lastSeen ?? Date()
                             viewModel.showingDatePicker = true
                         },
                         onCityTap: {
@@ -100,75 +99,6 @@ struct FriendExistingView: View {
     }
 }
 
-
-/*
-struct FriendExistingView: View {
-    @Environment(\.modelContext) private var modelContext
-    @Environment(\.dismiss) private var dismiss
-    @State private var viewModel: FriendDetail.ViewModel
-    let presentationStyle: FriendDetail.PresentationStyle
-    
-    init(friend: Friend, presentationStyle: FriendDetail.PresentationStyle) {
-        self._viewModel = State(initialValue: FriendDetail.ViewModel(friend: friend))
-        self.presentationStyle = presentationStyle
-    }
-    
-    var body: some View {
-        FriendDetailForm(
-            friend: viewModel.friend,
-            onLastSeenTap: {
-                viewModel.lastSeenDate = viewModel.friend.lastSeen ?? Date()
-                viewModel.showingDatePicker = true
-            },
-            onCityTap: {
-                viewModel.showingCityPicker = true
-            },
-            onManageTags: {
-                viewModel.showingTagsManager = true
-            },
-            onMessageTap: {
-                viewModel.showingMessageSheet = true
-            },
-            onScheduleTap: {
-                viewModel.showingScheduler = true
-            },
-            onMarkSeenTap: {
-                viewModel.markAsSeen()
-            }
-        )
-        .navigationTitle(viewModel.friend.name)
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            if case .sheet(let isPresented) = presentationStyle {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
-                        isPresented.wrappedValue = false
-                    }
-                    .foregroundColor(AppColors.accent)
-                }
-            }
-        }
-        .datePickerSheet(
-            isPresented: $viewModel.showingDatePicker,
-            date: $viewModel.lastSeenDate,
-            onSave: viewModel.updateLastSeenDate
-        )
-        .cityPickerSheet(
-            isPresented: $viewModel.showingCityPicker,
-            searchText: $viewModel.citySearchText,
-            selectedCity: $viewModel.selectedCity,
-            onSave: viewModel.updateCity
-        )
-        .sheet(isPresented: $viewModel.showingTagsManager) {
-            TagsSelectionView(friend: viewModel.friend)
-        }
-        .sheet(isPresented: $viewModel.showingScheduler) {
-            SchedulerView(initialFriend: viewModel.friend)
-        }
-    }
-}
-
- */
 #Preview {
     NavigationStack {
         FriendExistingView(

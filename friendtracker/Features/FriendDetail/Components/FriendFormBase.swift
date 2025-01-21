@@ -34,7 +34,7 @@ struct OnboardingConfiguration: FriendFormConfiguration {
 }
 
 struct ExistingConfiguration: FriendFormConfiguration {
-    let showsName = false
+    let showsName = true
     let showsContactInfo = true
     let showsActions = true
     let showsHangouts = true
