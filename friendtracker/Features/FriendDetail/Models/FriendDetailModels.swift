@@ -64,13 +64,15 @@ enum FriendDetail {
         var showingMessageSheet = false
         var showingCityPicker = false
         var showingTagsManager = false
-        var lastSeenDate: Date
+        var lastSeenDate: Date {
+            get { friend.lastSeen ?? Date() }
+            set { friend.updateLastSeen(to: newValue) }
+        }
         var citySearchText: String
         var selectedCity: String?
         
         init(friend: Friend) {
             self.friend = friend
-            self.lastSeenDate = friend.lastSeen ?? Date()
             self.citySearchText = friend.location ?? ""
             self.selectedCity = friend.location
         }

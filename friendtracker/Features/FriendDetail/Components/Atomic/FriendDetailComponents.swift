@@ -64,21 +64,33 @@ struct FriendCatchUpSection: View {
 struct FriendLastSeenSection: View {
     @Binding var hasLastSeen: Bool
     @Binding var lastSeenDate: Date
+    @State private var showingDatePicker = false
     
     var body: some View {
         Section("Last Seen") {
             Toggle("Add last seen date?", isOn: $hasLastSeen)
             
             if hasLastSeen {
-                DatePicker(
-                    "Last Seen Date",
-                    selection: $lastSeenDate,
-                    in: ...Date(),
-                    displayedComponents: [.date]
-                )
+                Button {
+                    showingDatePicker = true
+                } label: {
+                    HStack {
+                        Text("Last Seen Date")
+                        Spacer()
+                        Text(lastSeenDate.formatted(date: .abbreviated, time: .omitted))
+                            .foregroundColor(.secondary)
+                    }
+                }
             }
         }
         .listRowBackground(AppColors.secondarySystemBackground)
+        .datePickerSheet(
+            isPresented: $showingDatePicker,
+            date: $lastSeenDate,
+            onSave: { date in
+                lastSeenDate = date
+            }
+        )
     }
 }
 

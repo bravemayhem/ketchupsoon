@@ -11,6 +11,11 @@
   - Simplified tag management by abstracting shared functionality
   - Improved code organization and reduced duplication
   - Updated initialization patterns in FriendTagsSection for better reusability
+- **FriendDetail ViewModel Refactor**
+  - Converted lastSeenDate from stored to computed property
+  - Eliminated state duplication between ViewModel and Friend model
+  - Established Friend model as single source of truth for last seen date
+  - Simplified date updates through Friend.updateLastSeen method
 
 #### Technical Details
 - Refactored shared components for better code reuse

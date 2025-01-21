@@ -1,20 +1,26 @@
 import SwiftUI
 
 extension View {
+    // MARK: - Date Picker Sheet Modifier
     func datePickerSheet(
         isPresented: Binding<Bool>,
         date: Binding<Date>,
         onSave: @escaping (Date) -> Void
     ) -> some View {
-        sheet(isPresented: isPresented) {
+        self.sheet(isPresented: isPresented) {
             NavigationStack {
-                DatePicker(
-                    "Select Date",
-                    selection: date,
-                    in: ...Date(),
-                    displayedComponents: [.date]
-                )
-                .datePickerStyle(.graphical)
+                Form {
+                    DatePicker(
+                        "Select Date",
+                        selection: date,
+                        in: ...Date(),
+                        displayedComponents: [.date]
+                    )
+                    .datePickerStyle(.graphical)
+                    .tint(AppColors.accent)
+                }
+                .scrollContentBackground(.hidden)
+                .background(AppColors.systemBackground)
                 .navigationTitle("Select Date")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
