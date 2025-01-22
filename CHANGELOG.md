@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+### 2024-03-24
+#### Added
+- **Contact Integration for Imported Friends**
+  - Enabled direct access to contact details from friend cards for imported contacts
+  - Implemented visual distinction with accent color for imported contact fields
+  - Established contacts as source of truth for imported friend information
+  - Enhanced user experience by avoiding duplicate data entry
+  - Streamlined access to contact details through native iOS contact interface
+
 ### 2024-03-23
 #### Changed
 - **Friend Details UI Consistency**
