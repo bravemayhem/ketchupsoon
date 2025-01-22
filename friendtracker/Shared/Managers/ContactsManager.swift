@@ -42,23 +42,29 @@ class ContactsManager: ObservableObject {
         }
     }
     
-    func fetchContacts() async -> [CNContact] {
+    nonisolated func fetchContacts() async -> [CNContact] {
         #if DEBUG
-        if let previewContacts = previewContacts {
+        if let previewContacts = await MainActor.run(body: { self.previewContacts }) {
             return previewContacts
         }
         #endif
         
-        do {
-            let request = CNContactFetchRequest(keysToFetch: keysToFetch)
-            var contacts: [CNContact] = []
-            try store.enumerateContacts(with: request) { contact, _ in
-                contacts.append(contact)
+        // Initialize variables before capture
+        let capturedStore = await MainActor.run { self.store }
+        let capturedKeysToFetch = await MainActor.run { self.keysToFetch }
+        
+        return await Task.detached(priority: .background) {
+            do {
+                let request = CNContactFetchRequest(keysToFetch: capturedKeysToFetch)
+                var contacts: [CNContact] = []
+                try capturedStore.enumerateContacts(with: request) { contact, _ in
+                    contacts.append(contact)
+                }
+                return contacts
+            } catch {
+                print("Error fetching contacts: \(error)")
+                return []
             }
-            return contacts
-        } catch {
-            print("Error fetching contacts: \(error)")
-            return []
-        }
+        }.value
     }
 } 
