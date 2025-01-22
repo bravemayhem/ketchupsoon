@@ -16,6 +16,12 @@
   - Improved sheet presentation style with rounded corners
   - Enhanced native iOS feel with standard sheet interactions
 
+- **Friend Details UI Consistency**
+  - Standardized "Not set" placeholder styling across all unset fields
+  - Applied consistent text color for empty values
+  - Improved visual feedback for editable fields
+  - Enhanced clarity of which fields can be updated
+
 ### 2024-03-24
 #### Added
 - **Contact Integration for Imported Friends**
@@ -24,6 +30,19 @@
   - Established contacts as source of truth for imported friend information
   - Enhanced user experience by avoiding duplicate data entry
   - Streamlined access to contact details through native iOS contact interface
+
+#### Changed
+- **Friend Details UI Consistency**
+  - Standardized "Not set" placeholder styling across all unset fields
+  - Applied consistent text color for empty values
+  - Improved visual feedback for editable fields
+  - Enhanced clarity of which fields can be updated
+
+- **Text Color Refinements**
+  - Updated "Not set" text to use lighter color (tertiaryLabel) for better visual hierarchy
+  - Standardized text colors across Last Seen and Catch Up Frequency fields
+  - Improved consistency with City field interaction patterns
+  - Enhanced visual feedback for field states
 
 ### 2024-03-23
 #### Changed

@@ -218,22 +218,29 @@ struct FriendInfoSection: View {
             }
             
             // Last Seen
-            HStack {
-                Text("Last Seen")
-                    .foregroundColor(AppColors.label)
-                Spacer()
-                Button {
-                    onLastSeenTap()
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: "hourglass")
-                            .font(AppTheme.captionFont)
-                            .foregroundColor(AppColors.secondaryLabel)
-                        Text(friend.lastSeenText)
-                            .foregroundColor(AppColors.secondaryLabel)
+            Button {
+                onLastSeenTap()
+            } label: {
+                HStack {
+                    Text("Last Seen")
+                        .foregroundColor(AppColors.label)
+                    Spacer()
+                    if friend.lastSeen == nil {
+                        Text("Not set")
+                            .foregroundColor(AppColors.tertiaryLabel)
+                            .multilineTextAlignment(.trailing)
+                    } else {
+                        HStack(spacing: 4) {
+                            Image(systemName: "hourglass")
+                                .font(AppTheme.captionFont)
+                                .foregroundColor(AppColors.secondaryLabel)
+                            Text(friend.lastSeenText)
+                                .foregroundColor(AppColors.secondaryLabel)
+                        }
                     }
                 }
             }
+            .buttonStyle(.borderless)
             
             // City
             CitySearchField(service: cityService)
@@ -249,10 +256,12 @@ struct FriendInfoSection: View {
                             .foregroundColor(AppColors.secondaryLabel)
                     } else {
                         Text("Not set")
-                            .foregroundColor(AppColors.secondaryLabel)
+                            .foregroundColor(AppColors.tertiaryLabel)
+                            .multilineTextAlignment(.trailing)
                     }
                 }
             }
+            .buttonStyle(.borderless)
         }
         .listRowBackground(AppColors.secondarySystemBackground)
         .sheet(isPresented: $showingContactView) {
