@@ -25,7 +25,6 @@ enum FriendDetail {
         var lastSeenDate: Date { get set }
         
         // Common sheet presentation states
-        var showingCityPicker: Bool { get set }
         var showingTagsManager: Bool { get set }
         var showingDatePicker: Bool { get set }
         
@@ -60,7 +59,6 @@ enum FriendDetail {
         var showingDatePicker = false
         var showingScheduler = false
         var showingMessageSheet = false
-        var showingCityPicker = false
         var showingTagsManager = false
         var showingFrequencyPicker = false
         var lastSeenDate: Date {
@@ -85,7 +83,6 @@ enum FriendDetail {
         // Contact data
         var friendName = ""
         var phoneNumber = ""
-        var citySearchText = ""
         var selectedCity: String?
         var hasLastSeen = false
         var lastSeenDate = Date()
@@ -97,7 +94,6 @@ enum FriendDetail {
         
         // Sheet states
         var showingDatePicker = false
-        var showingCityPicker = false
         var showingTagsManager = false
         
         var isFromContacts: Bool {
@@ -136,10 +132,6 @@ enum FriendDetail {
             )
             friend.tags = Array(selectedTags)
             modelContext.insert(friend)
-        }
-        
-        func updateSelectedCity(_ city: String?) {
-            selectedCity = city
         }
     }
 }

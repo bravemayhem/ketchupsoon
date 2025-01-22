@@ -37,10 +37,7 @@ struct FriendOnboardingView: View {
                     contact: viewModel.input,
                     manualName: $viewModel.friendName,
                     phoneNumber: $viewModel.phoneNumber,
-                    cityService: cityService,
-                    onCityTap: {
-                        viewModel.showingCityPicker = true
-                    }
+                    cityService: cityService
                 )
                 
                 FriendTagsSection(
@@ -76,13 +73,6 @@ struct FriendOnboardingView: View {
             .sheet(isPresented: $showingTagsSheet) {
                 TagsSelectionView(selectedTags: $viewModel.selectedTags)
             }
-            .cityPickerSheet(
-                isPresented: $viewModel.showingCityPicker,
-                service: cityService
-            ) {
-                // Update the viewModel's selectedCity when city is picked
-                viewModel.selectedCity = cityService.selectedCity
-            }
         }
     }
     
@@ -91,6 +81,7 @@ struct FriendOnboardingView: View {
     }
     
     private func handleAdd() {
+        viewModel.selectedCity = cityService.selectedCity
         viewModel.createFriend(in: modelContext)
         dismiss()
     }

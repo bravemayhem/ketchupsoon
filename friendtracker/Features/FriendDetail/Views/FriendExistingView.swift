@@ -23,12 +23,12 @@ struct FriendExistingView: View {
         self._viewModel = State(initialValue: FriendDetail.ViewModel(friend: friend))
         self.presentationStyle = presentationStyle
         // Initialize cityService with friend's location
+        let service = CitySearchService()
         if let location = friend.location {
-                    let service = CitySearchService()
-                    service.searchInput = location
-                    service.selectedCity = location
-                    self._cityService = State(initialValue: service)
+            service.searchInput = location
+            service.selectedCity = location
         }
+        self._cityService = State(initialValue: service)
     }
     
     var body: some View {
@@ -40,12 +40,10 @@ struct FriendExistingView: View {
                         onLastSeenTap: {
                             viewModel.showingDatePicker = true
                         },
-                        onCityTap: {
-                            viewModel.showingCityPicker = true
-                        },
                         onFrequencyTap: {
                             viewModel.showingFrequencyPicker = true
-                        }
+                        },
+                        cityService: cityService
                     )
                 }
                 
@@ -84,6 +82,7 @@ struct FriendExistingView: View {
             if case .sheet(let isPresented) = presentationStyle {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Done") {
+                        viewModel.friend.location = cityService.selectedCity
                         isPresented.wrappedValue = false
                     }
                     .foregroundColor(AppColors.accent)
@@ -95,12 +94,6 @@ struct FriendExistingView: View {
             date: $viewModel.lastSeenDate,
             onSave: viewModel.updateLastSeenDate
         )
-        .cityPickerSheet(
-            isPresented: $viewModel.showingCityPicker,
-            service: cityService
-        ) {
-            viewModel.friend.location = cityService.selectedCity
-        }
         .sheet(isPresented: $viewModel.showingFrequencyPicker) {
             NavigationStack {
                 FrequencyPickerView(friend: viewModel.friend)
@@ -111,6 +104,9 @@ struct FriendExistingView: View {
         }
         .sheet(isPresented: $viewModel.showingScheduler) {
             SchedulerView(initialFriend: viewModel.friend)
+        }
+        .onChange(of: cityService.selectedCity) { _, newCity in
+            viewModel.friend.location = newCity
         }
     }
 }

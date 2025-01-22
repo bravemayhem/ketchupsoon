@@ -27,6 +27,18 @@ struct FriendNameSection: View {
     }
 }
 
+// MARK: - City Selection Section
+struct FriendCitySection: View {
+    @Bindable var cityService: CitySearchService
+    
+    var body: some View {
+        Section("Location") {
+            CitySearchField(service: cityService)
+        }
+        .listRowBackground(AppColors.secondarySystemBackground)
+    }
+}
+
 // MARK: - Friend Details Section for Onboarding
 struct FriendOnboardingDetailsSection: View {
     let isFromContacts: Bool
@@ -34,7 +46,6 @@ struct FriendOnboardingDetailsSection: View {
     @Binding var manualName: String
     @Binding var phoneNumber: String
     @Bindable var cityService: CitySearchService
-    let onCityTap: () -> Void
     
     var body: some View {
         Section("Friend Details") {
@@ -63,20 +74,7 @@ struct FriendOnboardingDetailsSection: View {
                 }
             }
             
-            Button(action: onCityTap) {
-                HStack {
-                    Text("City")
-                        .foregroundColor(AppColors.label)
-                    Spacer()
-                    if let location = cityService.selectedCity {
-                        Text(location)
-                            .foregroundColor(AppColors.secondaryLabel)
-                    } else {
-                        Text("Not set")
-                            .foregroundColor(AppColors.secondaryLabel)
-                    }
-                }
-            }
+            CitySearchField(service: cityService)
         }
         .listRowBackground(AppColors.secondarySystemBackground)
     }
@@ -155,40 +153,13 @@ struct FriendLastSeenSection: View {
     }
 }
 
-//USED FOR SETTING UP LOCATION FOR THE FIRST TIME
-struct FriendLocationSection: View {
-    let selectedCity: String?
-    let onCityTap: () -> Void
-    
-    var body: some View {
-        Section("Location") {
-            Button(action: onCityTap) {
-                HStack {
-                    Text("City")
-                        .foregroundColor(AppColors.label)
-                    Spacer()
-                    if let location = selectedCity {
-                        Text(location)
-                            .foregroundColor(AppColors.secondaryLabel)
-                    } else {
-                        Text("Not set")
-                            .foregroundColor(AppColors.secondaryLabel)
-                    }
-                }
-            }
-        }
-        .listRowBackground(AppColors.secondarySystemBackground)
-    }
-}
-
-
 // MARK: - CURRENTLY USED FOR EXISTING FRIENDS
 
 struct FriendInfoSection: View {
     let friend: Friend
     let onLastSeenTap: () -> Void
-    let onCityTap: () -> Void
     let onFrequencyTap: () -> Void
+    @Bindable var cityService: CitySearchService
     
     var body: some View {
         Section("Friend Details") {
@@ -219,21 +190,8 @@ struct FriendInfoSection: View {
                 }
             }
             
-            // Location
-            Button(action: onCityTap) {
-                HStack {
-                    Text("City")
-                        .foregroundColor(AppColors.label)
-                    Spacer()
-                    if let location = friend.location {
-                        Text(location)
-                            .foregroundColor(AppColors.secondaryLabel)
-                    } else {
-                        Text("Not set")
-                            .foregroundColor(AppColors.secondaryLabel)
-                    }
-                }
-            }
+            // City
+            CitySearchField(service: cityService)
             
             // Catch Up Frequency
             Button(action: onFrequencyTap) {
@@ -429,8 +387,12 @@ struct TagView: View {
                     catchUpFrequency: .monthly
                 ),
                 onLastSeenTap: {},
-                onCityTap: {},
-                onFrequencyTap: {}
+                onFrequencyTap: {},
+                cityService: {
+                    let service = CitySearchService()
+                    service.selectedCity = "San Francisco"
+                    return service
+                }()
             )
         }
         .listStyle(.insetGrouped)
@@ -560,8 +522,7 @@ struct TagView: View {
                 ),
                 manualName: .constant(""),
                 phoneNumber: .constant(""),
-                cityService: CitySearchService(),
-                onCityTap: {}
+                cityService: CitySearchService()
             )
             
             // Manual Entry Scenario
@@ -574,8 +535,7 @@ struct TagView: View {
                     let service = CitySearchService()
                     service.selectedCity = "New York"
                     return service
-                }(),
-                onCityTap: {}
+                }()
             )
         }
         .listStyle(.insetGrouped)
