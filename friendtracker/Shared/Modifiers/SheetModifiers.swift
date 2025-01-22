@@ -41,19 +41,17 @@ extension View {
         }
     }
     
+    // MARK: - City Picker Sheet Modifier
     func cityPickerSheet(
         isPresented: Binding<Bool>,
-        searchText: Binding<String>,
-        selectedCity: Binding<String?>,
+        service: CitySearchService,
         onSave: @escaping () -> Void
     ) -> some View {
         sheet(isPresented: isPresented) {
             NavigationStack {
                 CitySearchField(
-                    searchText: searchText,
-                    selectedCity: selectedCity
-                )
-                .navigationTitle("Select City")
+                    service: service
+                )                .navigationTitle("Select City")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
@@ -74,15 +72,17 @@ extension View {
     }
 } 
 
+// MARK: - Modifier Preview Code
 struct SheetModifierPreview: View {
     @State private var showDatePicker = false
     @State private var showCityPicker = false
     @State private var selectedDate = Date()
-    @State private var searchText = ""
-    @State private var selectedCity: String?
+    // Replace separate states with CitySearchService
+    @State private var cityService = CitySearchService()
     
     var body: some View {
         VStack(spacing: AppTheme.spacingLarge) {
+            // Date Picker section stays the same
             VStack(alignment: .leading, spacing: AppTheme.spacingMedium) {
                 Text("Date Picker Sheet")
                     .font(AppTheme.headlineFont)
@@ -102,6 +102,7 @@ struct SheetModifierPreview: View {
                 .cardButton(style: .primary)
             }
             
+            // Updated City Picker section
             VStack(alignment: .leading, spacing: AppTheme.spacingMedium) {
                 Text("City Picker Sheet")
                     .font(AppTheme.headlineFont)
@@ -109,7 +110,7 @@ struct SheetModifierPreview: View {
                 VStack(alignment: .leading, spacing: AppTheme.spacingSmall) {
                     Text("Selected City:")
                         .font(AppTheme.bodyFont)
-                    Text(selectedCity ?? "No city selected")
+                    Text(cityService.selectedCity ?? "No city selected")
                         .cardSecondaryText()
                 }
                 .padding()
@@ -130,10 +131,10 @@ struct SheetModifierPreview: View {
         }
         .cityPickerSheet(
             isPresented: $showCityPicker,
-            searchText: $searchText,
-            selectedCity: $selectedCity
+            service: cityService
         ) {
-            // Handle city save
+            // The service already has the selected city stored
+            // No need to manually update anything here
         }
     }
 }

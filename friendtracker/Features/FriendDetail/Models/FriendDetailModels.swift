@@ -22,8 +22,6 @@ enum FriendDetail {
     // MARK: - View Model Protocols
     protocol FriendDetailViewModel {
         // Common properties
-        var citySearchText: String { get set }
-        var selectedCity: String? { get set }
         var lastSeenDate: Date { get set }
         
         // Common sheet presentation states
@@ -32,7 +30,6 @@ enum FriendDetail {
         var showingDatePicker: Bool { get set }
         
         // Common functionality
-        func updateCity()
         func updateLastSeenDate(to date: Date)
     }
     
@@ -68,17 +65,9 @@ enum FriendDetail {
             get { friend.lastSeen ?? Date() }
             set { friend.updateLastSeen(to: newValue) }
         }
-        var citySearchText: String
-        var selectedCity: String?
         
         init(friend: Friend) {
             self.friend = friend
-            self.citySearchText = friend.location ?? ""
-            self.selectedCity = friend.location
-        }
-        
-        func updateCity() {
-            friend.location = selectedCity
         }
         
         func updateLastSeenDate(to date: Date) {
@@ -123,16 +112,8 @@ enum FriendDetail {
         
         init(input: NewFriendInput? = nil) {
             self.input = input
-            if let input = input {
-                self.citySearchText = input.city ?? ""
-                self.selectedCity = input.city
-            }
         }
-        
-        func updateCity() {
-            selectedCity = citySearchText
-        }
-        
+
         func updateLastSeenDate(to date: Date) {
             lastSeenDate = date
         }
@@ -150,6 +131,10 @@ enum FriendDetail {
             )
             friend.tags = Array(selectedTags)
             modelContext.insert(friend)
+        }
+        
+        func updateSelectedCity(_ city: String?) {
+            selectedCity = city
         }
     }
 }

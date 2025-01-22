@@ -94,6 +94,32 @@ struct FriendLastSeenSection: View {
     }
 }
 
+//USED FOR SETTING UP LOCATION FOR THE FIRST TIME
+struct FriendLocationSection: View {
+    let selectedCity: String?
+    let onCityTap: () -> Void
+    
+    var body: some View {
+        Section("Location") {
+            Button(action: onCityTap) {
+                HStack {
+                    Text("City")
+                        .foregroundColor(AppColors.label)
+                    Spacer()
+                    if let location = selectedCity {
+                        Text(location)
+                            .foregroundColor(AppColors.secondaryLabel)
+                    } else {
+                        Text("Not set")
+                            .foregroundColor(AppColors.secondaryLabel)
+                    }
+                }
+            }
+        }
+        .listRowBackground(AppColors.secondarySystemBackground)
+    }
+}
+
 
 // MARK: - CURRENTLY USED FOR EXISTING FRIENDS
 

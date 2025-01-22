@@ -16,11 +16,19 @@ struct FriendExistingView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     @State private var viewModel: FriendDetail.ViewModel
+    @State private var cityService = CitySearchService()
     let presentationStyle: FriendDetail.PresentationStyle
     
     init(friend: Friend, presentationStyle: FriendDetail.PresentationStyle) {
         self._viewModel = State(initialValue: FriendDetail.ViewModel(friend: friend))
         self.presentationStyle = presentationStyle
+        // Initialize cityService with friend's location
+        if let location = friend.location {
+                    let service = CitySearchService()
+                    service.searchInput = location
+                    service.selectedCity = location
+                    self._cityService = State(initialValue: service)
+        }
     }
     
     var body: some View {
@@ -86,10 +94,11 @@ struct FriendExistingView: View {
         )
         .cityPickerSheet(
             isPresented: $viewModel.showingCityPicker,
-            searchText: $viewModel.citySearchText,
-            selectedCity: $viewModel.selectedCity,
-            onSave: viewModel.updateCity
-        )
+            service: cityService
+        ) {
+            viewModel.friend.location = cityService.selectedCity
+        }
+        
         .sheet(isPresented: $viewModel.showingTagsManager) {
             TagsSelectionView(friend: viewModel.friend)
         }

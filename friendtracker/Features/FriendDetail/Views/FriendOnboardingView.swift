@@ -7,6 +7,7 @@ struct FriendOnboardingView: View {
     @Environment(\.modelContext) private var modelContext
     @State private var viewModel: FriendDetail.OnboardingViewModel
     @State private var showingTagsSheet = false
+    @State private var cityService = CitySearchService()
     @Query(sort: [SortDescriptor<Tag>(\.name)]) private var allTags: [Tag]
     
     init(contact: (name: String, identifier: String?, phoneNumber: String?, imageData: Data?, city: String?)) {
@@ -18,6 +19,14 @@ struct FriendOnboardingView: View {
             city: contact.city
         )
         self._viewModel = State(initialValue: FriendDetail.OnboardingViewModel(input: input))
+        
+        // Initialize cityService if we have a city from contacts
+        if let city = contact.city {
+            let service = CitySearchService()
+            service.searchInput = city
+            service.selectedCity = city
+            self._cityService = State(initialValue: service)
+        }
     }
     
     var body: some View {
@@ -29,6 +38,15 @@ struct FriendOnboardingView: View {
                             isFromContacts: viewModel.isFromContacts,
                             contactName: viewModel.input?.name,
                             manualName: $viewModel.friendName
+                        )
+                    }
+                    
+                    if config.showsLocation {
+                        FriendLocationSection(
+                            selectedCity: cityService.selectedCity,
+                            onCityTap: {
+                                viewModel.showingCityPicker = true
+                            }
                         )
                     }
                     
@@ -74,8 +92,16 @@ struct FriendOnboardingView: View {
             .sheet(isPresented: $showingTagsSheet) {
                 TagsSelectionView(selectedTags: $viewModel.selectedTags)
             }
+            .cityPickerSheet(
+                isPresented: $viewModel.showingCityPicker,
+                service: cityService
+            ) {
+                // Update the viewModel's selectedCity when city is picked
+                viewModel.selectedCity = cityService.selectedCity
+            }
         }
     }
+    
     
     private func handleCancel() {
         dismiss()
@@ -86,7 +112,7 @@ struct FriendOnboardingView: View {
         dismiss()
     }
 }
-
+    
 #Preview("Friend Onboarding") {
     NavigationStack {
         FriendOnboardingView(

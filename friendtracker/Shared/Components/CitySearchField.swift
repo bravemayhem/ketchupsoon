@@ -1,43 +1,24 @@
+// UI for CitySearchField
+
 import SwiftUI
 
 struct CitySearchField: View {
-    @Binding var searchText: String
-    @Binding var selectedCity: String?
-    
-    // Example cities for the preview
-    private let cities = [
-        "San Francisco, CA",
-        "New York, NY",
-        "Los Angeles, CA",
-        "Chicago, IL",
-        "Seattle, WA",
-        "Boston, MA",
-        "Austin, TX",
-        "Portland, OR"
-    ]
-    
-    var filteredCities: [String] {
-        if searchText.isEmpty {
-            return cities
-        }
-        return cities.filter { $0.lowercased().contains(searchText.lowercased()) }
-    }
+    @Bindable var service: CitySearchService
     
     var body: some View {
         VStack {
-            TextField("Search cities...", text: $searchText)
+            TextField("Search cities...", text: $service.searchInput)
                 .textFieldStyle(.roundedBorder)
                 .padding()
             
-            List(filteredCities, id: \.self) { city in
+            List(service.filteredCities, id: \.self) { city in
                 Button(action: {
-                    selectedCity = city
-                    searchText = city
+                    service.selectCity(city)
                 }) {
                     HStack {
                         Text(city)
                         Spacer()
-                        if city == selectedCity {
+                        if city == service.selectedCity {
                             Image(systemName: "checkmark")
                                 .foregroundColor(AppColors.accent)
                         }
@@ -51,8 +32,7 @@ struct CitySearchField: View {
 #Preview {
     NavigationStack {
         CitySearchField(
-            searchText: .constant(""),
-            selectedCity: .constant(nil)
+            service: CitySearchService()
         )
     }
-} 
+}
