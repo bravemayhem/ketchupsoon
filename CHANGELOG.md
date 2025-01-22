@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+### 2024-03-22
+#### Added
+- **Friend Details Enhancement**
+  - Added frequency selection to Friend Details section
+  - Integrated FrequencyPickerView for catch-up frequency management
+  - Added visual indicator for current catch-up frequency
+  - Improved friend management workflow with direct frequency updates
+
 ### 2024-03-21
 #### Changed
 - **Tag Management Refactor**
