@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+### 2024-03-22
+#### Changed
+- **Friend Card UI Improvements**
+  - Improved icon alignment in FriendListCard
+  - Standardized spacing between icons and text
+  - Enhanced visual consistency across all friend card elements
+  - Fixed left alignment of text while maintaining centered icons
+
 ### 2024-03-21
 #### Changed
 - **City Search UI/UX Improvements**
