@@ -105,6 +105,11 @@ struct FriendExistingView: View {
         .sheet(isPresented: $viewModel.showingScheduler) {
             SchedulerView(initialFriend: viewModel.friend)
         }
+        .sheet(isPresented: $viewModel.showingMessageSheet) {
+            if let phoneNumber = viewModel.friend.phoneNumber {
+                MessageComposeView(recipient: phoneNumber)
+            }
+        }
         .onChange(of: cityService.selectedCity) { _, newCity in
             viewModel.friend.location = newCity
         }

@@ -3,18 +3,41 @@ import MessageUI
 
 struct MessageComposeView: UIViewControllerRepresentable {
     let recipient: String
+    @Environment(\.dismiss) private var dismiss
+    
+    static func canSendMessages() -> Bool {
+        return MFMessageComposeViewController.canSendText()
+    }
     
     func makeUIViewController(context: Context) -> MFMessageComposeViewController {
         let controller = MFMessageComposeViewController()
-        controller.recipients = [recipient]
         controller.messageComposeDelegate = context.coordinator
+        
+        if !MFMessageComposeViewController.canSendText() {
+            DispatchQueue.main.async {
+                self.dismiss()
+                if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                   let viewController = windowScene.windows.first?.rootViewController {
+                    let alertController = UIAlertController(
+                        title: "Cannot Send Message",
+                        message: "Message capability not available on this device",
+                        preferredStyle: .alert
+                    )
+                    alertController.addAction(UIAlertAction(title: "OK", style: .default))
+                    viewController.present(alertController, animated: true)
+                }
+            }
+        } else {
+            controller.recipients = [recipient]
+        }
+        
         return controller
     }
     
     func updateUIViewController(_ uiViewController: MFMessageComposeViewController, context: Context) {}
     
     func makeCoordinator() -> Coordinator {
-        Coordinator(self)
+        return Coordinator(self)
     }
     
     class Coordinator: NSObject, MFMessageComposeViewControllerDelegate {
@@ -22,10 +45,13 @@ struct MessageComposeView: UIViewControllerRepresentable {
         
         init(_ parent: MessageComposeView) {
             self.parent = parent
+            super.init()
         }
         
         func messageComposeViewController(_ controller: MFMessageComposeViewController, didFinishWith result: MessageComposeResult) {
-            controller.dismiss(animated: true)
+            DispatchQueue.main.async {
+                self.parent.dismiss()
+            }
         }
     }
 } 

@@ -221,11 +221,9 @@ struct FriendActionSection: View {
     
     var body: some View {
         Section("Actions") {
-            if !(friend.phoneNumber?.isEmpty ?? true) {
-                Button(action: onMessageTap) {
-                    Label("Send Message", systemImage: "message.fill")
-                        .actionLabelStyle()
-                }
+            Button(action: onMessageTap) {
+                Label("Send Message", systemImage: "message.fill")
+                    .actionLabelStyle()
             }
             
             Button(action: onScheduleTap) {

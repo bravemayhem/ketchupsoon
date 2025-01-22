@@ -40,8 +40,29 @@ struct FriendSheetPresenter: ViewModifier {
                 }
             }
             .sheet(isPresented: $showingMessageSheet) {
-                if let friend = selectedFriend {
-                    MessageComposeView(recipient: friend.phoneNumber ?? "")
+                Group {
+                    if let friend = selectedFriend {
+                        let _ = print("DEBUG: Attempting to show message sheet for friend: \(friend.name)")
+                        let _ = print("DEBUG: Friend's phone number: \(String(describing: friend.phoneNumber))")
+                        if let phoneNumber = friend.phoneNumber {
+                            let _ = print("DEBUG: Opening MessageComposeView with number: \(phoneNumber)")
+                            NavigationStack {
+                                MessageComposeView(recipient: phoneNumber)
+                            }
+                        } else {
+                            let _ = print("DEBUG: No phone number available, dismissing sheet")
+                            Text("")
+                                .onAppear {
+                                    showingMessageSheet = false
+                                }
+                        }
+                    } else {
+                        let _ = print("DEBUG: No friend selected, dismissing sheet")
+                        Text("")
+                            .onAppear {
+                                showingMessageSheet = false
+                            }
+                    }
                 }
             }
             .sheet(isPresented: $showingFrequencyPicker) {
@@ -56,10 +77,9 @@ struct FriendSheetPresenter: ViewModifier {
                     showingFriendSheet = true
                 }
                 
-                if let _ = friend.phoneNumber {
-                    Button("Send Message") {
-                        showingMessageSheet = true
-                    }
+                Button("Send Message") {
+                    let _ = print("DEBUG: Send Message button tapped for friend: \(friend.name)")
+                    showingMessageSheet = true
                 }
                 
                 Button("Schedule Hangout") {
