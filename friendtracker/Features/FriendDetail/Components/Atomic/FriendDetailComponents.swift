@@ -512,7 +512,7 @@ struct ContactViewController: UIViewControllerRepresentable {
             Task { @MainActor in
                 // Dismiss the current navigation controller if it exists
                 if let navController = currentNavController {
-                    await navController.dismiss(animated: true)
+                    navController.dismiss(animated: true)
                 }
                 
                 // Get the friend and sync contact info
