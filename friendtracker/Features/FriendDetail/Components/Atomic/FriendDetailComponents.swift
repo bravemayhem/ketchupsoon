@@ -460,16 +460,15 @@ struct ContactViewController: UIViewControllerRepresentable {
                     let navController = UINavigationController(rootViewController: contactVC)
                     navController.modalPresentationStyle = .pageSheet
                     
+                    if let sheet = navController.sheetPresentationController {
+                        sheet.prefersGrabberVisible = true
+                        sheet.detents = [.large()]
+                        sheet.prefersScrollingExpandsWhenScrolledToEdge = true
+                        sheet.preferredCornerRadius = 12
+                    }
+                    
                     // Store the navigation controller in the coordinator
                     context.coordinator.currentNavController = navController
-                    
-                    // Add done button
-                    let doneButton = UIBarButtonItem(
-                        barButtonSystemItem: .done,
-                        target: context.coordinator,
-                        action: #selector(Coordinator.dismissContactVC)
-                    )
-                    contactVC.navigationItem.leftBarButtonItem = doneButton
                     
                     // Present only if the view is in the window hierarchy
                     if uiViewController.view.window != nil {

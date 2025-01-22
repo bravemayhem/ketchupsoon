@@ -9,6 +9,13 @@
   - Enhanced bi-directional synchronization between app and system contacts
   - Improved data consistency when contacts are modified externally
 
+#### Changed
+- **Contact Interface UX Enhancement**
+  - Replaced "Done" button with gesture-based dismissal for contact sheet
+  - Added visual grabber indicator for more intuitive interaction
+  - Improved sheet presentation style with rounded corners
+  - Enhanced native iOS feel with standard sheet interactions
+
 ### 2024-03-24
 #### Added
 - **Contact Integration for Imported Friends**
