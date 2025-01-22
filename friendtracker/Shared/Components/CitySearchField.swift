@@ -15,8 +15,15 @@ struct CitySearchField: View {
                     .foregroundColor(AppColors.label)
                 Spacer()
                 if let selectedCity = service.selectedCity {
-                    Text(selectedCity)
-                        .foregroundColor(AppColors.secondaryLabel)
+                    Button {
+                        service.searchInput = selectedCity
+                        service.selectedCity = nil
+                        isFocused = true
+                    } label: {
+                        Text(selectedCity)
+                            .foregroundColor(AppColors.secondaryLabel)
+                            .multilineTextAlignment(.trailing)
+                    }
                 } else {
                     TextField("Not set", text: $service.searchInput)
                         .multilineTextAlignment(.trailing)

@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import ContactsUI
 
 // MARK: - CURRENTLY USED FOR NEW FRIENDS
 //USED FOR IMPORTING NEW CONTACTS NAMES FROM THE CONTACT LIST OR MANUALLY FOR THE FIRST TIME
@@ -46,6 +47,7 @@ struct FriendOnboardingDetailsSection: View {
     @Binding var manualName: String
     @Binding var phoneNumber: String
     @Bindable var cityService: CitySearchService
+    @State private var showingContactView = false
     
     var body: some View {
         Section("Friend Details") {
@@ -68,21 +70,31 @@ struct FriendOnboardingDetailsSection: View {
                         .foregroundColor(AppColors.secondaryLabel)
                 }
             } else if let contact = contact {
-                HStack {
-                    Text("Name")
-                        .foregroundColor(AppColors.label)
-                    Spacer()
-                    Text(contact.name)
-                        .foregroundColor(AppColors.secondaryLabel)
-                }
-                
-                if let phone = contact.phoneNumber {
-                    HStack {
-                        Text("Phone")
-                            .foregroundColor(AppColors.label)
-                        Spacer()
-                        Text(phone)
-                            .foregroundColor(AppColors.secondaryLabel)
+                if contact.identifier != nil {
+                    Button {
+                        showingContactView = true
+                    } label: {
+                        HStack {
+                            Text("Name")
+                                .foregroundColor(AppColors.label)
+                            Spacer()
+                            Text(contact.name)
+                                .foregroundColor(AppColors.accent)
+                        }
+                    }
+                    
+                    if let phone = contact.phoneNumber {
+                        Button {
+                            showingContactView = true
+                        } label: {
+                            HStack {
+                                Text("Phone")
+                                    .foregroundColor(AppColors.label)
+                                Spacer()
+                                Text(phone)
+                                    .foregroundColor(AppColors.accent)
+                            }
+                        }
                     }
                 }
             }
@@ -90,6 +102,11 @@ struct FriendOnboardingDetailsSection: View {
             CitySearchField(service: cityService)
         }
         .listRowBackground(AppColors.secondarySystemBackground)
+        .sheet(isPresented: $showingContactView) {
+            if let identifier = contact?.identifier {
+                ContactViewController(contactIdentifier: identifier, isPresented: $showingContactView)
+            }
+        }
     }
 }
 
@@ -173,16 +190,31 @@ struct FriendInfoSection: View {
     let onLastSeenTap: () -> Void
     let onFrequencyTap: () -> Void
     @Bindable var cityService: CitySearchService
+    @State private var showingContactView = false
     
     var body: some View {
         Section("Friend Details") {
             // Name
-            HStack {
-                Text("Name")
-                    .foregroundColor(AppColors.label)
-                Spacer()
-                Text(friend.name)
-                    .foregroundColor(AppColors.secondaryLabel)
+            if friend.contactIdentifier != nil {
+                Button {
+                    showingContactView = true
+                } label: {
+                    HStack {
+                        Text("Name")
+                            .foregroundColor(AppColors.label)
+                        Spacer()
+                        Text(friend.name)
+                            .foregroundColor(AppColors.accent)
+                    }
+                }
+            } else {
+                HStack {
+                    Text("Name")
+                        .foregroundColor(AppColors.label)
+                    Spacer()
+                    Text(friend.name)
+                        .foregroundColor(AppColors.secondaryLabel)
+                }
             }
             
             // Last Seen
@@ -223,6 +255,11 @@ struct FriendInfoSection: View {
             }
         }
         .listRowBackground(AppColors.secondarySystemBackground)
+        .sheet(isPresented: $showingContactView) {
+            if let identifier = friend.contactIdentifier {
+                ContactViewController(contactIdentifier: identifier, isPresented: $showingContactView)
+            }
+        }
     }
 }
 
@@ -360,6 +397,89 @@ struct TagView: View {
     }
 }
 
+// Add ContactViewController
+struct ContactViewController: UIViewControllerRepresentable {
+    let contactIdentifier: String
+    @Binding var isPresented: Bool
+    
+    func makeUIViewController(context: Context) -> UIViewController {
+        let contactVC = UIViewController()
+        return contactVC
+    }
+    
+    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
+        guard isPresented, uiViewController.presentedViewController == nil else { return }
+        
+        let store = CNContactStore()
+        store.requestAccess(for: .contacts) { granted, error in
+            guard granted else {
+                DispatchQueue.main.async {
+                    self.isPresented = false
+                }
+                return
+            }
+            
+            do {
+                let predicate = CNContact.predicateForContacts(withIdentifiers: [contactIdentifier])
+                let keys = [CNContactViewController.descriptorForRequiredKeys()]
+                let contacts = try store.unifiedContacts(matching: predicate, keysToFetch: keys)
+                
+                guard let contact = contacts.first else {
+                    DispatchQueue.main.async {
+                        self.isPresented = false
+                    }
+                    return
+                }
+                
+                DispatchQueue.main.async {
+                    let contactVC = CNContactViewController(for: contact)
+                    contactVC.allowsEditing = true
+                    contactVC.allowsActions = true
+                    contactVC.delegate = context.coordinator
+                    
+                    let navController = UINavigationController(rootViewController: contactVC)
+                    navController.modalPresentationStyle = .pageSheet
+                    
+                    let doneButton = UIBarButtonItem(
+                        barButtonSystemItem: .done,
+                        target: context.coordinator,
+                        action: #selector(Coordinator.dismissContactVC)
+                    )
+                    contactVC.navigationItem.leftBarButtonItem = doneButton
+                    
+                    uiViewController.present(navController, animated: true)
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    self.isPresented = false
+                }
+            }
+        }
+    }
+    
+    func makeCoordinator() -> Coordinator {
+        Coordinator(parent: self)
+    }
+    
+    class Coordinator: NSObject, CNContactViewControllerDelegate {
+        let parent: ContactViewController
+        
+        init(parent: ContactViewController) {
+            self.parent = parent
+            super.init()
+        }
+        
+        @objc func dismissContactVC() {
+            DispatchQueue.main.async {
+                self.parent.isPresented = false
+            }
+        }
+        
+        func contactViewController(_ viewController: CNContactViewController, didCompleteWith contact: CNContact?) {
+            dismissContactVC()
+        }
+    }
+}
 
 // MARK: - PREVIEW SECTION
 
@@ -553,3 +673,4 @@ struct TagView: View {
     }
     .modelContainer(for: [Friend.self, Tag.self, Hangout.self])
 }
+

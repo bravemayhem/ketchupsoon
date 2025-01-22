@@ -18,5 +18,7 @@
 		<string>Cabin-Medium.ttf</string>
 		<string>Cabin-SemiBold.ttf</string>
 	</array>
+	<key>NSContactsUsageDescription</key>
+	<string>FriendTracker needs access to your contacts to help you manage and stay in touch with your friends.</string>
 </dict>
 </plist>
