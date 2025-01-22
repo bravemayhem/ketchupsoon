@@ -37,6 +37,7 @@ enum FriendDetail {
         var friend: Friend { get }
         var showingScheduler: Bool { get set }
         var showingMessageSheet: Bool { get set }
+        var showingFrequencyPicker: Bool { get set }
         func markAsSeen()
     }
     
@@ -61,6 +62,7 @@ enum FriendDetail {
         var showingMessageSheet = false
         var showingCityPicker = false
         var showingTagsManager = false
+        var showingFrequencyPicker = false
         var lastSeenDate: Date {
             get { friend.lastSeen ?? Date() }
             set { friend.updateLastSeen(to: newValue) }

@@ -34,7 +34,7 @@ struct FriendExistingView: View {
     var body: some View {
         BaseFriendForm(configuration: FormConfiguration.existing) { config in
             Group {
-                if config.showsLocation || config.showsLastSeen || config.showsName {
+                if config.showsLocation || config.showsLastSeen || config.showsName || config.showsCatchUpFrequency {
                     FriendInfoSection(
                         friend: viewModel.friend,
                         onLastSeenTap: {
@@ -42,6 +42,9 @@ struct FriendExistingView: View {
                         },
                         onCityTap: {
                             viewModel.showingCityPicker = true
+                        },
+                        onFrequencyTap: {
+                            viewModel.showingFrequencyPicker = true
                         }
                     )
                 }
@@ -98,7 +101,11 @@ struct FriendExistingView: View {
         ) {
             viewModel.friend.location = cityService.selectedCity
         }
-        
+        .sheet(isPresented: $viewModel.showingFrequencyPicker) {
+            NavigationStack {
+                FrequencyPickerView(friend: viewModel.friend)
+            }
+        }
         .sheet(isPresented: $viewModel.showingTagsManager) {
             TagsSelectionView(friend: viewModel.friend)
         }

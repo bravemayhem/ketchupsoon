@@ -188,6 +188,7 @@ struct FriendInfoSection: View {
     let friend: Friend
     let onLastSeenTap: () -> Void
     let onCityTap: () -> Void
+    let onFrequencyTap: () -> Void
     
     var body: some View {
         Section("Friend Details") {
@@ -226,6 +227,22 @@ struct FriendInfoSection: View {
                     Spacer()
                     if let location = friend.location {
                         Text(location)
+                            .foregroundColor(AppColors.secondaryLabel)
+                    } else {
+                        Text("Not set")
+                            .foregroundColor(AppColors.secondaryLabel)
+                    }
+                }
+            }
+            
+            // Catch Up Frequency
+            Button(action: onFrequencyTap) {
+                HStack {
+                    Text("Catch Up Frequency")
+                        .foregroundColor(AppColors.label)
+                    Spacer()
+                    if let frequency = friend.catchUpFrequency {
+                        Text(frequency.displayText)
                             .foregroundColor(AppColors.secondaryLabel)
                     } else {
                         Text("Not set")
@@ -412,7 +429,8 @@ struct TagView: View {
                     catchUpFrequency: .monthly
                 ),
                 onLastSeenTap: {},
-                onCityTap: {}
+                onCityTap: {},
+                onFrequencyTap: {}
             )
         }
         .listStyle(.insetGrouped)

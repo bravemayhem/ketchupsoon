@@ -31,48 +31,36 @@ struct FriendOnboardingView: View {
     
     var body: some View {
         NavigationStack {
-            BaseFriendForm(configuration: FormConfiguration.onboarding) { config in
-                Group {
-                    if config.showsName {
-                        FriendOnboardingDetailsSection(
-                            isFromContacts: viewModel.isFromContacts,
-                            contact: viewModel.input,
-                            manualName: $viewModel.friendName,
-                            phoneNumber: $viewModel.phoneNumber,
-                            cityService: cityService,
-                            onCityTap: {
-                                viewModel.showingCityPicker = true
-                            }
-                        )
+            Form {
+                FriendOnboardingDetailsSection(
+                    isFromContacts: viewModel.isFromContacts,
+                    contact: viewModel.input,
+                    manualName: $viewModel.friendName,
+                    phoneNumber: $viewModel.phoneNumber,
+                    cityService: cityService,
+                    onCityTap: {
+                        viewModel.showingCityPicker = true
                     }
-                    
-                    if config.showsTags {
-                        FriendTagsSection(
-                            tags: viewModel.selectedTags,
-                            onManageTags: { showingTagsSheet = true }
-                        )
-                    }
-                    
-                    if config.showsWishlist {
-                        FriendConnectSection(
-                            wantToConnectSoon: $viewModel.wantToConnectSoon
-                        )
-                    }
-                    
-                    if config.showsCatchUpFrequency {
-                        FriendCatchUpSection(
-                            hasCatchUpFrequency: $viewModel.hasCatchUpFrequency,
-                            selectedFrequency: $viewModel.selectedFrequency
-                        )
-                    }
-                    
-                    if config.showsLastSeen {
-                        FriendLastSeenSection(
-                            hasLastSeen: $viewModel.hasLastSeen,
-                            lastSeenDate: $viewModel.lastSeenDate
-                        )
-                    }
-                }
+                )
+                
+                FriendTagsSection(
+                    tags: viewModel.selectedTags,
+                    onManageTags: { showingTagsSheet = true }
+                )
+                
+                FriendConnectSection(
+                    wantToConnectSoon: $viewModel.wantToConnectSoon
+                )
+                
+                FriendCatchUpSection(
+                    hasCatchUpFrequency: $viewModel.hasCatchUpFrequency,
+                    selectedFrequency: $viewModel.selectedFrequency
+                )
+                
+                FriendLastSeenSection(
+                    hasLastSeen: $viewModel.hasLastSeen,
+                    lastSeenDate: $viewModel.lastSeenDate
+                )
             }
             .navigationTitle("Add Friend Details")
             .navigationBarTitleDisplayMode(.inline)
@@ -98,7 +86,6 @@ struct FriendOnboardingView: View {
         }
     }
     
-    
     private func handleCancel() {
         dismiss()
     }
@@ -108,16 +95,31 @@ struct FriendOnboardingView: View {
         dismiss()
     }
 }
-    
-#Preview("Friend Onboarding") {
+
+#Preview("From Contacts") {
     NavigationStack {
         FriendOnboardingView(
             contact: (
-                name: "John Doe",
-                identifier: nil,
+                name: "John Smith",
+                identifier: "123",
                 phoneNumber: "(555) 123-4567",
                 imageData: nil,
                 city: "San Francisco"
+            )
+        )
+    }
+    .modelContainer(for: [Friend.self, Tag.self], inMemory: true)
+}
+
+#Preview("Manual Entry") {
+    NavigationStack {
+        FriendOnboardingView(
+            contact: (
+                name: "",
+                identifier: nil,
+                phoneNumber: nil,
+                imageData: nil,
+                city: nil
             )
         )
     }
