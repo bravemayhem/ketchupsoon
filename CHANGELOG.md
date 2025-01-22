@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+### 2024-03-23
+#### Changed
+- **Friend Details UI Consistency**
+  - Standardized label styling across all fields in friend details
+  - Updated field labels to use consistent black text
+  - Added uniform "Not set" placeholder for empty fields
+  - Unified text alignment patterns across all inputs
+  - Improved visual hierarchy with standardized colors
+  - Enhanced readability through consistent styling
+
 ### 2024-03-22
 #### Changed
 - **Friend Card UI Improvements**

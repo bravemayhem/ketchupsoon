@@ -50,10 +50,23 @@ struct FriendOnboardingDetailsSection: View {
     var body: some View {
         Section("Friend Details") {
             if !isFromContacts {
-                TextField("Name", text: $manualName)
-                    .foregroundColor(AppColors.label)
-                TextField("Phone Number (Optional)", text: $phoneNumber)
-                    .foregroundColor(AppColors.label)
+                HStack {
+                    Text("Name")
+                        .foregroundColor(AppColors.label)
+                    Spacer()
+                    TextField("Not set", text: $manualName)
+                        .multilineTextAlignment(.trailing)
+                        .foregroundColor(AppColors.secondaryLabel)
+                }
+                
+                HStack {
+                    Text("Phone")
+                        .foregroundColor(AppColors.label)
+                    Spacer()
+                    TextField("Not set", text: $phoneNumber)
+                        .multilineTextAlignment(.trailing)
+                        .foregroundColor(AppColors.secondaryLabel)
+                }
             } else if let contact = contact {
                 HStack {
                     Text("Name")

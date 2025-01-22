@@ -30,13 +30,10 @@ final class FriendListStyleTests: XCTestCase {
     func testFriendListStyleProperties() {
         // Given
         let sut = FriendListStyle()
-        let content = Text("Test")
-        
-        // When
-        let modifiedView = sut.body(content: content)
+        let content = Text("Test").modifier(FriendListStyle())
         
         // Then
-        let mirror = Mirror(reflecting: modifiedView)
+        let mirror = Mirror(reflecting: content)
         let children = Array(mirror.children)
         
         // Verify the view has the expected modifiers
@@ -47,13 +44,10 @@ final class FriendListStyleTests: XCTestCase {
     func testFriendCardStyleProperties() {
         // Given
         let sut = FriendCardStyle()
-        let content = Text("Test")
-        
-        // When
-        let modifiedView = sut.body(content: content)
+        let content = Text("Test").modifier(FriendCardStyle())
         
         // Then
-        let mirror = Mirror(reflecting: modifiedView)
+        let mirror = Mirror(reflecting: content)
         let children = Array(mirror.children)
         
         // Verify the view has the expected modifiers

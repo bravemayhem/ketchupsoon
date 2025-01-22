@@ -77,4 +77,73 @@ final class FriendSheetPresenterTests: XCTestCase {
         XCTAssertEqual(sut.selectedFriend?.name, friend.name)
         XCTAssertTrue(sut.showingActionSheet)
     }
+    
+    func testFriendSheetPresenterModifier() {
+        // Given
+        let testFriend = Friend(name: "Test Friend", phoneNumber: "123-456-7890")
+        let selectedFriend = Binding.constant(testFriend)
+        let sut = Text("Test").friendSheetPresenter(selectedFriend: selectedFriend)
+        
+        // When
+        let mirror = Mirror(reflecting: sut)
+        
+        // Then
+        XCTAssertTrue(mirror.description.contains("FriendSheetPresenter"))
+    }
+    
+    func testFriendSheetPresenterEnvironment() {
+        // Given
+        let testFriend = Friend(name: "Test Friend", phoneNumber: "123-456-7890")
+        @State var selectedFriend: Friend? = testFriend
+        
+        let view = NavigationStack {
+            Text("Test")
+                .friendSheetPresenter(selectedFriend: $selectedFriend)
+        }
+        
+        // When
+        let mirror = Mirror(reflecting: view)
+        let presenterExists = mirror.children.contains { child in
+            String(describing: type(of: child.value)).contains("FriendSheetPresenter")
+        }
+        
+        // Then
+        XCTAssertTrue(presenterExists)
+    }
+    
+    func testFriendSheetPresenterBinding() {
+        // Given
+        let testFriend = Friend(name: "Test Friend", phoneNumber: "123-456-7890")
+        var selectedFriend: Friend? = nil
+        let binding = Binding(
+            get: { selectedFriend },
+            set: { selectedFriend = $0 }
+        )
+        let presenter = FriendSheetPresenter(selectedFriend: binding)
+        
+        // When
+        presenter.showFriendDetails(for: testFriend)
+        
+        // Then
+        XCTAssertEqual(selectedFriend?.name, testFriend.name)
+        XCTAssertEqual(selectedFriend?.phoneNumber, testFriend.phoneNumber)
+    }
+    
+    func testFriendSheetPresenterContent() {
+        // Given
+        let testFriend = Friend(name: "Test Friend", phoneNumber: "123-456-7890")
+        @State var selectedFriend: Friend? = nil
+        let content = Text("Test")
+            .friendSheetPresenter(selectedFriend: $selectedFriend)
+        
+        // When
+        let mirror = Mirror(reflecting: content)
+        
+        // Then
+        // Verify that the content has sheet modifiers
+        let hasSheetModifiers = mirror.children.contains { child in
+            String(describing: child.value).contains("sheet")
+        }
+        XCTAssertTrue(hasSheetModifiers)
+    }
 } 

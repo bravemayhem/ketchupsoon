@@ -27,6 +27,8 @@ struct FriendCard: View {
                             HStack(spacing: 4) {
                                 Image(systemName: "mappin.and.ellipse")
                                     .font(AppTheme.captionFont)
+                                    .foregroundColor(AppColors.secondaryLabel)
+                                    .frame(width: 15, alignment: .center)
                                 Text(location)
                             }
                             .cardSecondaryText()
@@ -36,6 +38,8 @@ struct FriendCard: View {
                             HStack(spacing: 4) {
                                 Image(systemName: "arrow.triangle.2.circlepath")
                                     .font(AppTheme.captionFont)
+                                    .foregroundColor(AppColors.secondaryLabel)
+                                    .frame(width: 15, alignment: .center)
                                 Text(frequency.displayText)
                             }
                             .cardSecondaryText()
@@ -45,6 +49,8 @@ struct FriendCard: View {
                             HStack(spacing: 4) {
                                 Image(systemName: "hourglass")
                                     .font(AppTheme.captionFont)
+                                    .foregroundColor(AppColors.secondaryLabel)
+                                    .frame(width: 15, alignment: .center)
                                 Text(lastSeen)
                             }
                             .cardSecondaryText()

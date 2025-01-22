@@ -10,18 +10,29 @@ struct CitySearchField: View {
     
     var body: some View {
         ZStack(alignment: .leading) {
-            TextField("City (Optional)", text: $service.searchInput)
-                .focused($isFocused)
-                .appTextFieldStyle()
-                .onChange(of: service.searchInput) { _, newValue in
-                    service.updateSearchText(newValue)
-                    isShowingResults = !newValue.isEmpty
+            HStack {
+                Text("City")
+                    .foregroundColor(AppColors.label)
+                Spacer()
+                if let selectedCity = service.selectedCity {
+                    Text(selectedCity)
+                        .foregroundColor(AppColors.secondaryLabel)
+                } else {
+                    TextField("Not set", text: $service.searchInput)
+                        .multilineTextAlignment(.trailing)
+                        .foregroundColor(AppColors.secondaryLabel)
+                        .focused($isFocused)
                 }
-                .onChange(of: isFocused) { _, focused in
-                    if !focused {
-                        isShowingResults = false
-                    }
+            }
+            .onChange(of: service.searchInput) { _, newValue in
+                service.updateSearchText(newValue)
+                isShowingResults = !newValue.isEmpty
+            }
+            .onChange(of: isFocused) { _, focused in
+                if !focused {
+                    isShowingResults = false
                 }
+            }
             
             if isShowingResults && !service.searchResults.isEmpty {
                 VStack(alignment: .leading, spacing: 0) {
