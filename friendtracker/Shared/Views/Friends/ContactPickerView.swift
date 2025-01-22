@@ -110,12 +110,19 @@ struct ContactPickerView: View {
     }
     
     private func loadContacts() async {
-        isLoading = true
+        await MainActor.run {
+            isLoading = true
+        }
         let granted = await contactsManager.requestAccess()
         if granted {
-            contacts = await contactsManager.fetchContacts()
+            let fetchedContacts = await contactsManager.fetchContacts()
+            await MainActor.run {
+                contacts = fetchedContacts
+            }
         }
-        isLoading = false
+        await MainActor.run {
+            isLoading = false
+        }
     }
 }
 

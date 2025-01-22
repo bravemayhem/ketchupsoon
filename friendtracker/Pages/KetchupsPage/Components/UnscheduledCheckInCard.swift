@@ -6,6 +6,7 @@ struct UnscheduledCheckInCard: View {
     let friend: Friend
     let onScheduleTapped: () -> Void
     let onMessageTapped: () -> Void
+    let onCardTapped: () -> Void
     
     var lastSeenText: String? {
         guard let lastSeen = friend.lastSeen else {
@@ -22,27 +23,30 @@ struct UnscheduledCheckInCard: View {
     var body: some View {
         BaseCardView {
             VStack(spacing: AppTheme.spacingMedium) {
-                CardContentView(friend: friend, showChevron: false) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        if let location = friend.location {
-                            HStack(spacing: 4) {
-                                Image(systemName: "mappin.and.ellipse")
-                                    .font(AppTheme.captionFont)
-                                    .foregroundColor(AppColors.secondaryLabel)
-                                Text(location).cardSecondaryText()
+                Button(action: onCardTapped) {
+                    CardContentView(friend: friend, showChevron: false) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            if let location = friend.location {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "mappin.and.ellipse")
+                                        .font(AppTheme.captionFont)
+                                        .foregroundColor(AppColors.secondaryLabel)
+                                    Text(location).cardSecondaryText()
+                                }
                             }
-                        }
-                        
-                        if let frequency = friend.catchUpFrequency {
-                            Text("Due for \(frequency.displayText) catch-up")
-                                .cardSecondaryText()
-                        }
-                        
-                        if let lastSeen = lastSeenText {
-                            Text(lastSeen).cardSecondaryText()
+                            
+                            if let frequency = friend.catchUpFrequency {
+                                Text("Due for \(frequency.displayText) catch-up")
+                                    .cardSecondaryText()
+                            }
+                            
+                            if let lastSeen = lastSeenText {
+                                Text(lastSeen).cardSecondaryText()
+                            }
                         }
                     }
                 }
+                .buttonStyle(.plain)
                 
                 HStack(spacing: AppTheme.spacingMedium) {
                     if friend.phoneNumber != nil {
@@ -57,6 +61,7 @@ struct UnscheduledCheckInCard: View {
                                         .stroke(AppColors.accent, lineWidth: 1)
                                 )
                         }
+                        .buttonStyle(.plain)
                     }
                     
                     Button(action: onScheduleTapped) {
@@ -70,6 +75,7 @@ struct UnscheduledCheckInCard: View {
                                     .stroke(AppColors.accent, lineWidth: 1)
                             )
                     }
+                    .buttonStyle(.plain)
                 }
             }
         }
@@ -88,7 +94,8 @@ struct UnscheduledCheckInCard: View {
                 catchUpFrequency: .monthly
             ),
             onScheduleTapped: {},
-            onMessageTapped: {}
+            onMessageTapped: {},
+            onCardTapped: {}
         )
         
         // Friend with only location
@@ -99,7 +106,8 @@ struct UnscheduledCheckInCard: View {
                 phoneNumber: "123-456-7890"
             ),
             onScheduleTapped: {},
-            onMessageTapped: {}
+            onMessageTapped: {},
+            onCardTapped: {}
         )
     }
     .padding()

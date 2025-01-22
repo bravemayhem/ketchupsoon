@@ -21,6 +21,8 @@ struct KetchupsView: View {
     @State private var hangoutToCheck: Hangout?
     @State private var showingCompletionPrompt = false
     @State private var selectedFriend: Friend?
+    @State private var showingScheduler = false
+    @State private var showingMessageSheet = false
     
     private var scheduledFriendIds: Set<UUID> {
         Set(upcomingHangouts.compactMap { $0.friend?.id })
@@ -129,8 +131,13 @@ struct KetchupsView: View {
                                 friend: friend,
                                 onScheduleTapped: {
                                     selectedFriend = friend
+                                    showingScheduler = true
                                 },
                                 onMessageTapped: {
+                                    selectedFriend = friend
+                                    showingMessageSheet = true
+                                },
+                                onCardTapped: {
                                     selectedFriend = friend
                                 }
                             )
@@ -162,7 +169,26 @@ struct KetchupsView: View {
                 HangoutCompletionView(hangout: hangout)
             }
         }
-        .friendSheetPresenter(selectedFriend: $selectedFriend)
+        .sheet(isPresented: $showingScheduler) {
+            if let friend = selectedFriend {
+                NavigationStack {
+                    SchedulerView(initialFriend: friend)
+                }
+            }
+        }
+        .sheet(isPresented: $showingMessageSheet) {
+            if let friend = selectedFriend, let phoneNumber = friend.phoneNumber {
+                NavigationStack {
+                    MessageComposeView(recipient: phoneNumber)
+                }
+            }
+        }
+        .onChange(of: selectedFriend) { _, newValue in
+            if newValue == nil {
+                showingScheduler = false
+                showingMessageSheet = false
+            }
+        }
     }
 }
 
