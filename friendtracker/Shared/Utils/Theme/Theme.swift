@@ -91,6 +91,42 @@ struct CustomButtonStyle: ButtonStyle {
     }
 }
 
+// Custom text field style
+struct AppTextFieldStyle: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .textFieldStyle(.plain)
+            .foregroundColor(AppColors.label)
+    }
+}
+
+extension View {
+    func appTextFieldStyle() -> some View {
+        self.modifier(AppTextFieldStyle())
+    }
+}
+
+// Search results popup style
+struct SearchResultsPopupStyle: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .background(AppColors.secondarySystemBackground)
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadiusMedium))
+            .shadow(
+                color: AppColors.label.opacity(0.1),
+                radius: AppTheme.shadowSmall.radius,
+                x: AppTheme.shadowSmall.x,
+                y: AppTheme.shadowSmall.y
+            )
+    }
+}
+
+extension View {
+    func searchResultsPopupStyle() -> some View {
+        self.modifier(SearchResultsPopupStyle())
+    }
+}
+
 #Preview("Theme") {
     ScrollView {
         VStack(alignment: .leading, spacing: AppTheme.spacingLarge) {

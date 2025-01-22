@@ -9,9 +9,10 @@ struct CitySearchField: View {
     @FocusState private var isFocused: Bool
     
     var body: some View {
-        ZStack(alignment: .top) {
+        ZStack(alignment: .leading) {
             TextField("City (Optional)", text: $service.searchInput)
                 .focused($isFocused)
+                .appTextFieldStyle()
                 .onChange(of: service.searchInput) { _, newValue in
                     service.updateSearchText(newValue)
                     isShowingResults = !newValue.isEmpty
@@ -24,9 +25,6 @@ struct CitySearchField: View {
             
             if isShowingResults && !service.searchResults.isEmpty {
                 VStack(alignment: .leading, spacing: 0) {
-                    Color.clear
-                        .frame(height: 44) // Height of the TextField
-                    
                     ScrollView {
                         LazyVStack(alignment: .leading, spacing: 0) {
                             ForEach(service.searchResults, id: \.self) { result in
@@ -50,15 +48,15 @@ struct CitySearchField: View {
                                 
                                 if result != service.searchResults.last {
                                     Divider()
+                                        .background(AppColors.secondaryLabel.opacity(0.3))
                                 }
                             }
                         }
                     }
                     .frame(maxHeight: 200)
-                    .background(AppColors.systemBackground)
                 }
-                .clipShape(RoundedRectangle(cornerRadius: 10))
-                .shadow(radius: 4)
+                .searchResultsPopupStyle()
+                .offset(y: 44) // Position below the text field
             }
         }
     }
