@@ -401,6 +401,7 @@ struct TagView: View {
 struct ContactViewController: UIViewControllerRepresentable {
     let contactIdentifier: String
     @Binding var isPresented: Bool
+    @Environment(\.modelContext) private var modelContext
     
     func makeUIViewController(context: Context) -> UIViewController {
         let contactVC = UIViewController()
@@ -408,7 +409,14 @@ struct ContactViewController: UIViewControllerRepresentable {
     }
     
     func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
-        guard isPresented, uiViewController.presentedViewController == nil else { return }
+        guard isPresented else {
+            // If not presented, make sure any presented view controller is dismissed
+            uiViewController.presentedViewController?.dismiss(animated: true)
+            return
+        }
+        
+        // Don't try to present if we already have a presented view controller
+        guard uiViewController.presentedViewController == nil else { return }
         
         let store = CNContactStore()
         store.requestAccess(for: .contacts) { granted, error in
@@ -421,7 +429,17 @@ struct ContactViewController: UIViewControllerRepresentable {
             
             do {
                 let predicate = CNContact.predicateForContacts(withIdentifiers: [contactIdentifier])
-                let keys = [CNContactViewController.descriptorForRequiredKeys()]
+                let baseKeys = [
+                    CNContactGivenNameKey,
+                    CNContactFamilyNameKey,
+                    CNContactPhoneNumbersKey,
+                    CNContactImageDataKey,
+                    CNContactThumbnailImageDataKey,
+                    CNContactPostalAddressesKey,
+                    CNContactIdentifierKey
+                ] as [CNKeyDescriptor]
+                
+                let keys = baseKeys + [CNContactViewController.descriptorForRequiredKeys()]
                 let contacts = try store.unifiedContacts(matching: predicate, keysToFetch: keys)
                 
                 guard let contact = contacts.first else {
@@ -432,14 +450,20 @@ struct ContactViewController: UIViewControllerRepresentable {
                 }
                 
                 DispatchQueue.main.async {
+                    // Create and configure the contact view controller
                     let contactVC = CNContactViewController(for: contact)
                     contactVC.allowsEditing = true
                     contactVC.allowsActions = true
                     contactVC.delegate = context.coordinator
                     
+                    // Create and configure the navigation controller
                     let navController = UINavigationController(rootViewController: contactVC)
                     navController.modalPresentationStyle = .pageSheet
                     
+                    // Store the navigation controller in the coordinator
+                    context.coordinator.currentNavController = navController
+                    
+                    // Add done button
                     let doneButton = UIBarButtonItem(
                         barButtonSystemItem: .done,
                         target: context.coordinator,
@@ -447,9 +471,15 @@ struct ContactViewController: UIViewControllerRepresentable {
                     )
                     contactVC.navigationItem.leftBarButtonItem = doneButton
                     
-                    uiViewController.present(navController, animated: true)
+                    // Present only if the view is in the window hierarchy
+                    if uiViewController.view.window != nil {
+                        uiViewController.present(navController, animated: true)
+                    } else {
+                        self.isPresented = false
+                    }
                 }
             } catch {
+                print("Error fetching contact: \(error)")
                 DispatchQueue.main.async {
                     self.isPresented = false
                 }
@@ -463,6 +493,7 @@ struct ContactViewController: UIViewControllerRepresentable {
     
     class Coordinator: NSObject, CNContactViewControllerDelegate {
         let parent: ContactViewController
+        var currentNavController: UINavigationController?
         
         init(parent: ContactViewController) {
             self.parent = parent
@@ -470,8 +501,30 @@ struct ContactViewController: UIViewControllerRepresentable {
         }
         
         @objc func dismissContactVC() {
-            DispatchQueue.main.async {
-                self.parent.isPresented = false
+            Task { @MainActor in
+                // Dismiss the current navigation controller if it exists
+                if let navController = currentNavController {
+                    await navController.dismiss(animated: true)
+                }
+                
+                // Get the friend and sync contact info
+                let identifier = parent.contactIdentifier
+                let descriptor = FetchDescriptor<Friend>(
+                    predicate: #Predicate<Friend> { friend in
+                        friend.contactIdentifier == identifier
+                    }
+                )
+                
+                if let friend = try? parent.modelContext.fetch(descriptor).first {
+                    if await ContactsManager.shared.syncContactInfo(for: friend) {
+                        print("Successfully synced contact info for \(friend.name)")
+                    } else {
+                        print("Failed to sync contact info for \(friend.name)")
+                    }
+                }
+                
+                // Update the presentation state
+                parent.isPresented = false
             }
         }
         

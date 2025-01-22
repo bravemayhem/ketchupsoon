@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+### 2024-03-25
+#### Added
+- **Contact Sync Improvements**
+  - Added ability to sync edits made through native contact interface
+  - Enhanced bi-directional synchronization between app and system contacts
+  - Improved data consistency when contacts are modified externally
+
 ### 2024-03-24
 #### Added
 - **Contact Integration for Imported Friends**

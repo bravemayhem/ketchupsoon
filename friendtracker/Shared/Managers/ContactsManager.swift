@@ -67,4 +67,34 @@ class ContactsManager: ObservableObject {
             }
         }.value
     }
+    
+    // Function to sync a friend's information with their contact
+    nonisolated func syncContactInfo(for friend: Friend) async -> Bool {
+        guard let contactIdentifier = friend.contactIdentifier else { return false }
+        
+        let capturedStore = await MainActor.run { self.store }
+        let capturedKeysToFetch = await MainActor.run { self.keysToFetch }
+        
+        return await Task.detached(priority: .background) {
+            do {
+                let predicate = CNContact.predicateForContacts(withIdentifiers: [contactIdentifier])
+                let contacts = try capturedStore.unifiedContacts(matching: predicate, keysToFetch: capturedKeysToFetch)
+                
+                guard let contact = contacts.first else { return false }
+                
+                // Update friend's information on the main thread
+                await MainActor.run {
+                    friend.name = "\(contact.givenName) \(contact.familyName)".trimmingCharacters(in: .whitespaces)
+                    friend.phoneNumber = contact.phoneNumbers.first?.value.stringValue
+                    friend.location = contact.postalAddresses.first?.value.city
+                    friend.photoData = contact.thumbnailImageData
+                }
+                
+                return true
+            } catch {
+                print("Error syncing contact info: \(error)")
+                return false
+            }
+        }.value
+    }
 } 
