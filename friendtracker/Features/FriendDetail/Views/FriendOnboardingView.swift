@@ -34,16 +34,12 @@ struct FriendOnboardingView: View {
             BaseFriendForm(configuration: FormConfiguration.onboarding) { config in
                 Group {
                     if config.showsName {
-                        FriendNameSection(
+                        FriendOnboardingDetailsSection(
                             isFromContacts: viewModel.isFromContacts,
-                            contactName: viewModel.input?.name,
-                            manualName: $viewModel.friendName
-                        )
-                    }
-                    
-                    if config.showsLocation {
-                        FriendLocationSection(
-                            selectedCity: cityService.selectedCity,
+                            contact: viewModel.input,
+                            manualName: $viewModel.friendName,
+                            phoneNumber: $viewModel.phoneNumber,
+                            cityService: cityService,
                             onCityTap: {
                                 viewModel.showingCityPicker = true
                             }

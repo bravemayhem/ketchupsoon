@@ -112,6 +112,9 @@ enum FriendDetail {
         
         init(input: NewFriendInput? = nil) {
             self.input = input
+            if let phoneNumber = input?.phoneNumber {
+                self.phoneNumber = phoneNumber
+            }
         }
 
         func updateLastSeenDate(to date: Date) {

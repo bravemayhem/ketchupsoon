@@ -27,6 +27,61 @@ struct FriendNameSection: View {
     }
 }
 
+// MARK: - Friend Details Section for Onboarding
+struct FriendOnboardingDetailsSection: View {
+    let isFromContacts: Bool
+    let contact: FriendDetail.NewFriendInput?
+    @Binding var manualName: String
+    @Binding var phoneNumber: String
+    @Bindable var cityService: CitySearchService
+    let onCityTap: () -> Void
+    
+    var body: some View {
+        Section("Friend Details") {
+            if !isFromContacts {
+                TextField("Name", text: $manualName)
+                    .foregroundColor(AppColors.label)
+                TextField("Phone Number (Optional)", text: $phoneNumber)
+                    .foregroundColor(AppColors.label)
+            } else if let contact = contact {
+                HStack {
+                    Text("Name")
+                        .foregroundColor(AppColors.label)
+                    Spacer()
+                    Text(contact.name)
+                        .foregroundColor(AppColors.secondaryLabel)
+                }
+                
+                if let phone = contact.phoneNumber {
+                    HStack {
+                        Text("Phone")
+                            .foregroundColor(AppColors.label)
+                        Spacer()
+                        Text(phone)
+                            .foregroundColor(AppColors.secondaryLabel)
+                    }
+                }
+            }
+            
+            Button(action: onCityTap) {
+                HStack {
+                    Text("City")
+                        .foregroundColor(AppColors.label)
+                    Spacer()
+                    if let location = cityService.selectedCity {
+                        Text(location)
+                            .foregroundColor(AppColors.secondaryLabel)
+                    } else {
+                        Text("Not set")
+                            .foregroundColor(AppColors.secondaryLabel)
+                    }
+                }
+            }
+        }
+        .listRowBackground(AppColors.secondarySystemBackground)
+    }
+}
+
 //USED FOR SETTING UP ADDING SOMEONE TO THE "WISH LIST" FOR THE FIRST TIME
 struct FriendConnectSection: View {
     @Binding var wantToConnectSoon: Bool
@@ -34,6 +89,7 @@ struct FriendConnectSection: View {
     var body: some View {
         Section("Connect Soon") {
             Toggle("Want to connect soon?", isOn: $wantToConnectSoon)
+                .foregroundColor(AppColors.label)
         }
         .listRowBackground(AppColors.secondarySystemBackground)
     }
@@ -47,11 +103,14 @@ struct FriendCatchUpSection: View {
     var body: some View {
         Section("Catch Up Frequency") {
             Toggle("Set catch up goal?", isOn: $hasCatchUpFrequency)
+                .foregroundColor(AppColors.label)
             
             if hasCatchUpFrequency {
                 Picker("Frequency", selection: $selectedFrequency) {
                     ForEach(CatchUpFrequency.allCases, id: \.self) { frequency in
-                        Text(frequency.displayText).tag(frequency)
+                        Text(frequency.displayText)
+                            .foregroundColor(AppColors.label)
+                            .tag(frequency)
                     }
                 }
             }
@@ -69,6 +128,7 @@ struct FriendLastSeenSection: View {
     var body: some View {
         Section("Last Seen") {
             Toggle("Add last seen date?", isOn: $hasLastSeen)
+                .foregroundColor(AppColors.label)
             
             if hasLastSeen {
                 Button {
@@ -76,9 +136,10 @@ struct FriendLastSeenSection: View {
                 } label: {
                     HStack {
                         Text("Last Seen Date")
+                            .foregroundColor(AppColors.label)
                         Spacer()
                         Text(lastSeenDate.formatted(date: .abbreviated, time: .omitted))
-                            .foregroundColor(.secondary)
+                            .foregroundColor(AppColors.secondaryLabel)
                     }
                 }
             }
@@ -315,6 +376,30 @@ struct TagView: View {
 
 
 // MARK: - PREVIEW SECTION
+
+#Preview("FriendActionSectionExisting") {
+    NavigationStack {
+        List {
+            FriendActionSection(
+                friend: Friend(
+                    name: "John Doe",
+                    lastSeen: Date(),
+                    location: "New York",
+                    needsToConnectFlag: true,
+                    phoneNumber: "(212) 555-0123",
+                    catchUpFrequency: .weekly
+                ),
+                onMessageTap: {},
+                onScheduleTap: {},
+                onMarkSeenTap: {}
+            )
+        }
+        .listStyle(.insetGrouped)
+    }
+    .modelContainer(for: [Friend.self, Tag.self, Hangout.self])
+}
+
+
 #Preview("FriendInfoSection") {
     NavigationStack {
         List {
@@ -440,4 +525,42 @@ struct TagView: View {
     .padding()
     .background(AppColors.secondarySystemBackground)
     .modelContainer(for: [Tag.self])
+}
+
+#Preview("FriendOnboardingDetailsSection") {
+    NavigationStack {
+        List {
+            // Contact Import Scenario
+            FriendOnboardingDetailsSection(
+                isFromContacts: true,
+                contact: FriendDetail.NewFriendInput(
+                    name: "John Smith",
+                    identifier: "123",
+                    phoneNumber: "(555) 123-4567",
+                    imageData: nil,
+                    city: "San Francisco"
+                ),
+                manualName: .constant(""),
+                phoneNumber: .constant(""),
+                cityService: CitySearchService(),
+                onCityTap: {}
+            )
+            
+            // Manual Entry Scenario
+            FriendOnboardingDetailsSection(
+                isFromContacts: false,
+                contact: nil,
+                manualName: .constant("Jane Doe"),
+                phoneNumber: .constant("(555) 987-6543"),
+                cityService: {
+                    let service = CitySearchService()
+                    service.selectedCity = "New York"
+                    return service
+                }(),
+                onCityTap: {}
+            )
+        }
+        .listStyle(.insetGrouped)
+    }
+    .modelContainer(for: [Friend.self, Tag.self, Hangout.self])
 }
