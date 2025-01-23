@@ -239,6 +239,17 @@ struct FriendInfoSection: View {
     let onFrequencyTap: () -> Void
     @Bindable var cityService: CitySearchService
     @State private var showingContactView = false
+    @State private var editableName: String
+    @State private var editablePhone: String
+    
+    init(friend: Friend, onLastSeenTap: @escaping () -> Void, onFrequencyTap: @escaping () -> Void, cityService: CitySearchService) {
+        self.friend = friend
+        self.onLastSeenTap = onLastSeenTap
+        self.onFrequencyTap = onFrequencyTap
+        self._cityService = Bindable(wrappedValue: cityService)
+        self._editableName = State(initialValue: friend.name)
+        self._editablePhone = State(initialValue: friend.phoneNumber ?? "")
+    }
     
     var body: some View {
         Section("Friend Details") {
@@ -260,8 +271,12 @@ struct FriendInfoSection: View {
                     Text("Name")
                         .foregroundColor(AppColors.label)
                     Spacer()
-                    Text(friend.name)
+                    TextField("Not set", text: $editableName)
+                        .multilineTextAlignment(.trailing)
                         .foregroundColor(AppColors.secondaryLabel)
+                        .onChange(of: editableName) { _, newValue in
+                            friend.name = newValue
+                        }
                 }
             }
             
@@ -288,13 +303,12 @@ struct FriendInfoSection: View {
                     Text("Phone")
                         .foregroundColor(AppColors.label)
                     Spacer()
-                    if let phone = friend.phoneNumber {
-                        Text(phone)
-                            .foregroundColor(AppColors.secondaryLabel)
-                    } else {
-                        Text("Not set")
-                            .foregroundColor(AppColors.tertiaryLabel)
-                    }
+                    TextField("Not set", text: $editablePhone)
+                        .multilineTextAlignment(.trailing)
+                        .foregroundColor(AppColors.secondaryLabel)
+                        .onChange(of: editablePhone) { _, newValue in
+                            friend.phoneNumber = newValue.isEmpty ? nil : newValue
+                        }
                 }
             }
             

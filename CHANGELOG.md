@@ -4,6 +4,13 @@
 
 ### 2024-03-25
 #### Added
+- **Manual Contact Editing**
+  - Added ability to edit name and phone number for manually added friends
+  - Implemented inline text fields for direct editing
+  - Maintained read-only fields for contacts imported from address book
+  - Added real-time updates as users type
+  - Preserved empty state handling with "Not set" placeholder
+
 - **Contact Sync Improvements**
   - Added ability to sync edits made through native contact interface
   - Enhanced bi-directional synchronization between app and system contacts
