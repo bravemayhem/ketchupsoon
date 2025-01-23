@@ -38,6 +38,7 @@ extension View {
                 }
             }
             .presentationDetents([.medium])
+            .interactiveDismissDisabled()
         }
     }
 }
@@ -85,4 +86,4 @@ struct SheetModifierPreview: View {
             .navigationTitle("Sheet Modifiers")
     }
     .background(AppColors.systemBackground)
-} 
+}

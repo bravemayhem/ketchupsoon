@@ -7,6 +7,7 @@ struct FriendOnboardingView: View {
     @Environment(\.modelContext) private var modelContext
     @State private var viewModel: FriendDetail.OnboardingViewModel
     @State private var showingTagsSheet = false
+    @State private var showingDatePicker = false
     @State private var cityService = CitySearchService()
     @Query(sort: [SortDescriptor<Tag>(\.name)]) private var allTags: [Tag]
     
@@ -56,7 +57,8 @@ struct FriendOnboardingView: View {
                 
                 FriendLastSeenSection(
                     hasLastSeen: $viewModel.hasLastSeen,
-                    lastSeenDate: $viewModel.lastSeenDate
+                    lastSeenDate: $viewModel.lastSeenDate,
+                    showingDatePicker: $showingDatePicker
                 )
             }
             .navigationTitle("Add Friend Details")
@@ -72,6 +74,9 @@ struct FriendOnboardingView: View {
             }
             .sheet(isPresented: $showingTagsSheet) {
                 TagsSelectionView(selectedTags: $viewModel.selectedTags)
+            }
+            .sheet(isPresented: $showingDatePicker) {
+                DatePickerView(date: $viewModel.lastSeenDate, isPresented: $showingDatePicker)
             }
         }
     }
