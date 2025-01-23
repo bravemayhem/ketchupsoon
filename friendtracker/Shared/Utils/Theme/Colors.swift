@@ -10,22 +10,22 @@ enum AppColors {
     static let accentLight = Color(hex: "FFA07A") // Light coral
     
     // Background Colors
-    static let systemBackground = Color(hex: "F2F2F7") // iOS system background
-    static let secondarySystemBackground = Color(hex: "FFFFFF") // iOS secondary background
+    static let systemBackground = Color(.systemBackground)
+    static let secondarySystemBackground = Color(.secondarySystemBackground)
     
     // Text Colors
-    static let label = Color(hex: "000000")
-    static let secondaryLabel = Color(hex: "3C3C43").opacity(0.6)
-    static let tertiaryLabel = Color(hex: "3C3C43").opacity(0.3)
+    static let label = Color(.label)
+    static let secondaryLabel = Color(.secondaryLabel)
+    static let tertiaryLabel = Color(.tertiaryLabel)
     
     // UI Element Colors
-    static let separator = Color(hex: "3C3C43").opacity(0.2)
-    static let systemGray = Color(hex: "8E8E93")
+    static let separator = Color(.separator)
+    static let systemGray = Color(.systemGray)
     
     // Semantic Colors
-    static let success = Color(hex: "34C759") // iOS green
-    static let warning = Color(hex: "FF9500") // iOS orange
-    static let error = Color(hex: "FF3B30")   // iOS red
+    static let success = Color(.systemGreen)
+    static let warning = Color(.systemOrange)
+    static let error = Color(.systemRed)
     
     // Gradient Colors
     static let gradientLight = Color(hex: "FF7E45").opacity(0.8)  // Soft orange

@@ -182,6 +182,13 @@
   - Enhanced error handling for Google authentication
   - Added proper state management for Google Calendar connection
 
+### 2024-03-27
+#### Added
+- **Dark Mode Support**
+  - Added toggle in settings for light/dark mode preference
+  - Enhanced app appearance with system-wide dark mode support
+  - Improved visual consistency across all views in both modes
+
 ## [1.0.0] - 2024-01-13
 
 ### Added

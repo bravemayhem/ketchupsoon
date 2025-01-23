@@ -4,6 +4,7 @@ import SwiftData
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
+    @StateObject private var colorSchemeManager = ColorSchemeManager.shared
     @State private var showingClearDataAlert = false
     
     var body: some View {
@@ -28,6 +29,10 @@ struct SettingsView: View {
                         CalendarIntegrationView()
                     } label: {
                         Label("Calendar Integration", systemImage: "calendar")
+                    }
+                    
+                    Toggle(isOn: $colorSchemeManager.isDarkMode) {
+                        Label("Dark Mode", systemImage: "moon.fill")
                     }
                 }
                 

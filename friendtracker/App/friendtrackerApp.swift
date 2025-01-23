@@ -18,6 +18,7 @@ import SwiftData
 @main
 struct friendtrackerApp: App {
     let modelContainer: ModelContainer
+    @StateObject private var colorSchemeManager = ColorSchemeManager.shared
     
     init() {
         // Initialize ModelContainer
@@ -114,6 +115,7 @@ struct friendtrackerApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .preferredColorScheme(colorSchemeManager.colorScheme)
         }
         .modelContainer(modelContainer)
     }
