@@ -160,6 +160,14 @@
   - Added navigation links for Profile Settings, Notifications, and Calendar Integration
   - Included data management option for clearing app data
 
+#### Changed
+- **Calendar Integration Enhancement**
+  - Integrated existing CalendarManager with new settings interface
+  - Added visual status indicators for Apple and Google Calendar connections
+  - Implemented connected calendars list showing all synced calendars
+  - Improved calendar authorization flow for both Apple and Google calendars
+  - Enhanced user feedback with clear connection states
+
 ## [1.0.0] - 2024-01-13
 
 ### Added

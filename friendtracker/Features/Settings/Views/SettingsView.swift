@@ -25,7 +25,7 @@ struct SettingsView: View {
                     }
                     
                     NavigationLink {
-                        Text("Calendar Integration")
+                        CalendarIntegrationView()
                     } label: {
                         Label("Calendar Integration", systemImage: "calendar")
                     }
@@ -51,12 +51,43 @@ struct SettingsView: View {
             .alert("Clear All Data", isPresented: $showingClearDataAlert) {
                 Button("Cancel", role: .cancel) { }
                 Button("Clear", role: .destructive) {
-                    // TODO: Implement clear data functionality
+                    Task { @MainActor in
+                        await clearAllData()
+                    }
                 }
             } message: {
                 Text("This will delete all your friends and hangouts data. This action cannot be undone.")
             }
         }
+    }
+    
+    @MainActor
+    private func clearAllData() async {
+        // Delete all hangouts
+        let hangoutDescriptor = FetchDescriptor<Hangout>()
+        if let hangouts = try? modelContext.fetch(hangoutDescriptor) {
+            for hangout in hangouts {
+                modelContext.delete(hangout)
+            }
+        }
+        
+        // Delete all friends
+        let friendDescriptor = FetchDescriptor<Friend>()
+        if let friends = try? modelContext.fetch(friendDescriptor) {
+            for friend in friends {
+                modelContext.delete(friend)
+            }
+        }
+        
+        // Delete all tags
+        let tagDescriptor = FetchDescriptor<Tag>()
+        if let tags = try? modelContext.fetch(tagDescriptor) {
+            for tag in tags {
+                modelContext.delete(tag)
+            }
+        }
+        
+        dismiss()
     }
 }
 

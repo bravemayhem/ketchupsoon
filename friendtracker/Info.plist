@@ -20,5 +20,9 @@
 	</array>
 	<key>NSContactsUsageDescription</key>
 	<string>FriendTracker needs access to your contacts to help you manage and stay in touch with your friends.</string>
+	<key>NSCalendarsUsageDescription</key>
+	<string>FriendTracker needs access to your calendar to sync your hangouts and help you stay connected with friends.</string>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>FriendTracker needs full calendar access to create and manage hangout events in your calendar.</string>
 </dict>
 </plist>
