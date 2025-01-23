@@ -2,21 +2,34 @@
 
 ## [Unreleased]
 
+### 2024-01-22
+#### Added
+- **Friend Creation Timestamp**
+  - Added `createdAt` timestamp to track when friends are added to the system
+  - Enhanced scheduling logic to use creation date for new friends
+  - Improved accuracy of "Needs Scheduling" suggestions
+
+#### Changed
+- **Scheduling Window Adjustment**
+  - Reduced scheduling reminder window from 3 weeks to 2 weeks
+  - More focused and timely scheduling suggestions
+  - Better user experience with shorter planning horizon
+
 ### 2024-03-25
 #### Added
-- **Manual Contact Editing**
-  - Added ability to edit name and phone number for manually added friends
-  - Implemented inline text fields for direct editing
-  - Maintained read-only fields for contacts imported from address book
-  - Added real-time updates as users type
-  - Preserved empty state handling with "Not set" placeholder
-
 - **Contact Sync Improvements**
   - Added ability to sync edits made through native contact interface
   - Enhanced bi-directional synchronization between app and system contacts
   - Improved data consistency when contacts are modified externally
 
 #### Changed
+- **Manual Contact Editing Enhancement**
+  - Enhanced manual contacts with inline name and phone number editing
+  - Added text fields for direct editing of manually added friends
+  - Maintained read-only fields for contacts imported from address book
+  - Implemented real-time updates as users type
+  - Preserved empty state handling with "Not set" placeholder
+
 - **Contact Interface UX Enhancement**
   - Replaced "Done" button with gesture-based dismissal for contact sheet
   - Added visual grabber indicator for more intuitive interaction

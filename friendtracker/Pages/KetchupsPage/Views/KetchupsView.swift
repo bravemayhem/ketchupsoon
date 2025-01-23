@@ -28,13 +28,13 @@ struct KetchupsView: View {
         Set(upcomingHangouts.compactMap { $0.friend?.id })
     }
     
-    private var threeWeeksFromNow: Date {
-        Calendar.current.date(byAdding: .day, value: 21, to: Date()) ?? Date()
+    private var twoWeeksFromNow: Date {
+        Calendar.current.date(byAdding: .day, value: 14, to: Date()) ?? Date()
     }
     
     private func shouldIncludeInUpcomingCheckIns(_ friend: Friend) -> Bool {
         guard let nextConnect = friend.nextConnectDate else { return false }
-        guard nextConnect <= threeWeeksFromNow else { return false }
+        guard nextConnect <= twoWeeksFromNow else { return false }
         return !scheduledFriendIds.contains(friend.id)
     }
     

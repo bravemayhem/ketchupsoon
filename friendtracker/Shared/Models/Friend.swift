@@ -16,11 +16,12 @@ final class Friend: Identifiable {
     var catchUpFrequency: CatchUpFrequency?
     var calendarIntegrationEnabled: Bool
     @Attribute(.externalStorage) var calendarVisibilityPreference: CalendarVisibilityPreference
+    var createdAt: Date
     @Relationship(deleteRule: .cascade) var hangouts: [Hangout]
     @Relationship(deleteRule: .nullify) var tags: [Tag]
     // Cache for frequently accessed computed properties
     @Transient private var _lastSeenTextCache: (Date, String)?
-        // Lazy loading for hangouts
+    // Lazy loading for hangouts
     @Transient private var _scheduledHangoutsCache: [Hangout]?
 
     
@@ -43,6 +44,7 @@ final class Friend: Identifiable {
         self.needsToConnectFlag = needsToConnectFlag
         self.calendarIntegrationEnabled = false
         self.calendarVisibilityPreference = .none
+        self.createdAt = Date()
         self.hangouts = []
         self.tags = []
         self._lastSeenTextCache = nil
@@ -77,9 +79,11 @@ final class Friend: Identifiable {
     }
     
     var nextConnectDate: Date? {
-        guard let lastSeen = lastSeen else { return nil }
-        let days = catchUpFrequency?.days ?? 30  // Default to monthly if no frequency set
-        return Calendar.current.date(byAdding: .day, value: days, to: lastSeen)
+        guard let frequency = catchUpFrequency else { return nil }
+        
+        // Use lastSeen if available, otherwise use createdAt
+        let baseDate = lastSeen ?? createdAt
+        return Calendar.current.date(byAdding: .day, value: frequency.days, to: baseDate)
     }
     
     func updateLastSeen(to date: Date? = nil) {
