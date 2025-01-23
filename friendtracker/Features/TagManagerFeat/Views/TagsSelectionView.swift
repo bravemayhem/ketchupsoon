@@ -20,6 +20,14 @@ struct TagsSelectionView: View {
     private let friend: Friend?
     @Binding private var selectedTags: Set<Tag>
     
+    private var selectionState: TagSelectionState {
+        if let friend = friend {
+            return .existingFriend(friend)
+        } else {
+            return .newFriend(selectedTags: Set(selectedTags.map { $0.id }))
+        }
+    }
+    
     // MARK: - Initialization
     init(friend: Friend) {
         self.friend = friend
@@ -73,7 +81,7 @@ struct TagsSelectionView: View {
     // MARK: - Body
     var body: some View {
         TagsContentView(
-            friend: friend ?? Friend(name: ""), // Temporary friend for preview only
+            selectionState: selectionState,
             allTags: allTags,
             isEditMode: $isEditMode,
             showingAddTagSheet: $showingAddTagSheet,

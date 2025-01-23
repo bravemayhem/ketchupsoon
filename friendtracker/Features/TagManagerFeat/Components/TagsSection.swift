@@ -1,8 +1,22 @@
 import SwiftUI
 import SwiftData
 
+enum TagSelectionState {
+    case existingFriend(Friend)
+    case newFriend(selectedTags: Set<Tag.ID>)
+    
+    func isSelected(_ tag: Tag) -> Bool {
+        switch self {
+        case .existingFriend(let friend):
+            return friend.tags.contains(where: { $0.id == tag.id })
+        case .newFriend(let selectedTags):
+            return selectedTags.contains(tag.id)
+        }
+    }
+}
+
 struct TagsSection: View {
-    let friend: Friend
+    let selectionState: TagSelectionState
     let allTags: [Tag]
     let isEditMode: Bool
     @Binding var showingAddTagSheet: Bool
@@ -13,10 +27,9 @@ struct TagsSection: View {
     var body: some View {
         FlowLayout(spacing: 8) {
             ForEach(allTags) { tag in
-                let isSelected = friend.tags.contains(where: { $0.id == tag.id })
                 TagButton(
                     tag: tag,
-                    isSelected: isSelected,
+                    isSelected: selectionState.isSelected(tag),
                     isEditMode: isEditMode,
                     isMarkedForDeletion: selectedTagsToDelete.contains(tag.id),
                     onSelect: {
@@ -63,7 +76,7 @@ struct TagsSectionPreviewContainer: View {
             List {
                 Section("TAGS") {
                     TagsSection(
-                        friend: friend,
+                        selectionState: .existingFriend(friend),
                         allTags: tags,
                         isEditMode: isEditMode,
                         showingAddTagSheet: $showingAddTagSheet,

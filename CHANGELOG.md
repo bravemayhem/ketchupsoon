@@ -141,4 +141,21 @@
 - Created dedicated DatePickerView component for reusability
 - Improved state management with proper binding flow
 - Fixed multiple presentation attempts issue
-- Better component organization and responsibility separation 
+- Better component organization and responsibility separation
+
+### Fixed
+- Fixed tag selection visual feedback in the tag management sheet when adding new friends
+- Improved tag selection state management to handle both existing and new friends properly
+
+### Changed
+- Refactored tag selection logic to use a dedicated `TagSelectionState` enum for better type safety and clarity
+- Updated `TagsSection`, `TagsContentView`, and `TagsSelectionView` to use the new tag selection state management
+
+## [1.0.0] - 2024-01-13
+
+### Added
+- Initial release
+- Basic friend management functionality
+- Tag system for categorizing friends
+- Catch-up scheduling features
+- Contact integration 

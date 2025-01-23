@@ -2,7 +2,7 @@ import SwiftUI
 import SwiftData
 
 struct TagsContentView: View {
-    let friend: Friend
+    let selectionState: TagSelectionState
     let allTags: [Tag]
     @Binding var isEditMode: Bool
     @Binding var showingAddTagSheet: Bool
@@ -11,12 +11,19 @@ struct TagsContentView: View {
     let onTagDeletion: (Tag) -> Void
     let onDeleteSelected: () -> Void
     
+    private var friend: Friend? {
+        if case .existingFriend(let friend) = selectionState {
+            return friend
+        }
+        return nil
+    }
+    
     var body: some View {
         VStack(spacing: 0) {
             Form {
                 Section("TAGS") {
                     TagsSection(
-                        friend: friend,
+                        selectionState: selectionState,
                         allTags: allTags,
                         isEditMode: isEditMode,
                         showingAddTagSheet: $showingAddTagSheet,
@@ -115,7 +122,7 @@ struct TagsPreviewContainer: View {
     var body: some View {
         NavigationStack {
             TagsContentView(
-                friend: friend,
+                selectionState: .existingFriend(friend),
                 allTags: tags,
                 isEditMode: .constant(isEditMode),
                 showingAddTagSheet: .constant(false),
