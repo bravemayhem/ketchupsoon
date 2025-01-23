@@ -12,6 +12,7 @@ final class Friend: Identifiable {
     var contactIdentifier: String?
     var needsToConnectFlag: Bool
     var phoneNumber: String?
+    var email: String?
     var photoData: Data?
     var catchUpFrequency: CatchUpFrequency?
     var calendarIntegrationEnabled: Bool
@@ -31,6 +32,7 @@ final class Friend: Identifiable {
          contactIdentifier: String? = nil,
          needsToConnectFlag: Bool = false,
          phoneNumber: String? = nil,
+         email: String? = nil,
          photoData: Data? = nil,
          catchUpFrequency: CatchUpFrequency? = nil) {
         self.id = UUID()
@@ -39,6 +41,7 @@ final class Friend: Identifiable {
         self.location = location
         self.contactIdentifier = contactIdentifier
         self.phoneNumber = phoneNumber
+        self.email = email
         self.photoData = photoData
         self.catchUpFrequency = catchUpFrequency
         self.needsToConnectFlag = needsToConnectFlag

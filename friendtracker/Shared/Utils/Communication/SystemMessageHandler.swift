@@ -3,7 +3,13 @@ import MessageUI
 
 struct MessageComposeView: UIViewControllerRepresentable {
     let recipient: String
+    let message: String?
     @Environment(\.dismiss) private var dismiss
+    
+    init(recipient: String, message: String? = nil) {
+        self.recipient = recipient
+        self.message = message
+    }
     
     static func canSendMessages() -> Bool {
         return MFMessageComposeViewController.canSendText()
@@ -29,6 +35,9 @@ struct MessageComposeView: UIViewControllerRepresentable {
             }
         } else {
             controller.recipients = [recipient]
+            if let message = message {
+                controller.body = message
+            }
         }
         
         return controller

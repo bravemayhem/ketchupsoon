@@ -15,6 +15,12 @@
   - More focused and timely scheduling suggestions
   - Better user experience with shorter planning horizon
 
+- **Message Sharing Enhancement**
+  - Simplified hangout sharing message format
+  - Removed calendar link for better user experience
+  - Enhanced message readability with clear date, activity, and location formatting
+  - Improved message sheet presentation with adjustable height
+
 ### 2024-03-25
 #### Added
 - **Contact Sync Improvements**

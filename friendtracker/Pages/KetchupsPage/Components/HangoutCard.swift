@@ -6,6 +6,7 @@ import SwiftData
 struct HangoutCard: View {
     let hangout: Hangout
     @State private var selectedFriend: Friend?
+    @State private var showingMessageSheet = false
     
     var statusColor: Color {
         if hangout.isCompleted {
@@ -27,86 +28,101 @@ struct HangoutCard: View {
         }
     }
     
+    var messageText: String {
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateStyle = .full
+        dateFormatter.timeStyle = .short
+        
+        var message = "Hey! Here are the details for our hangout:\n\n"
+        message += "🗓 \(dateFormatter.string(from: hangout.date))\n"
+        message += "🎯 \(hangout.activity)\n"
+        if !hangout.location.isEmpty {
+            message += "📍 \(hangout.location)\n"
+        }
+        
+        message += "\n\nSee you there! 👋"
+        
+        return message
+    }
+    
     var body: some View {
         BaseCardView {
             if let friend = hangout.friend {
-                Button(action: {
-                    selectedFriend = friend
-                }) {
-                    CardContentView(friend: friend) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            HStack {
-                                Text(hangout.activity)
-                                    .font(.subheadline)
-                                    .foregroundColor(AppColors.label)
-                                Spacer()
-                                Text(statusText)
-                                    .font(AppTheme.captionFont)
-                                    .foregroundColor(statusColor)
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 4)
-                                    .background(
-                                        Capsule()
-                                            .fill(statusColor.opacity(0.1))
-                                    )
-                            }
-                            
-                            if !hangout.location.isEmpty {
-                                HStack(spacing: 4) {
-                                    Image(systemName: "mappin.and.ellipse")
+                VStack(spacing: 12) {
+                    Button(action: {
+                        selectedFriend = friend
+                    }) {
+                        CardContentView(friend: friend) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                HStack {
+                                    Text(hangout.activity)
+                                        .font(.subheadline)
+                                        .foregroundColor(AppColors.label)
+                                    Spacer()
+                                    Text(statusText)
                                         .font(AppTheme.captionFont)
-                                        .foregroundColor(AppColors.secondaryLabel)
-                                    Text(hangout.location).cardSecondaryText()
+                                        .foregroundColor(statusColor)
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 4)
+                                        .background(
+                                            Capsule()
+                                                .fill(statusColor.opacity(0.1))
+                                        )
                                 }
+                                
+                                if !hangout.location.isEmpty {
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "mappin.and.ellipse")
+                                            .font(AppTheme.captionFont)
+                                            .foregroundColor(AppColors.secondaryLabel)
+                                        Text(hangout.location).cardSecondaryText()
+                                    }
+                                }
+                                
+                                if let frequency = friend.catchUpFrequency {
+                                    Text(frequency.displayText).cardSecondaryText()
+                                }
+                                
+                                Text(hangout.formattedDate).cardSecondaryText()
                             }
-                            
-                            if let frequency = friend.catchUpFrequency {
-                                Text(frequency.displayText).cardSecondaryText()
-                            }
-                            
-                            Text(hangout.formattedDate).cardSecondaryText()
                         }
+                    }
+                    
+                    if !hangout.isCompleted && hangout.date > Date() && friend.phoneNumber != nil {
+                        Button {
+                            showingMessageSheet = true
+                        } label: {
+                            Label("Share Details", systemImage: "square.and.arrow.up")
+                                .font(AppTheme.bodyFont)
+                                .foregroundColor(AppColors.accent)
+                        }
+                        .padding(.horizontal)
+                        .padding(.bottom, 4)
                     }
                 }
             }
         }
         .friendSheetPresenter(selectedFriend: $selectedFriend)
+        .sheet(isPresented: $showingMessageSheet) {
+            if let phoneNumber = hangout.friend?.phoneNumber {
+                MessageComposeView(recipient: phoneNumber, message: messageText)
+                    .presentationDetents([.height(400), .large])
+                    .presentationDragIndicator(.visible)
+            }
+        }
     }
 }
 
 #Preview {
-    VStack(spacing: 20) {
-        // Friend with all details
-        let friendWithDetails = Friend(
-            name: "Test Friend",
-            location: "San Francisco",
-            phoneNumber: "123-456-7890",
-            catchUpFrequency: .monthly
-        )
-        let hangoutWithDetails = Hangout(
-            date: Date(),
-            activity: "Coffee",
-            location: "Local Cafe",
-            isScheduled: true,
-            friend: friendWithDetails
-        )
-        HangoutCard(hangout: hangoutWithDetails)
-        
-        // Friend with only location
-        let friendWithLocation = Friend(
-            name: "Another Friend",
-            location: "Los Angeles",
-            phoneNumber: "123-456-7890"
-        )
-        let hangoutWithLocation = Hangout(
-            date: Date(),
-            activity: "Lunch",
-            location: "Restaurant",
-            isScheduled: true,
-            friend: friendWithLocation
-        )
-        HangoutCard(hangout: hangoutWithLocation)
-    }
-    .padding()
-    .background(AppColors.systemBackground)
+    let friend = Friend(name: "Test Friend")
+    let hangout = Hangout(
+        date: Date().addingTimeInterval(86400),
+        activity: "Coffee",
+        location: "Starbucks",
+        isScheduled: true,
+        friend: friend
+    )
+    
+    return HangoutCard(hangout: hangout)
+        .padding()
 } 

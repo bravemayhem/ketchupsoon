@@ -31,4 +31,59 @@ final class Hangout: Identifiable {
         dateFormatter.timeStyle = .short
         return dateFormatter.string(from: date)
     }
+    
+    var calendarEventURL: URL? {
+        // Format dates in iCal format
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyyMMdd'T'HHmmss'Z'"
+        dateFormatter.timeZone = TimeZone(identifier: "UTC")
+        
+        let startDate = dateFormatter.string(from: date)
+        let endDate = dateFormatter.string(from: endDate)
+        
+        // Create event description
+        var description = "Hangout with"
+        if let friendName = friend?.name {
+            description += " \(friendName)"
+        }
+        
+        // Create iCal content
+        var iCalContent = """
+        BEGIN:VCALENDAR
+        VERSION:2.0
+        PRODID:-//FriendTracker//Hangout//EN
+        CALSCALE:GREGORIAN
+        METHOD:REQUEST
+        BEGIN:VEVENT
+        DTSTART:\(startDate)
+        DTEND:\(endDate)
+        DTSTAMP:\(dateFormatter.string(from: Date()))
+        ORGANIZER;CN=FriendTracker:mailto:no-reply@friendtracker.app
+        SUMMARY:\(activity)
+        DESCRIPTION:\(description)
+        """
+        
+        if !location.isEmpty {
+            iCalContent += "\nLOCATION:\(location)"
+        }
+        
+        // Add friend as attendee if they have an email
+        if let email = friend?.email {
+            iCalContent += "\nATTENDEE;CUTYPE=INDIVIDUAL;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=TRUE;CN=\(friend?.name ?? "Friend"):mailto:\(email)"
+        }
+        
+        iCalContent += """
+        
+        END:VEVENT
+        END:VCALENDAR
+        """
+        
+        // Encode the iCal content for URL
+        let encodedContent = iCalContent
+            .addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)?
+            .replacingOccurrences(of: "\n", with: "%0A") ?? ""
+        
+        // Use the data URL format that iOS recognizes for calendar events
+        return URL(string: "data:text/calendar;charset=utf8,\(encodedContent)")
+    }
 }

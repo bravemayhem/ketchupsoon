@@ -9,7 +9,7 @@ struct ContactPickerView: View {
     @State private var searchText = ""
     @State private var contacts: [CNContact] = []
     @State private var isLoading = true
-    @State private var selectedContact: (name: String, identifier: String?, phoneNumber: String?, imageData: Data?, city: String?)?
+    @State private var selectedContact: (name: String, identifier: String?, phoneNumber: String?, email: String?, imageData: Data?, city: String?)?
     @State private var showingOnboarding = false
     
     var body: some View {
@@ -49,6 +49,7 @@ struct ContactPickerView: View {
                     name: "\(contact.givenName) \(contact.familyName)",
                     identifier: contact.identifier,
                     phoneNumber: contact.phoneNumbers.first?.value.stringValue,
+                    email: contact.emailAddresses.first?.value as String?,
                     imageData: contact.thumbnailImageData,
                     city: city
                 )

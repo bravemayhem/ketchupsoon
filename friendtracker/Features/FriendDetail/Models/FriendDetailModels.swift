@@ -25,6 +25,7 @@ enum FriendDetail {
         let name: String
         let identifier: String?
         let phoneNumber: String?
+        let email: String?
         let imageData: Data?
         let city: String?
         
@@ -97,6 +98,7 @@ enum FriendDetail {
         // Contact data
         var friendName = ""
         var phoneNumber = ""
+        var email = ""
         var selectedCity: String?
         var hasLastSeen = false
         var lastSeenDate = Date()
@@ -170,6 +172,7 @@ enum FriendDetail {
                 contactIdentifier: input?.identifier,
                 needsToConnectFlag: wantToConnectSoon,
                 phoneNumber: isFromContacts ? input?.phoneNumber : (phoneNumber.isEmpty ? nil : phoneNumber),
+                email: isFromContacts ? input?.email : (email.isEmpty ? nil : email),
                 photoData: input?.imageData,
                 catchUpFrequency: hasCatchUpFrequency ? selectedFrequency : nil
             )

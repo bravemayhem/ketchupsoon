@@ -15,6 +15,7 @@ class ContactsManager: ObservableObject {
         CNContactGivenNameKey,
         CNContactFamilyNameKey,
         CNContactPhoneNumbersKey,
+        CNContactEmailAddressesKey,
         CNContactImageDataKey,
         CNContactThumbnailImageDataKey,
         CNContactPostalAddressesKey,
@@ -86,6 +87,7 @@ class ContactsManager: ObservableObject {
                 await MainActor.run {
                     friend.name = "\(contact.givenName) \(contact.familyName)".trimmingCharacters(in: .whitespaces)
                     friend.phoneNumber = contact.phoneNumbers.first?.value.stringValue
+                    friend.email = contact.emailAddresses.first?.value as String?
                     friend.location = contact.postalAddresses.first?.value.city
                     friend.photoData = contact.thumbnailImageData
                 }

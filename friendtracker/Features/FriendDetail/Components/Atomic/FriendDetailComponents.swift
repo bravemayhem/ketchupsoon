@@ -46,6 +46,7 @@ struct FriendOnboardingDetailsSection: View {
     let contact: FriendDetail.NewFriendInput?
     @Binding var manualName: String
     @Binding var phoneNumber: String
+    @Binding var email: String
     @Bindable var cityService: CitySearchService
     @State private var showingContactView = false
     
@@ -66,6 +67,15 @@ struct FriendOnboardingDetailsSection: View {
                         .foregroundColor(AppColors.label)
                     Spacer()
                     TextField("Not set", text: $phoneNumber)
+                        .multilineTextAlignment(.trailing)
+                        .foregroundColor(AppColors.secondaryLabel)
+                }
+                
+                HStack {
+                    Text("Email")
+                        .foregroundColor(AppColors.label)
+                    Spacer()
+                    TextField("Not set", text: $email)
                         .multilineTextAlignment(.trailing)
                         .foregroundColor(AppColors.secondaryLabel)
                 }
@@ -804,11 +814,13 @@ struct ContactViewController: UIViewControllerRepresentable {
                     name: "John Smith",
                     identifier: "123",
                     phoneNumber: "(555) 123-4567",
+                    email: "john.smith@email.com",
                     imageData: nil,
                     city: "San Francisco"
                 ),
                 manualName: .constant(""),
                 phoneNumber: .constant(""),
+                email: .constant(""),
                 cityService: CitySearchService()
             )
             
@@ -818,6 +830,7 @@ struct ContactViewController: UIViewControllerRepresentable {
                 contact: nil,
                 manualName: .constant("Jane Doe"),
                 phoneNumber: .constant("(555) 987-6543"),
+                email: .constant(""),
                 cityService: {
                     let service = CitySearchService()
                     service.selectedCity = "New York"

@@ -13,11 +13,12 @@ struct FriendOnboardingView: View {
     @State private var showingError = false
     @Query(sort: [SortDescriptor<Tag>(\.name)]) private var allTags: [Tag]
     
-    init(contact: (name: String, identifier: String?, phoneNumber: String?, imageData: Data?, city: String?)) {
+    init(contact: (name: String, identifier: String?, phoneNumber: String?, email: String?, imageData: Data?, city: String?)) {
         let input = FriendDetail.NewFriendInput(
             name: contact.name,
             identifier: contact.identifier,
             phoneNumber: contact.phoneNumber,
+            email: contact.email,
             imageData: contact.imageData,
             city: contact.city
         )
@@ -40,6 +41,7 @@ struct FriendOnboardingView: View {
                     contact: viewModel.input,
                     manualName: $viewModel.friendName,
                     phoneNumber: $viewModel.phoneNumber,
+                    email: $viewModel.email,
                     cityService: cityService
                 )
                 
@@ -114,6 +116,7 @@ struct FriendOnboardingView: View {
                 name: "John Smith",
                 identifier: "123",
                 phoneNumber: "(555) 123-4567",
+                email: "john.smith@email.com",
                 imageData: nil,
                 city: "San Francisco"
             )
@@ -129,6 +132,7 @@ struct FriendOnboardingView: View {
                 name: "",
                 identifier: nil,
                 phoneNumber: nil,
+                email: nil,
                 imageData: nil,
                 city: nil
             )
