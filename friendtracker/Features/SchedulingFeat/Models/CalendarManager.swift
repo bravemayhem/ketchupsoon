@@ -16,14 +16,25 @@ class CalendarManager: ObservableObject {
     init() {
         Task {
             await requestAccess()
-            setupGoogleCalendar()
+            await setupGoogleCalendar()
         }
     }
     
-    private func setupGoogleCalendar() {
+    private func setupGoogleCalendar() async {
         googleService = GTLRCalendarService()
         // Configure Google Sign-In
         GIDSignIn.sharedInstance.configuration = GIDConfiguration(clientID: "144315286048-7jasampp9nttpd09rd3d31iui3j9stif.apps.googleusercontent.com")
+        
+        // Restore previous sign-in
+        do {
+            let currentUser = try await GIDSignIn.sharedInstance.restorePreviousSignIn()
+            isGoogleAuthorized = true
+            googleService?.authorizer = currentUser.fetcherAuthorizer
+            await loadConnectedCalendars()
+        } catch {
+            print("Error restoring Google sign-in: \(error)")
+            isGoogleAuthorized = false
+        }
     }
     
     func requestAccess() async {
@@ -57,7 +68,6 @@ class CalendarManager: ObservableObject {
               let rootViewController = window.rootViewController else { return }
         
         do {
-            GIDSignIn.sharedInstance.configuration = GIDConfiguration(clientID: "144315286048-7jasampp9nttpd09rd3d31iui3j9stif.apps.googleusercontent.com")
             let result = try await GIDSignIn.sharedInstance.signIn(
                 withPresenting: rootViewController,
                 hint: nil,
@@ -75,6 +85,13 @@ class CalendarManager: ObservableObject {
             print("Error signing in with Google: \(error)")
             throw error
         }
+    }
+    
+    func signOutGoogle() async {
+        GIDSignIn.sharedInstance.signOut()
+        isGoogleAuthorized = false
+        googleService?.authorizer = nil
+        await loadConnectedCalendars()
     }
     
     private func loadConnectedCalendars() async {

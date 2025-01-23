@@ -29,8 +29,16 @@ struct CalendarIntegrationView: View {
                     Label("Google Calendar", systemImage: "calendar.badge.plus")
                     Spacer()
                     if calendarManager.isGoogleAuthorized {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundColor(.green)
+                        HStack(spacing: 12) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundColor(.green)
+                            Button("Sign Out") {
+                                Task {
+                                    await calendarManager.signOutGoogle()
+                                }
+                            }
+                            .foregroundColor(AppColors.accent)
+                        }
                     } else {
                         Button("Sign In") {
                             Task {

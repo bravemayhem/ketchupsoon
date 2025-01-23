@@ -168,6 +168,14 @@
   - Improved calendar authorization flow for both Apple and Google calendars
   - Enhanced user feedback with clear connection states
 
+#### Fixed
+- **Google Calendar Authentication**
+  - Fixed Google Calendar sign-in persistence issue
+  - Added proper session restoration on app launch
+  - Implemented sign-out functionality
+  - Enhanced error handling for Google authentication
+  - Added proper state management for Google Calendar connection
+
 ## [1.0.0] - 2024-01-13
 
 ### Added
