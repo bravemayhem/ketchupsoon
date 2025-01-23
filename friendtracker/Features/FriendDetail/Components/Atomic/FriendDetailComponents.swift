@@ -265,6 +265,39 @@ struct FriendInfoSection: View {
                 }
             }
             
+            // Phone
+            if friend.contactIdentifier != nil {
+                Button {
+                    showingContactView = true
+                } label: {
+                    HStack {
+                        Text("Phone")
+                            .foregroundColor(AppColors.label)
+                        Spacer()
+                        if let phone = friend.phoneNumber {
+                            Text(phone)
+                                .foregroundColor(AppColors.accent)
+                        } else {
+                            Text("Not set")
+                                .foregroundColor(AppColors.tertiaryLabel)
+                        }
+                    }
+                }
+            } else {
+                HStack {
+                    Text("Phone")
+                        .foregroundColor(AppColors.label)
+                    Spacer()
+                    if let phone = friend.phoneNumber {
+                        Text(phone)
+                            .foregroundColor(AppColors.secondaryLabel)
+                    } else {
+                        Text("Not set")
+                            .foregroundColor(AppColors.tertiaryLabel)
+                    }
+                }
+            }
+            
             // Last Seen
             Button {
                 onLastSeenTap()

@@ -22,6 +22,13 @@
   - Improved visual feedback for editable fields
   - Enhanced clarity of which fields can be updated
 
+- **Phone Number Display in Friend Details**
+  - Added phone number field to friend details view
+  - Implemented consistent styling with other contact fields
+  - Shows phone numbers from contacts in accent color with tap-to-edit
+  - Displays manual entries in standard color scheme
+  - Added "Not set" placeholder for missing phone numbers
+
 ### 2024-03-24
 #### Added
 - **Contact Integration for Imported Friends**
