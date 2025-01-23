@@ -189,6 +189,13 @@
   - Enhanced app appearance with system-wide dark mode support
   - Improved visual consistency across all views in both modes
 
+#### Changed
+- **Tag Management UI Enhancement**
+  - Updated tag management interface with consistent theme colors
+  - Fixed tag section background visibility
+  - Enhanced create tag sheet with proper color scheme
+  - Improved visual hierarchy in both light and dark modes
+
 ## [1.0.0] - 2024-01-13
 
 ### Added

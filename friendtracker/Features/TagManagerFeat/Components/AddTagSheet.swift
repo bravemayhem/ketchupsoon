@@ -23,17 +23,21 @@ struct AddTagSheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                TextField("Tag name", text: $tagName)
-                    .autocapitalization(.none)
-                    .autocorrectionDisabled()
-                    .textInputAutocapitalization(.never)
-                    .font(.body)
-                    .onSubmit {
-                        if !tagName.isEmpty {
-                            createTag()
+                Section {
+                    TextField("Tag name", text: $tagName)
+                        .autocapitalization(.none)
+                        .autocorrectionDisabled()
+                        .textInputAutocapitalization(.never)
+                        .font(AppTheme.bodyFont)
+                        .foregroundColor(AppColors.label)
+                        .onSubmit {
+                            if !tagName.isEmpty {
+                                createTag()
+                            }
                         }
-                    }
-                    .submitLabel(.done)
+                        .submitLabel(.done)
+                }
+                .listRowBackground(AppColors.secondarySystemBackground)
             }
             .scrollContentBackground(.hidden)
             .background(AppColors.systemBackground)
@@ -44,15 +48,18 @@ struct AddTagSheet: View {
                     Button("Cancel") {
                         dismiss()
                     }
+                    .foregroundColor(AppColors.label)
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Add") {
                         createTag()
                     }
                     .disabled(tagName.isEmpty)
+                    .foregroundColor(tagName.isEmpty ? AppColors.tertiaryLabel : AppColors.accent)
                 }
             }
         }
+        .background(AppColors.systemBackground)
         .alert("Error", isPresented: $showingError, presenting: error) { _ in
             Button("OK", role: .cancel) { }
         } message: { error in

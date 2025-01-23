@@ -15,12 +15,12 @@ struct TagButton: View {
             HStack {
                 if isEditMode {
                     Image(systemName: isMarkedForDeletion ? "checkmark.circle.fill" : "circle")
-                        .foregroundColor(isMarkedForDeletion ? .red : .gray)
+                        .foregroundColor(isMarkedForDeletion ? .red : AppColors.secondaryLabel)
                         .font(.caption)
                 }
                 
                 Text("#\(tag.name)")
-                    .font(.body)
+                    .font(AppTheme.bodyFont)
                 if isSelected && !isEditMode {
                     Image(systemName: "checkmark")
                         .font(.caption)
@@ -31,6 +31,7 @@ struct TagButton: View {
             .background(
                 Capsule()
                     .fill(isSelected && !isEditMode ? AppColors.accent : AppColors.systemBackground)
+                    .shadow(color: AppColors.label.opacity(0.1), radius: 2, x: 0, y: 1)
             )
             .foregroundColor(isSelected && !isEditMode ? .white : AppColors.label)
             .contentShape(Capsule())

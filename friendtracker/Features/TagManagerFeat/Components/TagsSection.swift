@@ -43,6 +43,8 @@ struct TagsSection: View {
             }
         }
         .padding(.vertical, 8)
+        .padding(.horizontal, 4)
+        .background(AppColors.secondarySystemBackground)
     }
 }
 

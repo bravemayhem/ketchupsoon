@@ -32,7 +32,10 @@ struct TagsContentView: View {
                         onTagDeletion: onTagDeletion
                     )
                 }
+                .listRowBackground(AppColors.secondarySystemBackground)
             }
+            .scrollContentBackground(.hidden)
+            .background(AppColors.systemBackground)
             
             if !isEditMode {
                 CreateTagButton(action: {
@@ -42,7 +45,6 @@ struct TagsContentView: View {
                 .padding()
             }
         }
-        .scrollContentBackground(.hidden)
         .background(AppColors.systemBackground)
         .navigationTitle("Manage Tags")
         .navigationBarTitleDisplayMode(.inline)
