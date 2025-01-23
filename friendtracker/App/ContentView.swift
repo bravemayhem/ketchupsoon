@@ -87,6 +87,7 @@ private struct NavigationTab<Content: View>: View {
     let icon: String
     @Binding var showImportOptions: Bool
     @Binding var showingDebugAlert: Bool
+    @State private var showingSettings = false
     let clearData: () async -> Void
     let content: Content
     
@@ -112,6 +113,16 @@ private struct NavigationTab<Content: View>: View {
                 .navigationTitle(title)
                 .navigationBarTitleDisplayMode(.large)
                 .toolbar {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button {
+                            showingSettings = true
+                        } label: {
+                            Image(systemName: "gear")
+                                .font(.title2)
+                                .foregroundColor(AppColors.label)
+                        }
+                    }
+                    
                     ToolbarItem(placement: .topBarTrailing) {
                         Button {
                             showImportOptions = true
@@ -126,6 +137,9 @@ private struct NavigationTab<Content: View>: View {
                         }
                         #endif
                     }
+                }
+                .sheet(isPresented: $showingSettings) {
+                    SettingsView()
                 }
         }
         .tabItem {

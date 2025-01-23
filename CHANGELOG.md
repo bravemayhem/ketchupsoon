@@ -151,6 +151,15 @@
 - Refactored tag selection logic to use a dedicated `TagSelectionState` enum for better type safety and clarity
 - Updated `TagsSection`, `TagsContentView`, and `TagsSelectionView` to use the new tag selection state management
 
+### 2024-03-26
+#### Added
+- **Settings Interface**
+  - Added settings gear icon to the left side of all navigation bars
+  - Created new Settings view with profile, app settings, and data management sections
+  - Implemented basic settings structure for future feature expansion
+  - Added navigation links for Profile Settings, Notifications, and Calendar Integration
+  - Included data management option for clearing app data
+
 ## [1.0.0] - 2024-01-13
 
 ### Added
