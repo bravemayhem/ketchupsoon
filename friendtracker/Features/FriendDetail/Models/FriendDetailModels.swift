@@ -7,6 +7,20 @@ enum FriendDetail {
         case sheet(Binding<Bool>)
     }
     
+    enum FriendError: Error {
+        case duplicateName
+        case duplicateContact
+        
+        var message: String {
+            switch self {
+            case .duplicateName:
+                return "A friend with this name already exists"
+            case .duplicateContact:
+                return "This contact has already been added"
+            }
+        }
+    }
+    
     struct NewFriendInput {
         let name: String
         let identifier: String?
@@ -50,7 +64,7 @@ enum FriendDetail {
         var selectedTags: Set<Tag> { get set }
         var input: NewFriendInput? { get }
         var isFromContacts: Bool { get }
-        func createFriend(in modelContext: ModelContext)
+        func createFriend(in modelContext: ModelContext) throws
     }
     
     // MARK: - View Model Implementations
@@ -119,7 +133,36 @@ enum FriendDetail {
             lastSeenDate = date
         }
         
-        func createFriend(in modelContext: ModelContext) {
+        private func checkForDuplicates(in modelContext: ModelContext) throws {
+            // Check for duplicate contact if importing from contacts
+            if let identifier = input?.identifier {
+                let contactDescriptor = FetchDescriptor<Friend>(
+                    predicate: #Predicate<Friend> { friend in
+                        friend.contactIdentifier == identifier
+                    }
+                )
+                if let _ = try modelContext.fetch(contactDescriptor).first {
+                    throw FriendError.duplicateContact
+                }
+            }
+            
+            // Check for duplicate name
+            let name = displayName.trimmingCharacters(in: .whitespacesAndNewlines)
+            let allFriendsDescriptor = FetchDescriptor<Friend>()
+            let existingFriends = try modelContext.fetch(allFriendsDescriptor)
+            
+            // Check for case-insensitive name match in memory
+            if existingFriends.contains(where: { friend in
+                friend.name.localizedCaseInsensitiveCompare(name) == .orderedSame
+            }) {
+                throw FriendError.duplicateName
+            }
+        }
+        
+        func createFriend(in modelContext: ModelContext) throws {
+            // Check for duplicates before creating
+            try checkForDuplicates(in: modelContext)
+            
             let friend = Friend(
                 name: displayName,
                 lastSeen: hasLastSeen ? lastSeenDate : nil,

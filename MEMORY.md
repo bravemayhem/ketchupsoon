@@ -1,30 +1,28 @@
-### Date Picker Sheet Implementation Learnings
+# Implementation Memories
 
-When implementing sheet presentations in SwiftUI, especially with date pickers:
+## Duplicate Friend Prevention
 
-1. **Sheet Presentation Hierarchy**
-   - Sheets should be presented from parent views rather than child components
-   - This ensures proper navigation stack and presentation handling
-   - Prevents conflicts with other sheet presentations
+### Overview
+Added validation to prevent duplicate friends from being added to the app, either through manual entry or contact import.
 
-2. **Component Design**
-   - Create dedicated view components for reusable UI elements (e.g., DatePickerView)
-   - Keep state management at appropriate levels
-   - Use bindings to pass state between parent and child views
+### Implementation Details
+- Located in `FriendDetail.OnboardingViewModel`
+- Uses two types of validation:
+  1. Contact identifier check for imported contacts
+  2. Case-insensitive name comparison for all friends
 
-3. **Presentation Timing**
-   - Be cautious of presentation conflicts when multiple sheets could be shown
-   - Consider adding delays if needed to prevent presentation conflicts
-   - Always handle dismissal properly to maintain view state
+### Technical Notes
+- SwiftData predicate limitations required performing case-insensitive name comparison in memory
+- Contact identifier check uses direct predicate comparison
+- Error handling uses custom `FriendError` enum with descriptive messages
+- Validation happens before friend creation to ensure data integrity
 
-4. **Debugging Tips**
-   - Use strategic print statements to track state changes
-   - Monitor presentation state changes
-   - Watch for multiple presentation attempts
-   - Check navigation stack interactions
+### User Experience
+- Shows clear error messages when duplicates are detected
+- Prevents accidental duplicate entries
+- Maintains data quality by ensuring each friend is unique
 
-5. **Best Practices**
-   - Maintain separation of concerns
-   - Keep view components focused and reusable
-   - Handle state at appropriate levels in view hierarchy
-   - Use proper SwiftUI view modifiers (.sheet, .navigationStack) 
+### Future Considerations
+- If the friend list grows very large, may need to optimize the in-memory name comparison
+- Could add fuzzy matching for similar names as a warning (not blocking)
+- Might want to add ability to merge duplicate entries if found 

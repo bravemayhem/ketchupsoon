@@ -158,4 +158,10 @@
 - Basic friend management functionality
 - Tag system for categorizing friends
 - Catch-up scheduling features
-- Contact integration 
+- Contact integration
+- **Duplicate Friend Prevention**
+  - Added validation to prevent adding duplicate friends
+  - Checks for duplicate contact identifiers when importing from contacts
+  - Performs case-insensitive name comparison to prevent duplicate names
+  - Shows clear error messages when duplicates are detected
+  - Improves data integrity by preventing duplicate entries 

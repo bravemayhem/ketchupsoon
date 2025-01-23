@@ -9,6 +9,8 @@ struct FriendOnboardingView: View {
     @State private var showingTagsSheet = false
     @State private var showingDatePicker = false
     @State private var cityService = CitySearchService()
+    @State private var error: FriendDetail.FriendError?
+    @State private var showingError = false
     @Query(sort: [SortDescriptor<Tag>(\.name)]) private var allTags: [Tag]
     
     init(contact: (name: String, identifier: String?, phoneNumber: String?, imageData: Data?, city: String?)) {
@@ -78,6 +80,11 @@ struct FriendOnboardingView: View {
             .sheet(isPresented: $showingDatePicker) {
                 DatePickerView(date: $viewModel.lastSeenDate, isPresented: $showingDatePicker)
             }
+            .alert("Cannot Add Friend", isPresented: $showingError, presenting: error) { _ in
+                Button("OK", role: .cancel) { }
+            } message: { error in
+                Text(error.message)
+            }
         }
     }
     
@@ -87,8 +94,16 @@ struct FriendOnboardingView: View {
     
     private func handleAdd() {
         viewModel.selectedCity = cityService.selectedCity
-        viewModel.createFriend(in: modelContext)
-        dismiss()
+        do {
+            try viewModel.createFriend(in: modelContext)
+            dismiss()
+        } catch let friendError as FriendDetail.FriendError {
+            error = friendError
+            showingError = true
+        } catch {
+            print("Unexpected error: \(error)")
+            dismiss()
+        }
     }
 }
 
