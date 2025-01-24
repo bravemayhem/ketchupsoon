@@ -55,7 +55,7 @@ struct DailyScheduleView: View {
                     }
                     
                     // Events
-                    ForEach(events, id: \.event.eventIdentifier) { calendarEvent in
+                    ForEach(events) { calendarEvent in
                         if let eventPosition = calculateEventPosition(calendarEvent.event) {
                             EventView(event: calendarEvent)
                                 .frame(height: eventPosition.height)

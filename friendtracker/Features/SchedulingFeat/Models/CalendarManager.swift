@@ -11,11 +11,23 @@ class CalendarManager: ObservableObject {
     @Published var isAuthorized = false
     @Published var isGoogleAuthorized = false
     @Published var connectedCalendars: [Friend.ConnectedCalendar] = []
+    private var isInitialized = false
     
     init() {
         Task {
-            await requestAccess()
-            await setupGoogleCalendar()
+            await initialize()
+        }
+    }
+    
+    private func initialize() async {
+        await requestAccess()
+        await setupGoogleCalendar()
+        isInitialized = true
+    }
+    
+    func ensureInitialized() async {
+        if !isInitialized {
+            await initialize()
         }
     }
     
@@ -196,11 +208,19 @@ class CalendarManager: ObservableObject {
     
     // MARK: - Event Fetching
     
-    struct CalendarEvent {
+    struct CalendarEvent: Identifiable {
+        let id: String
         let event: EKEvent
         let source: CalendarSource
         
-        enum CalendarSource {
+        init(event: EKEvent, source: CalendarSource) {
+            self.event = event
+            self.source = source
+            // Create a unique ID combining the event ID and source
+            self.id = "\(source)_\(event.eventIdentifier ?? UUID().uuidString)"
+        }
+        
+        enum CalendarSource: String {
             case apple
             case google
         }
@@ -210,19 +230,28 @@ class CalendarManager: ObservableObject {
         var allEvents: [CalendarEvent] = []
         let calendar = Calendar.current
         
+        // Get start and end of the selected date
         guard let startDate = calendar.date(bySettingHour: 0, minute: 0, second: 0, of: date),
               let endDate = calendar.date(bySettingHour: 23, minute: 59, second: 59, of: date) else {
+            print("Failed to create date range for: \(date)")
             return []
         }
         
+        print("Fetching events for date range: \(startDate) to \(endDate)")
+        print("Calendar authorization status - Apple: \(isAuthorized), Google: \(isGoogleAuthorized)")
+        
         // Fetch Apple Calendar events
         if isAuthorized {
+            let calendars = eventStore.calendars(for: .event)
+            print("Available Apple calendars: \(calendars.count)")
             let predicate = eventStore.predicateForEvents(
                 withStart: startDate,
                 end: endDate,
-                calendars: eventStore.calendars(for: .event)
+                calendars: calendars
             )
-            allEvents.append(contentsOf: eventStore.events(matching: predicate).map { CalendarEvent(event: $0, source: .apple) })
+            let appleEvents = eventStore.events(matching: predicate)
+            print("Found \(appleEvents.count) Apple Calendar events")
+            allEvents.append(contentsOf: appleEvents.map { CalendarEvent(event: $0, source: .apple) })
         }
         
         // Fetch Google Calendar events
@@ -237,6 +266,7 @@ class CalendarManager: ObservableObject {
                 let response = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<GTLRCalendar_Events, Error>) in
                     service.executeQuery(query) { callbackTicket, response, error in
                         if let error = error {
+                            print("Error fetching Google Calendar events: \(error)")
                             continuation.resume(throwing: error)
                             return
                         }
@@ -249,6 +279,7 @@ class CalendarManager: ObservableObject {
                 }
                 
                 if let items = response.items {
+                    print("Found \(items.count) Google Calendar events")
                     // Convert Google Calendar events to EKEvents
                     for googleEvent in items {
                         let event = EKEvent(eventStore: eventStore)
@@ -279,7 +310,8 @@ class CalendarManager: ObservableObject {
             }
         }
         
-        // Sort all events by start date
-        return allEvents.sorted { $0.event.startDate < $1.event.startDate }
+        let sortedEvents = allEvents.sorted { $0.event.startDate < $1.event.startDate }
+        print("Total events found: \(sortedEvents.count)")
+        return sortedEvents
     }
 }

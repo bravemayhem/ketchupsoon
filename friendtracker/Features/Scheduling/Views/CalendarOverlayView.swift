@@ -70,12 +70,6 @@ struct CalendarOverlayView: View {
                         if isLoading {
                             ProgressView()
                                 .padding()
-                        } else if events.isEmpty {
-                            ContentUnavailableView(
-                                "No Events",
-                                systemImage: "calendar",
-                                description: Text("No events scheduled for this day")
-                            )
                         } else {
                             if viewMode == .daily {
                                 DailyScheduleView(
@@ -84,38 +78,46 @@ struct CalendarOverlayView: View {
                                     selectedFriend: $selectedFriend
                                 )
                             } else {
-                                List {
-                                    ForEach(events, id: \.event.eventIdentifier) { calendarEvent in
-                                        VStack(alignment: .leading) {
-                                            HStack {
-                                                Text(calendarEvent.event.title)
-                                                    .font(.headline)
-                                                Spacer()
-                                                Image(systemName: calendarEvent.source == .google ? "calendar.badge.plus" : "calendar")
-                                                    .foregroundColor(.gray)
-                                            }
-                                            
-                                            if calendarEvent.event.isAllDay {
-                                                Text("All Day")
+                                if events.isEmpty {
+                                    ContentUnavailableView(
+                                        "No Events",
+                                        systemImage: "calendar",
+                                        description: Text("No events scheduled for this day")
+                                    )
+                                } else {
+                                    List {
+                                        ForEach(events) { calendarEvent in
+                                            VStack(alignment: .leading) {
+                                                HStack {
+                                                    Text(calendarEvent.event.title)
+                                                        .font(.headline)
+                                                    Spacer()
+                                                    Image(systemName: calendarEvent.source == .google ? "calendar.badge.plus" : "calendar")
+                                                        .foregroundColor(.gray)
+                                                }
+                                                
+                                                if calendarEvent.event.isAllDay {
+                                                    Text("All Day")
+                                                        .font(.subheadline)
+                                                        .foregroundColor(.gray)
+                                                } else {
+                                                    HStack {
+                                                        Text(formatDate(calendarEvent.event.startDate))
+                                                        Text("-")
+                                                        Text(formatDate(calendarEvent.event.endDate))
+                                                    }
                                                     .font(.subheadline)
                                                     .foregroundColor(.gray)
-                                            } else {
-                                                HStack {
-                                                    Text(formatDate(calendarEvent.event.startDate))
-                                                    Text("-")
-                                                    Text(formatDate(calendarEvent.event.endDate))
                                                 }
-                                                .font(.subheadline)
-                                                .foregroundColor(.gray)
+                                                
+                                                if let location = calendarEvent.event.location, !location.isEmpty {
+                                                    Text(location)
+                                                        .font(.caption)
+                                                        .foregroundColor(.gray)
+                                                }
                                             }
-                                            
-                                            if let location = calendarEvent.event.location, !location.isEmpty {
-                                                Text(location)
-                                                    .font(.caption)
-                                                    .foregroundColor(.gray)
-                                            }
+                                            .padding(.vertical, 4)
                                         }
-                                        .padding(.vertical, 4)
                                     }
                                 }
                             }
@@ -133,7 +135,13 @@ struct CalendarOverlayView: View {
                 }
             )
             .onChange(of: selectedDate) { _, newDate in
-                loadEvents(for: newDate)
+                print("Date changed to: \(newDate)")
+                Task {
+                    await loadEvents(for: newDate)
+                }
+            }
+            .onChange(of: viewMode) { _, newMode in
+                print("View mode changed to: \(newMode)")
             }
             .onChange(of: selectedFriend) { _, _ in
                 if selectedFriend != nil {
@@ -156,9 +164,9 @@ struct CalendarOverlayView: View {
                     }
                 }
             }
-            .onAppear {
-                loadEvents(for: selectedDate)
-            }
+        }
+        .task {
+            await loadEvents(for: selectedDate)
         }
     }
     
@@ -168,18 +176,28 @@ struct CalendarOverlayView: View {
         return formatter.string(from: date)
     }
     
-    private func loadEvents(for date: Date) {
-        guard calendarManager.isAuthorized || calendarManager.isGoogleAuthorized else { return }
+    private func loadEvents(for date: Date) async {
+        print("Loading events for date: \(date)")
         
-        isLoading = true
+        // Ensure calendar manager is initialized
+        await calendarManager.ensureInitialized()
         
-        Task {
-            let fetchedEvents = await calendarManager.fetchEventsForDate(date)
-            
-            await MainActor.run {
-                self.events = fetchedEvents
-                self.isLoading = false
-            }
+        guard calendarManager.isAuthorized || calendarManager.isGoogleAuthorized else {
+            print("No calendar authorization")
+            return
+        }
+        
+        await MainActor.run {
+            isLoading = true
+            events = [] // Clear existing events while loading
+        }
+        
+        let fetchedEvents = await calendarManager.fetchEventsForDate(date)
+        print("Fetched \(fetchedEvents.count) events")
+        
+        await MainActor.run {
+            self.events = fetchedEvents
+            self.isLoading = false
         }
     }
 }
