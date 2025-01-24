@@ -23,6 +23,7 @@ struct KetchupsView: View {
     @State private var selectedFriend: Friend?
     @State private var showingScheduler = false
     @State private var showingMessageSheet = false
+    @State private var showingCalendarOverlay = false
     
     private var scheduledFriendIds: Set<UUID> {
         Set(upcomingHangouts.compactMap { $0.friend?.id })
@@ -67,6 +68,22 @@ struct KetchupsView: View {
     var body: some View {
         ScrollView {
             LazyVStack(spacing: AppTheme.spacingMedium, pinnedViews: [.sectionHeaders]) {
+                // Calendar Button at the top
+                Button(action: {
+                    showingCalendarOverlay = true
+                }) {
+                    HStack {
+                        Image(systemName: "calendar")
+                        Text("View Calendar")
+                    }
+                    .padding()
+                    .frame(maxWidth: .infinity)
+                    .background(AppColors.accent.opacity(0.1))
+                    .foregroundColor(AppColors.accent)
+                    .cornerRadius(10)
+                }
+                .padding(.horizontal)
+                
                 if !upcomingHangouts.isEmpty {
                     Section {
                         ForEach(upcomingHangouts) { hangout in
@@ -182,6 +199,9 @@ struct KetchupsView: View {
                     MessageComposeView(recipient: phoneNumber)
                 }
             }
+        }
+        .sheet(isPresented: $showingCalendarOverlay) {
+            CalendarOverlayView()
         }
         .onChange(of: selectedFriend) { _, newValue in
             if newValue == nil {
