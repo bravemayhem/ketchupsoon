@@ -11,7 +11,13 @@ class CalendarManager: ObservableObject {
     @Published var isAuthorized = false
     @Published var isGoogleAuthorized = false
     @Published var connectedCalendars: [Friend.ConnectedCalendar] = []
+    @Published var selectedCalendarType: CalendarType = .apple
     private var isInitialized = false
+    
+    enum CalendarType {
+        case apple
+        case google
+    }
     
     init() {
         Task {
@@ -168,6 +174,70 @@ class CalendarManager: ObservableObject {
     }
     
     func createHangoutEvent(with friend: Friend, activity: String, location: String, date: Date, duration: TimeInterval, emailRecipients: [String] = []) async throws -> String {
+        // For Google Calendar
+        if selectedCalendarType == .google && isGoogleAuthorized {
+            guard let service = googleService else { throw CalendarError.unauthorized }
+            
+            let event = GTLRCalendar_Event()
+            event.summary = "\(activity) with \(friend.name)"
+            event.location = location
+            
+            let startDateTime = GTLRDateTime(date: date)
+            let endDateTime = GTLRDateTime(date: date.addingTimeInterval(duration))
+            
+            let start = GTLRCalendar_EventDateTime()
+            start.dateTime = startDateTime
+            event.start = start
+            
+            let end = GTLRCalendar_EventDateTime()
+            end.dateTime = endDateTime
+            event.end = end
+            
+            // Add attendees
+            var attendees: [GTLRCalendar_EventAttendee] = []
+            for email in emailRecipients {
+                let attendee = GTLRCalendar_EventAttendee()
+                attendee.email = email
+                attendees.append(attendee)
+            }
+            
+            // Add friend's email if available
+            if let friendEmail = friend.email, !emailRecipients.contains(friendEmail) {
+                let attendee = GTLRCalendar_EventAttendee()
+                attendee.email = friendEmail
+                attendees.append(attendee)
+            }
+            
+            if !attendees.isEmpty {
+                event.attendees = attendees
+            }
+            
+            let query = GTLRCalendarQuery_EventsInsert.query(withObject: event, calendarId: "primary")
+            // Send email notifications to all attendees
+            query.sendUpdates = "all"
+            
+            do {
+                let response = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<GTLRCalendar_Event, Error>) in
+                    service.executeQuery(query) { callbackTicket, response, error in
+                        if let error = error {
+                            continuation.resume(throwing: error)
+                            return
+                        }
+                        if let event = response as? GTLRCalendar_Event {
+                            continuation.resume(returning: event)
+                        } else {
+                            continuation.resume(throwing: NSError(domain: "", code: -1))
+                        }
+                    }
+                }
+                return response.identifier ?? UUID().uuidString
+            } catch {
+                print("Error creating Google Calendar event: \(error)")
+                throw CalendarError.eventCreationFailed
+            }
+        }
+        
+        // For Apple Calendar (existing code)
         guard isAuthorized else { throw CalendarError.unauthorized }
         
         let event = EKEvent(eventStore: eventStore)
@@ -177,25 +247,10 @@ class CalendarManager: ObservableObject {
         event.endDate = date.addingTimeInterval(duration)
         event.calendar = eventStore.defaultCalendarForNewEvents
         
-        // Add friend's email if available
-        var allRecipients = emailRecipients
-        if let friendEmail = friend.email, !allRecipients.contains(friendEmail) {
-            allRecipients.append(friendEmail)
-        }
-        
-        // Add attendees using proper EKEventStore methods
-        if !allRecipients.isEmpty {
-            for email in allRecipients {
-                let attendee = EKParticipant()
-                attendee.setValue("mailto:\(email)", forKey: "emailAddress")
-                attendee.setValue("REQ-PARTICIPANT", forKey: "participantRole")
-                attendee.setValue("IND", forKey: "participantType")
-                attendee.setValue("NEEDS-ACTION", forKey: "participantStatus")
-                
-                var attendees = event.value(forKey: "attendees") as? [EKParticipant] ?? []
-                attendees.append(attendee)
-                event.setValue(attendees, forKey: "attendees")
-            }
+        // Add notes with email recipients if any
+        if !emailRecipients.isEmpty {
+            let emailList = emailRecipients.joined(separator: ", ")
+            event.notes = "Participants: \(emailList)"
         }
         
         do {

@@ -157,6 +157,9 @@ struct CalendarOverlayView: View {
             .sheet(isPresented: $showingScheduler, onDismiss: {
                 selectedFriend = nil
                 selectedTime = nil
+                Task {
+                    await loadEvents(for: selectedDate)
+                }
             }) {
                 if let friend = selectedFriend {
                     NavigationStack {
