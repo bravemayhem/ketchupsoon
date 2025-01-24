@@ -9,6 +9,9 @@ struct CardStyles {
                 .background(
                     RoundedRectangle(cornerRadius: AppTheme.cornerRadiusLarge)
                         .fill(AppColors.secondarySystemBackground)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: AppTheme.cornerRadiusMedium)   .stroke(AppColors.systemGray.opacity(0.10), lineWidth: 0.5) // Optional border
+                            )
                         .shadow(
                             color: AppTheme.shadowSmall.color,
                             radius: AppTheme.shadowSmall.radius,
