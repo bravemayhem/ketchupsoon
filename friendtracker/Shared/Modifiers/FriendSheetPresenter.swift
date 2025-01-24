@@ -35,7 +35,7 @@ struct FriendSheetPresenter: ViewModifier {
             .sheet(isPresented: $showingScheduler) {
                 if let friend = selectedFriend {
                     NavigationStack {
-                        SchedulerView(friend: friend)
+                        CreateHangoutView(friend: friend)
                     }
                 }
             }

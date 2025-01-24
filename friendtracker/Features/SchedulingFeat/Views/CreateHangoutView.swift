@@ -1,7 +1,7 @@
 import SwiftUI
 import SwiftData
 
-struct SchedulerView: View {
+struct CreateHangoutView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     let friend: Friend
@@ -179,7 +179,7 @@ struct SchedulerView: View {
                     .listRowBackground(Color.clear)
                 }
             }
-            .navigationTitle("Schedule Hangout")
+            .navigationTitle("Create Hangout")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -302,6 +302,6 @@ struct SchedulerView: View {
 }
 
 #Preview {
-    SchedulerView(friend: Friend(name: "Test Friend"))
+    CreateHangoutView(friend: Friend(name: "Test Friend"))
         .modelContainer(for: [Friend.self, Hangout.self])
 }

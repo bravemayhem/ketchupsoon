@@ -163,7 +163,7 @@ struct CalendarOverlayView: View {
             }) {
                 if let friend = selectedFriend {
                     NavigationStack {
-                        SchedulerView(friend: friend, initialDate: selectedTime)
+                        CreateHangoutView(friend: friend, initialDate: selectedTime)
                     }
                 }
             }

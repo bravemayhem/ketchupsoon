@@ -74,7 +74,7 @@ struct KetchupsView: View {
                 }) {
                     HStack {
                         Image(systemName: "calendar")
-                        Text("View Calendar")
+                        Text("Calendar")
                     }
                     .padding()
                     .frame(maxWidth: .infinity)
@@ -189,7 +189,7 @@ struct KetchupsView: View {
         .sheet(isPresented: $showingScheduler) {
             if let friend = selectedFriend {
                 NavigationStack {
-                    SchedulerView(friend: friend)
+                    CreateHangoutView(friend: friend)
                 }
             }
         }
