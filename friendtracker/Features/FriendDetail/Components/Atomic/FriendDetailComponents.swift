@@ -106,6 +106,20 @@ struct FriendOnboardingDetailsSection: View {
                             }
                         }
                     }
+                    
+                    if let email = contact.email {
+                        Button {
+                            showingContactView = true
+                        } label: {
+                            HStack {
+                                Text("Email")
+                                    .foregroundColor(AppColors.label)
+                                Spacer()
+                                Text(email)
+                                    .foregroundColor(AppColors.accent)
+                            }
+                        }
+                    }
                 }
             }
             
@@ -251,6 +265,7 @@ struct FriendInfoSection: View {
     @State private var showingContactView = false
     @State private var editableName: String
     @State private var editablePhone: String
+    @State private var editableEmail: String
     
     init(friend: Friend, onLastSeenTap: @escaping () -> Void, onFrequencyTap: @escaping () -> Void, cityService: CitySearchService) {
         self.friend = friend
@@ -259,6 +274,7 @@ struct FriendInfoSection: View {
         self._cityService = Bindable(wrappedValue: cityService)
         self._editableName = State(initialValue: friend.name)
         self._editablePhone = State(initialValue: friend.phoneNumber ?? "")
+        self._editableEmail = State(initialValue: friend.email ?? "")
     }
     
     var body: some View {
@@ -318,6 +334,38 @@ struct FriendInfoSection: View {
                         .foregroundColor(AppColors.secondaryLabel)
                         .onChange(of: editablePhone) { _, newValue in
                             friend.phoneNumber = newValue.isEmpty ? nil : newValue
+                        }
+                }
+            }
+            
+            // Email
+            if friend.contactIdentifier != nil {
+                Button {
+                    showingContactView = true
+                } label: {
+                    HStack {
+                        Text("Email")
+                            .foregroundColor(AppColors.label)
+                        Spacer()
+                        if let email = friend.email {
+                            Text(email)
+                                .foregroundColor(AppColors.accent)
+                        } else {
+                            Text("Not set")
+                                .foregroundColor(AppColors.tertiaryLabel)
+                        }
+                    }
+                }
+            } else {
+                HStack {
+                    Text("Email")
+                        .foregroundColor(AppColors.label)
+                    Spacer()
+                    TextField("Not set", text: $editableEmail)
+                        .multilineTextAlignment(.trailing)
+                        .foregroundColor(AppColors.secondaryLabel)
+                        .onChange(of: editableEmail) { _, newValue in
+                            friend.email = newValue.isEmpty ? nil : newValue
                         }
                 }
             }

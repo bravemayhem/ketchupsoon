@@ -103,7 +103,7 @@ struct FriendExistingView: View {
             TagsSelectionView(friend: viewModel.friend)
         }
         .sheet(isPresented: $viewModel.showingScheduler) {
-            SchedulerView(initialFriend: viewModel.friend)
+            SchedulerView(friend: viewModel.friend)
         }
         .sheet(isPresented: $viewModel.showingMessageSheet) {
             if let phoneNumber = viewModel.friend.phoneNumber {

@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+### 2024-03-28
+#### Changed
+- **Calendar Integration Simplification**
+  - Removed calendar availability checking functionality
+  - Simplified hangout scheduling by removing busy time validation
+  - Removed suggested times feature for more straightforward scheduling
+  - Streamlined duration selection interface
+  - Enhanced direct event creation without availability constraints
+
 ### 2024-01-22
 #### Added
 - **Friend Creation Timestamp**

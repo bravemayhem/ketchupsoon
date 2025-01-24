@@ -10,7 +10,6 @@ class CalendarManager: ObservableObject {
     
     @Published var isAuthorized = false
     @Published var isGoogleAuthorized = false
-    @Published var busyTimeSlots: [DateInterval] = []
     @Published var connectedCalendars: [Friend.ConnectedCalendar] = []
     
     init() {
@@ -148,122 +147,6 @@ class CalendarManager: ObservableObject {
         }
     }
     
-    private func fetchFriendAvailability(friend: Friend, start: Date, end: Date) async -> [DateInterval] {
-        guard isGoogleAuthorized, let service = googleService else { return [] }
-        
-        do {
-            // Create the FreeBusy request body
-            let freeBusyRequest = GTLRCalendar_FreeBusyRequest()
-            freeBusyRequest.timeMin = GTLRDateTime(date: start)
-            freeBusyRequest.timeMax = GTLRDateTime(date: end)
-            
-            // Add the calendar to check
-            let requestItem = GTLRCalendar_FreeBusyRequestItem()
-            requestItem.identifier = "primary"
-            freeBusyRequest.items = [requestItem]
-            
-            // Create the query with the request
-            let query = GTLRCalendarQuery_FreebusyQuery(object: freeBusyRequest)
-            
-            // Execute the query
-            let response = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Any, Error>) in
-                service.executeQuery(query) { callbackTicket, response, error in
-                    if let error = error {
-                        continuation.resume(throwing: error)
-                        return
-                    }
-                    continuation.resume(returning: response ?? NSNull())
-                }
-            }
-            
-            // Process the response
-            guard let freeBusyResponse = response as? GTLRCalendar_FreeBusyResponse,
-                  let calendars = freeBusyResponse.calendars?.additionalProperties(),
-                  let primaryCalendar = calendars["primary"] as? GTLRCalendar_FreeBusyCalendar,
-                  let busyPeriods = primaryCalendar.busy else {
-                return []
-            }
-            
-            // Convert to DateIntervals
-            return busyPeriods.compactMap { period -> DateInterval? in
-                guard let startDate = period.start?.date,
-                      let endDate = period.end?.date else {
-                    return nil
-                }
-                return DateInterval(start: startDate, end: endDate)
-            }
-        } catch {
-            print("Error fetching freebusy data: \(error)")
-            return []
-        }
-    }
-    
-    func fetchBusyTimeSlots(for date: Date, friends: [Friend]) async {
-        guard isAuthorized else { return }
-        
-        var allBusySlots: [DateInterval] = []
-        let calendar = Calendar.current
-        let startOfDay = calendar.startOfDay(for: date)
-        guard let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay) else { return }
-        
-        // Fetch local calendar busy times
-        let calendars = eventStore.calendars(for: .event)
-        let predicate = eventStore.predicateForEvents(withStart: startOfDay, end: endOfDay, calendars: calendars)
-        let events = eventStore.events(matching: predicate)
-        allBusySlots.append(contentsOf: events.map { DateInterval(start: $0.startDate, end: $0.endDate) })
-        
-        // Fetch friends' busy times
-        for friend in friends where friend.calendarIntegrationEnabled {
-            if friend.calendarVisibilityPreference != .none {
-                let busySlots = await fetchFriendAvailability(friend: friend, start: startOfDay, end: endOfDay)
-                allBusySlots.append(contentsOf: busySlots)
-            }
-        }
-        
-        await MainActor.run {
-            self.busyTimeSlots = allBusySlots
-        }
-    }
-    
-    func suggestAvailableTimeSlots(with friends: [Friend], duration: TimeInterval = 3600, limit: Int = 3) async -> [Date] {
-        guard isAuthorized else { return [] }
-        
-        // Fetch busy times for all participants
-        await fetchBusyTimeSlots(for: Date(), friends: friends)
-        
-        let calendar = Calendar.current
-        var suggestedTimes: [Date] = []
-        var currentDate = Date()
-        
-        while suggestedTimes.count < limit && 
-              currentDate < calendar.date(byAdding: .day, value: 14, to: Date())! {
-            
-            if let startOfDay = calendar.date(bySettingHour: 9, minute: 0, second: 0, of: currentDate),
-               let endOfDay = calendar.date(bySettingHour: 21, minute: 0, second: 0, of: currentDate) {
-                
-                var timeToCheck = startOfDay
-                while timeToCheck < endOfDay {
-                    if isTimeSlotAvailable(timeToCheck, duration: duration) {
-                        suggestedTimes.append(timeToCheck)
-                        if suggestedTimes.count >= limit {
-                            break
-                        }
-                    }
-                    timeToCheck = calendar.date(byAdding: .hour, value: 1, to: timeToCheck) ?? endOfDay
-                }
-            }
-            
-            currentDate = calendar.date(byAdding: .day, value: 1, to: currentDate) ?? Date()
-        }
-        
-        return suggestedTimes
-    }
-    
-    func isTimeSlotAvailable(_ date: Date, duration: TimeInterval) -> Bool {
-        let interval = DateInterval(start: date, duration: duration)
-        return !busyTimeSlots.contains { $0.intersects(interval) }
-    }
-    
     // MARK: - Event Management
     
     enum CalendarError: Error {
@@ -272,7 +155,7 @@ class CalendarManager: ObservableObject {
         case eventNotFound
     }
     
-    func createHangoutEvent(with friend: Friend, activity: String, location: String, date: Date, duration: TimeInterval) async throws -> String {
+    func createHangoutEvent(with friend: Friend, activity: String, location: String, date: Date, duration: TimeInterval, emailRecipients: [String] = []) async throws -> String {
         guard isAuthorized else { throw CalendarError.unauthorized }
         
         let event = EKEvent(eventStore: eventStore)
@@ -281,6 +164,27 @@ class CalendarManager: ObservableObject {
         event.startDate = date
         event.endDate = date.addingTimeInterval(duration)
         event.calendar = eventStore.defaultCalendarForNewEvents
+        
+        // Add friend's email if available
+        var allRecipients = emailRecipients
+        if let friendEmail = friend.email, !allRecipients.contains(friendEmail) {
+            allRecipients.append(friendEmail)
+        }
+        
+        // Add attendees using proper EKEventStore methods
+        if !allRecipients.isEmpty {
+            for email in allRecipients {
+                let attendee = EKParticipant()
+                attendee.setValue("mailto:\(email)", forKey: "emailAddress")
+                attendee.setValue("REQ-PARTICIPANT", forKey: "participantRole")
+                attendee.setValue("IND", forKey: "participantType")
+                attendee.setValue("NEEDS-ACTION", forKey: "participantStatus")
+                
+                var attendees = event.value(forKey: "attendees") as? [EKParticipant] ?? []
+                attendees.append(attendee)
+                event.setValue(attendees, forKey: "attendees")
+            }
+        }
         
         do {
             try eventStore.save(event, span: .thisEvent)

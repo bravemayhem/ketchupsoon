@@ -172,7 +172,7 @@ struct KetchupsView: View {
         .sheet(isPresented: $showingScheduler) {
             if let friend = selectedFriend {
                 NavigationStack {
-                    SchedulerView(initialFriend: friend)
+                    SchedulerView(friend: friend)
                 }
             }
         }

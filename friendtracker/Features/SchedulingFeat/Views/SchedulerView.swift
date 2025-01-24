@@ -4,18 +4,16 @@ import SwiftData
 struct SchedulerView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
-    @State private var selectedFriend: Friend?
-    @State private var selectedActivity: String = SampleData.activities[0]
+    let friend: Friend
+    @State private var hangoutTitle: String = ""
     @State private var selectedDate = Date()
     @State private var selectedLocation = ""
-    @Query(sort: [SortDescriptor(\Friend.name)]) private var friends: [Friend]
+    @State private var emailRecipients: [String] = []
+    @State private var newEmail: String = ""
     @StateObject private var calendarManager = CalendarManager()
     @State private var selectedDuration: TimeInterval? = nil // nil means use default
     @State private var isLoading = false
     @State private var errorMessage: String?
-    @State private var suggestedTimes: [Date] = []
-    @State private var showingSuggestedTimes = false
-    @State private var showingDurationPicker = false
     @State private var selectedCalendarType: CalendarType = .apple
     @State private var showingCustomDurationInput = false
     @State private var customHours: Int = 1
@@ -34,42 +32,54 @@ struct SchedulerView: View {
         ("Custom", -1.0)
     ]
     
-    init(initialFriend: Friend? = nil) {
-        _selectedFriend = State(initialValue: initialFriend)
+    init(friend: Friend) {
+        self.friend = friend
     }
     
     var body: some View {
         NavigationStack {
             Form {
-                // Friend Selection
+                // Friend Display
                 Section("Friend") {
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 12) {
-                            ForEach(friends) { friend in
-                                SelectableButton(
-                                    title: friend.name,
-                                    isSelected: selectedFriend?.id == friend.id,
-                                    action: { selectedFriend = friend }
-                                )
-                            }
-                        }
-                        .padding(.horizontal, 4)
-                    }
+                    Text(friend.name)
+                        .foregroundColor(.primary)
                 }
                 
-                // Activity Selection
-                Section("Activity") {
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 12) {
-                            ForEach(SampleData.activities, id: \.self) { activity in
-                                SelectableButton(
-                                    title: activity,
-                                    isSelected: selectedActivity == activity,
-                                    action: { selectedActivity = activity }
-                                )
+                // Hangout Title
+                Section("Hangout Title") {
+                    TextField("Enter title", text: $hangoutTitle)
+                }
+                
+                // Email Recipients
+                Section("Email Recipients") {
+                    ForEach(emailRecipients, id: \.self) { email in
+                        HStack {
+                            Text(email)
+                            Spacer()
+                            Button(action: {
+                                emailRecipients.removeAll { $0 == email }
+                            }) {
+                                Image(systemName: "minus.circle.fill")
+                                    .foregroundColor(.red)
                             }
                         }
-                        .padding(.horizontal, 4)
+                    }
+                    
+                    HStack {
+                        TextField("Add email", text: $newEmail)
+                            .textContentType(.emailAddress)
+                            .keyboardType(.emailAddress)
+                            .autocapitalization(.none)
+                        
+                        Button(action: {
+                            if !newEmail.isEmpty && newEmail.contains("@") {
+                                emailRecipients.append(newEmail)
+                                newEmail = ""
+                            }
+                        }) {
+                            Image(systemName: "plus.circle.fill")
+                                .foregroundColor(.blue)
+                        }
                     }
                 }
                 
@@ -118,13 +128,13 @@ struct SchedulerView: View {
                             Text("Duration")
                             Spacer()
                             Button(formatDuration(duration)) {
-                                showingDurationPicker = true
+                                showingCustomDurationInput = true
                             }
                             .foregroundColor(.blue)
                         }
                     } else {
                         Button("Set Duration (Optional)") {
-                            showingDurationPicker = true
+                            showingCustomDurationInput = true
                         }
                         .foregroundColor(.blue)
                     }
@@ -174,69 +184,6 @@ struct SchedulerView: View {
                     }
                 }
             }
-            .sheet(isPresented: $showingSuggestedTimes) {
-                NavigationStack {
-                    List(suggestedTimes, id: \.self) { time in
-                        Button(action: {
-                            selectedDate = time
-                            showingSuggestedTimes = false
-                        }) {
-                            Text(time.formatted(date: .complete, time: .shortened))
-                        }
-                    }
-                    .navigationTitle("Suggested Times")
-                    .navigationBarTitleDisplayMode(.inline)
-                    .toolbar {
-                        ToolbarItem(placement: .navigationBarTrailing) {
-                            Button("Done") {
-                                showingSuggestedTimes = false
-                            }
-                        }
-                    }
-                }
-                .presentationDetents([.medium])
-            }
-            .sheet(isPresented: $showingDurationPicker) {
-                NavigationStack {
-                    List {
-                        ForEach(availableDurations, id: \.1) { duration in
-                            Button(action: {
-                                if duration.1 == -1 {
-                                    showingCustomDurationInput = true
-                                } else {
-                                    selectedDuration = duration.1
-                                    showingDurationPicker = false
-                                }
-                            }) {
-                                HStack {
-                                    Text(duration.0)
-                                    Spacer()
-                                    if let selected = selectedDuration, selected == duration.1 {
-                                        Image(systemName: "checkmark")
-                                            .foregroundColor(.blue)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    .navigationTitle("Select Duration")
-                    .navigationBarTitleDisplayMode(.inline)
-                    .toolbar {
-                        ToolbarItem(placement: .navigationBarLeading) {
-                            Button("Clear") {
-                                selectedDuration = nil
-                                showingDurationPicker = false
-                            }
-                        }
-                        ToolbarItem(placement: .navigationBarTrailing) {
-                            Button("Done") {
-                                showingDurationPicker = false
-                            }
-                        }
-                    }
-                }
-                .presentationDetents([.medium])
-            }
             .sheet(isPresented: $showingCustomDurationInput) {
                 NavigationStack {
                     Form {
@@ -261,7 +208,6 @@ struct SchedulerView: View {
                                 let duration = TimeInterval(customHours * 3600 + customMinutes * 60)
                                 selectedDuration = duration
                                 showingCustomDurationInput = false
-                                showingDurationPicker = false
                             }
                             .disabled(customHours == 0 && customMinutes == 0)
                         }
@@ -275,40 +221,16 @@ struct SchedulerView: View {
                 dismiss()
             }
             Button("Remove from Wishlist") {
-                selectedFriend?.needsToConnectFlag = false
+                friend.needsToConnectFlag = false
                 dismiss()
             }
         } message: {
-            if let friend = selectedFriend {
-                Text("You've scheduled time with \(friend.name). Would you like to remove them from your wishlist?")
-            }
+            Text("You've scheduled time with \(friend.name). Would you like to remove them from your wishlist?")
         }
     }
     
     private var isScheduleButtonDisabled: Bool {
-        selectedFriend == nil
-    }
-    
-    private func findAvailableTimes() async {
-        guard let friend = selectedFriend else { return }
-        isLoading = true
-        errorMessage = nil
-        
-        // Use default duration of 2 hours if none selected
-        let duration = selectedDuration ?? 7200
-        
-        // Get suggested times considering both users' calendars
-        let times = await calendarManager.suggestAvailableTimeSlots(
-            with: [friend],
-            duration: duration,
-            limit: 5
-        )
-        
-        await MainActor.run {
-            suggestedTimes = times
-            showingSuggestedTimes = true
-            isLoading = false
-        }
+        hangoutTitle.isEmpty
     }
     
     private func formatDuration(_ duration: TimeInterval) -> String {
@@ -321,41 +243,34 @@ struct SchedulerView: View {
         }
     }
     
-    private func createHangout(for friend: Friend) async throws {
-        // First, check if the time slot is available
-        await calendarManager.fetchBusyTimeSlots(for: selectedDate, friends: [friend])
-        let duration = selectedDuration ?? 7200 // Default 2 hours
-        
-        guard calendarManager.isTimeSlotAvailable(selectedDate, duration: duration) else {
-            throw SchedulerError.timeSlotNotAvailable
-        }
-        
+    private func createHangout() async throws {
         // Create calendar event
         if selectedCalendarType == .google && calendarManager.isGoogleAuthorized {
-            // TODO: Implement Google Calendar event creation
+            // TODO: Implement Google Calendar event creation with email invites
         } else {
             _ = try await calendarManager.createHangoutEvent(
                 with: friend,
-                activity: selectedActivity,
+                activity: hangoutTitle,
                 location: selectedLocation,
                 date: selectedDate,
-                duration: duration
+                duration: selectedDuration ?? 7200, // Default 2 hours
+                emailRecipients: emailRecipients
             )
         }
         
         // Create and insert the hangout
         let hangout = Hangout(
             date: selectedDate,
-            activity: selectedActivity,
+            activity: hangoutTitle,
             location: selectedLocation,
             isScheduled: true,
             friend: friend,
-            duration: duration
+            duration: selectedDuration ?? 7200
         )
         modelContext.insert(hangout)
     }
     
-    private func handleScheduleCompletion(for friend: Friend) {
+    private func handleScheduleCompletion() {
         if friend.needsToConnectFlag {
             showingWishlistPrompt = true
         } else {
@@ -364,23 +279,16 @@ struct SchedulerView: View {
     }
     
     private func scheduleHangout() {
-        guard let friend = selectedFriend else { return }
-        
         isLoading = true
         errorMessage = nil
         
         Task {
             do {
-                try await createHangout(for: friend)
+                try await createHangout()
                 
                 await MainActor.run {
                     isLoading = false
-                    handleScheduleCompletion(for: friend)
-                }
-            } catch SchedulerError.timeSlotNotAvailable {
-                await MainActor.run {
-                    errorMessage = "This time slot is not available. Please select another time."
-                    isLoading = false
+                    handleScheduleCompletion()
                 }
             } catch {
                 await MainActor.run {
@@ -390,37 +298,9 @@ struct SchedulerView: View {
             }
         }
     }
-    
-    private enum SchedulerError: Error {
-        case timeSlotNotAvailable
-    }
-}
-
-private struct SelectableButton: View {
-    let title: String
-    let isSelected: Bool
-    let action: () -> Void
-    
-    var body: some View {
-        Button(action: action) {
-            Text(title)
-                .font(.subheadline)
-                .foregroundColor(isSelected ? .white : .primary)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
-                .background(
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(isSelected ? Color.blue : Color.clear)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 8)
-                                .stroke(isSelected ? Color.blue : Color.primary, lineWidth: 1)
-                        )
-                )
-        }
-    }
 }
 
 #Preview {
-    SchedulerView()
+    SchedulerView(friend: Friend(name: "Test Friend"))
         .modelContainer(for: [Friend.self, Hangout.self])
 }
