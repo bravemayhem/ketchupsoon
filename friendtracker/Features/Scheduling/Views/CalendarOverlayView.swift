@@ -10,6 +10,9 @@ struct CalendarOverlayView: View {
     @State private var showingAuthPrompt = false
     @State private var isLoading = false
     @State private var viewMode: ViewMode = .daily
+    @State private var selectedFriend: Friend?
+    @State private var showingScheduler = false
+    @State private var selectedTime: Date?
     
     enum ViewMode {
         case daily
@@ -74,44 +77,45 @@ struct CalendarOverlayView: View {
                                 description: Text("No events scheduled for this day")
                             )
                         } else {
-                            Group {
-                                switch viewMode {
-                                case .daily:
-                                    DailyScheduleView(events: events, date: selectedDate)
-                                case .list:
-                                    List {
-                                        ForEach(events, id: \.event.eventIdentifier) { calendarEvent in
-                                            VStack(alignment: .leading) {
-                                                HStack {
-                                                    Text(calendarEvent.event.title)
-                                                        .font(.headline)
-                                                    Spacer()
-                                                    Image(systemName: calendarEvent.source == .google ? "calendar.badge.plus" : "calendar")
-                                                        .foregroundColor(.gray)
-                                                }
-                                                
-                                                if calendarEvent.event.isAllDay {
-                                                    Text("All Day")
-                                                        .font(.subheadline)
-                                                        .foregroundColor(.gray)
-                                                } else {
-                                                    HStack {
-                                                        Text(formatDate(calendarEvent.event.startDate))
-                                                        Text("-")
-                                                        Text(formatDate(calendarEvent.event.endDate))
-                                                    }
+                            if viewMode == .daily {
+                                DailyScheduleView(
+                                    events: events,
+                                    date: selectedDate,
+                                    selectedFriend: $selectedFriend
+                                )
+                            } else {
+                                List {
+                                    ForEach(events, id: \.event.eventIdentifier) { calendarEvent in
+                                        VStack(alignment: .leading) {
+                                            HStack {
+                                                Text(calendarEvent.event.title)
+                                                    .font(.headline)
+                                                Spacer()
+                                                Image(systemName: calendarEvent.source == .google ? "calendar.badge.plus" : "calendar")
+                                                    .foregroundColor(.gray)
+                                            }
+                                            
+                                            if calendarEvent.event.isAllDay {
+                                                Text("All Day")
                                                     .font(.subheadline)
                                                     .foregroundColor(.gray)
+                                            } else {
+                                                HStack {
+                                                    Text(formatDate(calendarEvent.event.startDate))
+                                                    Text("-")
+                                                    Text(formatDate(calendarEvent.event.endDate))
                                                 }
-                                                
-                                                if let location = calendarEvent.event.location, !location.isEmpty {
-                                                    Text(location)
-                                                        .font(.caption)
-                                                        .foregroundColor(.gray)
-                                                }
+                                                .font(.subheadline)
+                                                .foregroundColor(.gray)
                                             }
-                                            .padding(.vertical, 4)
+                                            
+                                            if let location = calendarEvent.event.location, !location.isEmpty {
+                                                Text(location)
+                                                    .font(.caption)
+                                                    .foregroundColor(.gray)
+                                            }
                                         }
+                                        .padding(.vertical, 4)
                                     }
                                 }
                             }
@@ -131,9 +135,25 @@ struct CalendarOverlayView: View {
             .onChange(of: selectedDate) { _, newDate in
                 loadEvents(for: newDate)
             }
+            .onChange(of: selectedFriend) { _, _ in
+                if selectedFriend != nil {
+                    selectedTime = selectedDate
+                    showingScheduler = true
+                }
+            }
             .sheet(isPresented: $showingAuthPrompt) {
                 NavigationStack {
                     CalendarIntegrationView()
+                }
+            }
+            .sheet(isPresented: $showingScheduler, onDismiss: {
+                selectedFriend = nil
+                selectedTime = nil
+            }) {
+                if let friend = selectedFriend {
+                    NavigationStack {
+                        SchedulerView(friend: friend, initialDate: selectedTime)
+                    }
                 }
             }
             .onAppear {

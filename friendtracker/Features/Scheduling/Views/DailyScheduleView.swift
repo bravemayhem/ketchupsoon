@@ -1,9 +1,14 @@
 import SwiftUI
 import EventKit
+import SwiftData
 
 struct DailyScheduleView: View {
     let events: [CalendarManager.CalendarEvent]
     let date: Date
+    @State private var showingScheduler = false
+    @State private var selectedTime: Date?
+    @Binding var selectedFriend: Friend?
+    @Query private var friends: [Friend]
     
     private let hourHeight: CGFloat = 60
     private let timeWidth: CGFloat = 60
@@ -27,14 +32,25 @@ struct DailyScheduleView: View {
                 
                 // Events column
                 ZStack(alignment: .top) {
-                    // Grid lines
+                    // Grid lines with gesture areas
                     VStack(spacing: 0) {
-                        ForEach(startHour..<endHour, id: \.self) { _ in
+                        ForEach(startHour..<endHour, id: \.self) { hour in
                             Rectangle()
                                 .fill(Color.gray.opacity(0.2))
                                 .frame(height: 1)
                                 .frame(maxWidth: .infinity)
                                 .padding(.bottom, hourHeight - 1)
+                                .contentShape(Rectangle())
+                                .onLongPressGesture {
+                                    let calendar = Calendar.current
+                                    var components = calendar.dateComponents([.year, .month, .day], from: date)
+                                    components.hour = hour
+                                    components.minute = 0
+                                    if let newDate = calendar.date(from: components) {
+                                        selectedTime = newDate
+                                        showingScheduler = true
+                                    }
+                                }
                         }
                     }
                     
@@ -50,12 +66,44 @@ struct DailyScheduleView: View {
             }
             .padding(.horizontal)
         }
+        .sheet(isPresented: $showingScheduler) {
+            NavigationStack {
+                List(friends) { friend in
+                    Button(action: {
+                        selectedFriend = friend
+                        showingScheduler = false
+                    }) {
+                        HStack {
+                            Text(friend.name)
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .foregroundColor(.gray)
+                        }
+                    }
+                }
+                .navigationTitle("Select Friend for \(formatTime(selectedTime ?? Date()))")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Cancel") {
+                            showingScheduler = false
+                        }
+                    }
+                }
+            }
+        }
     }
     
     private func formatHour(_ hour: Int) -> String {
         let suffix = hour >= 12 ? "PM" : "AM"
         let displayHour = hour > 12 ? hour - 12 : hour
         return "\(displayHour) \(suffix)"
+    }
+    
+    private func formatTime(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.timeStyle = .short
+        return formatter.string(from: date)
     }
     
     private struct EventPosition {
@@ -111,5 +159,10 @@ struct EventView: View {
 }
 
 #Preview {
-    DailyScheduleView(events: [], date: Date())
+    DailyScheduleView(
+        events: [],
+        date: Date(),
+        selectedFriend: .constant(nil)
+    )
+    .modelContainer(for: [Friend.self])
 } 

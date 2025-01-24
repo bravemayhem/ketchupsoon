@@ -5,13 +5,15 @@ struct SchedulerView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     let friend: Friend
+    let initialDate: Date?
+    
     @State private var hangoutTitle: String = ""
-    @State private var selectedDate = Date()
+    @State private var selectedDate: Date
     @State private var selectedLocation = ""
     @State private var emailRecipients: [String] = []
     @State private var newEmail: String = ""
     @StateObject private var calendarManager = CalendarManager()
-    @State private var selectedDuration: TimeInterval? = nil // nil means use default
+    @State private var selectedDuration: TimeInterval? = nil
     @State private var isLoading = false
     @State private var errorMessage: String?
     @State private var selectedCalendarType: CalendarType = .apple
@@ -32,8 +34,10 @@ struct SchedulerView: View {
         ("Custom", -1.0)
     ]
     
-    init(friend: Friend) {
+    init(friend: Friend, initialDate: Date? = nil) {
         self.friend = friend
+        self.initialDate = initialDate
+        _selectedDate = State(initialValue: initialDate ?? Date())
     }
     
     var body: some View {
