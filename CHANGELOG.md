@@ -196,6 +196,13 @@
   - Enhanced create tag sheet with proper color scheme
   - Improved visual hierarchy in both light and dark modes
 
+- **Email Support**
+  - Added email field to friend details for both new and existing friends
+  - Implemented email import from contacts when adding friends from address book
+  - Added editable email field for manually added friends
+  - Enhanced contact sync to include email updates
+  - Maintained consistent UI patterns for email display and editing
+
 ## [1.0.0] - 2024-01-13
 
 ### Added
@@ -209,4 +216,20 @@
   - Checks for duplicate contact identifiers when importing from contacts
   - Performs case-insensitive name comparison to prevent duplicate names
   - Shows clear error messages when duplicates are detected
-  - Improves data integrity by preventing duplicate entries 
+  - Improves data integrity by preventing duplicate entries
+
+### Added
+- Search functionality in Friends List
+  - Real-time search by friend name
+  - Case-insensitive search
+- Sort functionality in Friends List
+  - Sort by name (default)
+  - Sort by last seen date
+- Tag filtering in Friends List
+  - Filter friends by multiple tags
+  - Visual tag chips with remove option
+  - Tag picker with Clear All option
+- UI Improvements
+  - Compact search and filter controls
+  - Visual indicators for active filters
+  - Improved empty states for search/filter results 
