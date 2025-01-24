@@ -193,4 +193,93 @@ class CalendarManager: ObservableObject {
             throw CalendarError.eventCreationFailed
         }
     }
+    
+    // MARK: - Event Fetching
+    
+    struct CalendarEvent {
+        let event: EKEvent
+        let source: CalendarSource
+        
+        enum CalendarSource {
+            case apple
+            case google
+        }
+    }
+    
+    func fetchEventsForDate(_ date: Date) async -> [CalendarEvent] {
+        var allEvents: [CalendarEvent] = []
+        let calendar = Calendar.current
+        
+        guard let startDate = calendar.date(bySettingHour: 0, minute: 0, second: 0, of: date),
+              let endDate = calendar.date(bySettingHour: 23, minute: 59, second: 59, of: date) else {
+            return []
+        }
+        
+        // Fetch Apple Calendar events
+        if isAuthorized {
+            let predicate = eventStore.predicateForEvents(
+                withStart: startDate,
+                end: endDate,
+                calendars: eventStore.calendars(for: .event)
+            )
+            allEvents.append(contentsOf: eventStore.events(matching: predicate).map { CalendarEvent(event: $0, source: .apple) })
+        }
+        
+        // Fetch Google Calendar events
+        if isGoogleAuthorized, let service = googleService {
+            do {
+                let query = GTLRCalendarQuery_EventsList.query(withCalendarId: "primary")
+                query.timeMin = GTLRDateTime(date: startDate)
+                query.timeMax = GTLRDateTime(date: endDate)
+                query.singleEvents = true
+                query.orderBy = "startTime"
+                
+                let response = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<GTLRCalendar_Events, Error>) in
+                    service.executeQuery(query) { callbackTicket, response, error in
+                        if let error = error {
+                            continuation.resume(throwing: error)
+                            return
+                        }
+                        if let events = response as? GTLRCalendar_Events {
+                            continuation.resume(returning: events)
+                        } else {
+                            continuation.resume(throwing: NSError(domain: "", code: -1))
+                        }
+                    }
+                }
+                
+                if let items = response.items {
+                    // Convert Google Calendar events to EKEvents
+                    for googleEvent in items {
+                        let event = EKEvent(eventStore: eventStore)
+                        event.title = googleEvent.summary ?? "Untitled Event"
+                        event.location = googleEvent.location
+                        
+                        if let start = googleEvent.start?.dateTime?.date {
+                            event.startDate = start
+                        } else if let startDate = googleEvent.start?.date?.date {
+                            // Handle all-day events
+                            event.startDate = startDate
+                            event.isAllDay = true
+                        }
+                        
+                        if let end = googleEvent.end?.dateTime?.date {
+                            event.endDate = end
+                        } else if let endDate = googleEvent.end?.date?.date {
+                            // Handle all-day events
+                            event.endDate = endDate
+                            event.isAllDay = true
+                        }
+                        
+                        allEvents.append(CalendarEvent(event: event, source: .google))
+                    }
+                }
+            } catch {
+                print("Error fetching Google Calendar events: \(error)")
+            }
+        }
+        
+        // Sort all events by start date
+        return allEvents.sorted { $0.event.startDate < $1.event.startDate }
+    }
 }
