@@ -11,11 +11,29 @@ class CalendarManager: ObservableObject {
     @Published var isAuthorized = false
     @Published var isGoogleAuthorized = false
     @Published var connectedCalendars: [Friend.ConnectedCalendar] = []
+    @Published var selectedCalendarType: CalendarType = .apple
+    private var isInitialized = false
+    
+    enum CalendarType {
+        case apple
+        case google
+    }
     
     init() {
         Task {
-            await requestAccess()
-            await setupGoogleCalendar()
+            await initialize()
+        }
+    }
+    
+    private func initialize() async {
+        await requestAccess()
+        await setupGoogleCalendar()
+        isInitialized = true
+    }
+    
+    func ensureInitialized() async {
+        if !isInitialized {
+            await initialize()
         }
     }
     
@@ -156,6 +174,70 @@ class CalendarManager: ObservableObject {
     }
     
     func createHangoutEvent(with friend: Friend, activity: String, location: String, date: Date, duration: TimeInterval, emailRecipients: [String] = []) async throws -> String {
+        // For Google Calendar
+        if selectedCalendarType == .google && isGoogleAuthorized {
+            guard let service = googleService else { throw CalendarError.unauthorized }
+            
+            let event = GTLRCalendar_Event()
+            event.summary = "\(activity) with \(friend.name)"
+            event.location = location
+            
+            let startDateTime = GTLRDateTime(date: date)
+            let endDateTime = GTLRDateTime(date: date.addingTimeInterval(duration))
+            
+            let start = GTLRCalendar_EventDateTime()
+            start.dateTime = startDateTime
+            event.start = start
+            
+            let end = GTLRCalendar_EventDateTime()
+            end.dateTime = endDateTime
+            event.end = end
+            
+            // Add attendees
+            var attendees: [GTLRCalendar_EventAttendee] = []
+            for email in emailRecipients {
+                let attendee = GTLRCalendar_EventAttendee()
+                attendee.email = email
+                attendees.append(attendee)
+            }
+            
+            // Add friend's email if available
+            if let friendEmail = friend.email, !emailRecipients.contains(friendEmail) {
+                let attendee = GTLRCalendar_EventAttendee()
+                attendee.email = friendEmail
+                attendees.append(attendee)
+            }
+            
+            if !attendees.isEmpty {
+                event.attendees = attendees
+            }
+            
+            let query = GTLRCalendarQuery_EventsInsert.query(withObject: event, calendarId: "primary")
+            // Send email notifications to all attendees
+            query.sendUpdates = "all"
+            
+            do {
+                let response = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<GTLRCalendar_Event, Error>) in
+                    service.executeQuery(query) { callbackTicket, response, error in
+                        if let error = error {
+                            continuation.resume(throwing: error)
+                            return
+                        }
+                        if let event = response as? GTLRCalendar_Event {
+                            continuation.resume(returning: event)
+                        } else {
+                            continuation.resume(throwing: NSError(domain: "", code: -1))
+                        }
+                    }
+                }
+                return response.identifier ?? UUID().uuidString
+            } catch {
+                print("Error creating Google Calendar event: \(error)")
+                throw CalendarError.eventCreationFailed
+            }
+        }
+        
+        // For Apple Calendar (existing code)
         guard isAuthorized else { throw CalendarError.unauthorized }
         
         let event = EKEvent(eventStore: eventStore)
@@ -165,25 +247,10 @@ class CalendarManager: ObservableObject {
         event.endDate = date.addingTimeInterval(duration)
         event.calendar = eventStore.defaultCalendarForNewEvents
         
-        // Add friend's email if available
-        var allRecipients = emailRecipients
-        if let friendEmail = friend.email, !allRecipients.contains(friendEmail) {
-            allRecipients.append(friendEmail)
-        }
-        
-        // Add attendees using proper EKEventStore methods
-        if !allRecipients.isEmpty {
-            for email in allRecipients {
-                let attendee = EKParticipant()
-                attendee.setValue("mailto:\(email)", forKey: "emailAddress")
-                attendee.setValue("REQ-PARTICIPANT", forKey: "participantRole")
-                attendee.setValue("IND", forKey: "participantType")
-                attendee.setValue("NEEDS-ACTION", forKey: "participantStatus")
-                
-                var attendees = event.value(forKey: "attendees") as? [EKParticipant] ?? []
-                attendees.append(attendee)
-                event.setValue(attendees, forKey: "attendees")
-            }
+        // Add notes with email recipients if any
+        if !emailRecipients.isEmpty {
+            let emailList = emailRecipients.joined(separator: ", ")
+            event.notes = "Participants: \(emailList)"
         }
         
         do {
@@ -192,5 +259,114 @@ class CalendarManager: ObservableObject {
         } catch {
             throw CalendarError.eventCreationFailed
         }
+    }
+    
+    // MARK: - Event Fetching
+    
+    struct CalendarEvent: Identifiable {
+        let id: String
+        let event: EKEvent
+        let source: CalendarSource
+        
+        init(event: EKEvent, source: CalendarSource) {
+            self.event = event
+            self.source = source
+            // Create a unique ID combining the event ID and source
+            self.id = "\(source)_\(event.eventIdentifier ?? UUID().uuidString)"
+        }
+        
+        enum CalendarSource: String {
+            case apple
+            case google
+        }
+    }
+    
+    func fetchEventsForDate(_ date: Date) async -> [CalendarEvent] {
+        var allEvents: [CalendarEvent] = []
+        let calendar = Calendar.current
+        
+        // Get start and end of the selected date
+        guard let startDate = calendar.date(bySettingHour: 0, minute: 0, second: 0, of: date),
+              let endDate = calendar.date(bySettingHour: 23, minute: 59, second: 59, of: date) else {
+            print("Failed to create date range for: \(date)")
+            return []
+        }
+        
+        print("Fetching events for date range: \(startDate) to \(endDate)")
+        print("Calendar authorization status - Apple: \(isAuthorized), Google: \(isGoogleAuthorized)")
+        
+        // Fetch Apple Calendar events
+        if isAuthorized {
+            let calendars = eventStore.calendars(for: .event)
+            print("Available Apple calendars: \(calendars.count)")
+            let predicate = eventStore.predicateForEvents(
+                withStart: startDate,
+                end: endDate,
+                calendars: calendars
+            )
+            let appleEvents = eventStore.events(matching: predicate)
+            print("Found \(appleEvents.count) Apple Calendar events")
+            allEvents.append(contentsOf: appleEvents.map { CalendarEvent(event: $0, source: .apple) })
+        }
+        
+        // Fetch Google Calendar events
+        if isGoogleAuthorized, let service = googleService {
+            do {
+                let query = GTLRCalendarQuery_EventsList.query(withCalendarId: "primary")
+                query.timeMin = GTLRDateTime(date: startDate)
+                query.timeMax = GTLRDateTime(date: endDate)
+                query.singleEvents = true
+                query.orderBy = "startTime"
+                
+                let response = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<GTLRCalendar_Events, Error>) in
+                    service.executeQuery(query) { callbackTicket, response, error in
+                        if let error = error {
+                            print("Error fetching Google Calendar events: \(error)")
+                            continuation.resume(throwing: error)
+                            return
+                        }
+                        if let events = response as? GTLRCalendar_Events {
+                            continuation.resume(returning: events)
+                        } else {
+                            continuation.resume(throwing: NSError(domain: "", code: -1))
+                        }
+                    }
+                }
+                
+                if let items = response.items {
+                    print("Found \(items.count) Google Calendar events")
+                    // Convert Google Calendar events to EKEvents
+                    for googleEvent in items {
+                        let event = EKEvent(eventStore: eventStore)
+                        event.title = googleEvent.summary ?? "Untitled Event"
+                        event.location = googleEvent.location
+                        
+                        if let start = googleEvent.start?.dateTime?.date {
+                            event.startDate = start
+                        } else if let startDate = googleEvent.start?.date?.date {
+                            // Handle all-day events
+                            event.startDate = startDate
+                            event.isAllDay = true
+                        }
+                        
+                        if let end = googleEvent.end?.dateTime?.date {
+                            event.endDate = end
+                        } else if let endDate = googleEvent.end?.date?.date {
+                            // Handle all-day events
+                            event.endDate = endDate
+                            event.isAllDay = true
+                        }
+                        
+                        allEvents.append(CalendarEvent(event: event, source: .google))
+                    }
+                }
+            } catch {
+                print("Error fetching Google Calendar events: \(error)")
+            }
+        }
+        
+        let sortedEvents = allEvents.sorted { $0.event.startDate < $1.event.startDate }
+        print("Total events found: \(sortedEvents.count)")
+        return sortedEvents
     }
 }

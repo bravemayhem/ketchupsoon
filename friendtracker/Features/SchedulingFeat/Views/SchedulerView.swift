@@ -5,16 +5,18 @@ struct SchedulerView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     let friend: Friend
+    let initialDate: Date?
+    
     @State private var hangoutTitle: String = ""
-    @State private var selectedDate = Date()
+    @State private var selectedDate: Date
     @State private var selectedLocation = ""
     @State private var emailRecipients: [String] = []
     @State private var newEmail: String = ""
     @StateObject private var calendarManager = CalendarManager()
-    @State private var selectedDuration: TimeInterval? = nil // nil means use default
+    @State private var selectedDuration: TimeInterval? = nil
     @State private var isLoading = false
     @State private var errorMessage: String?
-    @State private var selectedCalendarType: CalendarType = .apple
+    @State private var selectedCalendarType: CalendarManager.CalendarType = .apple
     @State private var showingCustomDurationInput = false
     @State private var customHours: Int = 1
     @State private var customMinutes: Int = 0
@@ -32,8 +34,10 @@ struct SchedulerView: View {
         ("Custom", -1.0)
     ]
     
-    init(friend: Friend) {
+    init(friend: Friend, initialDate: Date? = nil) {
         self.friend = friend
+        self.initialDate = initialDate
+        _selectedDate = State(initialValue: initialDate ?? Date())
     }
     
     var body: some View {
@@ -93,8 +97,8 @@ struct SchedulerView: View {
                     )
                     
                     Picker("Calendar", selection: $selectedCalendarType) {
-                        Text("Apple Calendar").tag(CalendarType.apple)
-                        Text("Google Calendar").tag(CalendarType.google)
+                        Text("Apple Calendar").tag(CalendarManager.CalendarType.apple)
+                        Text("Google Calendar").tag(CalendarManager.CalendarType.google)
                     }
                     
                     if selectedCalendarType == .google && !calendarManager.isGoogleAuthorized {
@@ -245,18 +249,14 @@ struct SchedulerView: View {
     
     private func createHangout() async throws {
         // Create calendar event
-        if selectedCalendarType == .google && calendarManager.isGoogleAuthorized {
-            // TODO: Implement Google Calendar event creation with email invites
-        } else {
-            _ = try await calendarManager.createHangoutEvent(
-                with: friend,
-                activity: hangoutTitle,
-                location: selectedLocation,
-                date: selectedDate,
-                duration: selectedDuration ?? 7200, // Default 2 hours
-                emailRecipients: emailRecipients
-            )
-        }
+        _ = try await calendarManager.createHangoutEvent(
+            with: friend,
+            activity: hangoutTitle,
+            location: selectedLocation,
+            date: selectedDate,
+            duration: selectedDuration ?? 7200, // Default 2 hours
+            emailRecipients: emailRecipients
+        )
         
         // Create and insert the hangout
         let hangout = Hangout(
@@ -284,6 +284,7 @@ struct SchedulerView: View {
         
         Task {
             do {
+                calendarManager.selectedCalendarType = selectedCalendarType
                 try await createHangout()
                 
                 await MainActor.run {

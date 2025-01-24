@@ -258,4 +258,26 @@
 - UI Improvements
   - Compact search and filter controls
   - Visual indicators for active filters
-  - Improved empty states for search/filter results 
+  - Improved empty states for search/filter results
+
+### Added
+- Calendar integration feature
+  - Added daily and list view of calendar events
+  - Support for both Apple Calendar and Google Calendar integration
+  - Long-press gesture to schedule hangouts at specific times
+  - Visual distinction between Apple and Google calendar events
+  - Friend picker for quick scheduling
+  - Real-time calendar event synchronization
+  - Support for all-day events
+  - Calendar authorization management
+  - Event details including title, time, and location display
+
+### Fixed
+- Calendar initialization and authorization handling
+- Duplicate event ID handling
+- Event loading and display synchronization
+
+### Changed
+- Improved calendar navigation with date picker and view mode toggle
+- Enhanced event visualization in daily view
+- Streamlined scheduling workflow 
