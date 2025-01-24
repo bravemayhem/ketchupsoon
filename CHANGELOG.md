@@ -2,7 +2,24 @@
 
 ## [Unreleased]
 
-### 2024-03-28
+### 2024-01-24
+#### Added
+- **Google Calendar Invites Support**
+  - Implemented proper Google Calendar event creation with attendee invites
+  - Added calendar type selector (Apple/Google) in scheduler
+  - Email recipients now receive proper calendar invites when using Google Calendar
+  - Improved calendar integration UI with Google sign-in button
+
+- **Calendar View Implementation**
+  - Added comprehensive daily schedule view with hourly event blocks (8 AM - 8 PM)
+  - Implemented list view for quick event scanning
+  - Added visual distinction between Apple and Google calendar events
+  - Implemented long-press gesture for quick scheduling
+  - Added date navigation with picker and prev/next buttons
+  - Added real-time calendar event synchronization
+  - Implemented proper event positioning and overlap handling
+  - Added support for all-day events display
+
 #### Changed
 - **Calendar Integration Simplification**
   - Removed calendar availability checking functionality
