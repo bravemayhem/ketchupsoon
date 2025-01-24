@@ -9,10 +9,16 @@ struct CalendarOverlayView: View {
     @State private var events: [CalendarManager.CalendarEvent] = []
     @State private var showingAuthPrompt = false
     @State private var isLoading = false
+    @State private var viewMode: ViewMode = .daily
+    
+    enum ViewMode {
+        case daily
+        case list
+    }
     
     var body: some View {
         NavigationView {
-            VStack {
+            VStack(spacing: 0) {
                 if !calendarManager.isAuthorized && !calendarManager.isGoogleAuthorized {
                     ContentUnavailableView(
                         "Calendar Access Required",
@@ -21,62 +27,99 @@ struct CalendarOverlayView: View {
                     )
                     .padding()
                 } else {
-                    DatePicker(
-                        "Select Date",
-                        selection: $selectedDate,
-                        displayedComponents: [.date]
-                    )
-                    .datePickerStyle(.graphical)
-                    .padding()
-                    
-                    if isLoading {
-                        ProgressView()
-                            .padding()
-                    } else if events.isEmpty {
-                        ContentUnavailableView(
-                            "No Events",
-                            systemImage: "calendar",
-                            description: Text("No events scheduled for this day")
-                        )
-                    } else {
-                        List {
-                            ForEach(events, id: \.event.eventIdentifier) { calendarEvent in
-                                VStack(alignment: .leading) {
-                                    HStack {
-                                        Text(calendarEvent.event.title)
-                                            .font(.headline)
-                                        Spacer()
-                                        Image(systemName: calendarEvent.source == .google ? "calendar.badge.plus" : "calendar")
-                                            .foregroundColor(.gray)
-                                    }
-                                    
-                                    if calendarEvent.event.isAllDay {
-                                        Text("All Day")
-                                            .font(.subheadline)
-                                            .foregroundColor(.gray)
-                                    } else {
-                                        HStack {
-                                            Text(formatDate(calendarEvent.event.startDate))
-                                            Text("-")
-                                            Text(formatDate(calendarEvent.event.endDate))
+                    VStack(spacing: 0) {
+                        // Date picker and view mode toggle
+                        HStack {
+                            Picker("View Mode", selection: $viewMode) {
+                                Image(systemName: "clock").tag(ViewMode.daily)
+                                Image(systemName: "list.bullet").tag(ViewMode.list)
+                            }
+                            .pickerStyle(.segmented)
+                            .frame(width: 100)
+                            
+                            Spacer()
+                            
+                            Button(action: {
+                                selectedDate = Calendar.current.date(byAdding: .day, value: -1, to: selectedDate) ?? selectedDate
+                            }) {
+                                Image(systemName: "chevron.left")
+                                    .foregroundColor(.gray)
+                            }
+                            
+                            DatePicker(
+                                "",
+                                selection: $selectedDate,
+                                displayedComponents: [.date]
+                            )
+                            .labelsHidden()
+                            
+                            Button(action: {
+                                selectedDate = Calendar.current.date(byAdding: .day, value: 1, to: selectedDate) ?? selectedDate
+                            }) {
+                                Image(systemName: "chevron.right")
+                                    .foregroundColor(.gray)
+                            }
+                        }
+                        .padding()
+                        
+                        Divider()
+                        
+                        if isLoading {
+                            ProgressView()
+                                .padding()
+                        } else if events.isEmpty {
+                            ContentUnavailableView(
+                                "No Events",
+                                systemImage: "calendar",
+                                description: Text("No events scheduled for this day")
+                            )
+                        } else {
+                            Group {
+                                switch viewMode {
+                                case .daily:
+                                    DailyScheduleView(events: events, date: selectedDate)
+                                case .list:
+                                    List {
+                                        ForEach(events, id: \.event.eventIdentifier) { calendarEvent in
+                                            VStack(alignment: .leading) {
+                                                HStack {
+                                                    Text(calendarEvent.event.title)
+                                                        .font(.headline)
+                                                    Spacer()
+                                                    Image(systemName: calendarEvent.source == .google ? "calendar.badge.plus" : "calendar")
+                                                        .foregroundColor(.gray)
+                                                }
+                                                
+                                                if calendarEvent.event.isAllDay {
+                                                    Text("All Day")
+                                                        .font(.subheadline)
+                                                        .foregroundColor(.gray)
+                                                } else {
+                                                    HStack {
+                                                        Text(formatDate(calendarEvent.event.startDate))
+                                                        Text("-")
+                                                        Text(formatDate(calendarEvent.event.endDate))
+                                                    }
+                                                    .font(.subheadline)
+                                                    .foregroundColor(.gray)
+                                                }
+                                                
+                                                if let location = calendarEvent.event.location, !location.isEmpty {
+                                                    Text(location)
+                                                        .font(.caption)
+                                                        .foregroundColor(.gray)
+                                                }
+                                            }
+                                            .padding(.vertical, 4)
                                         }
-                                        .font(.subheadline)
-                                        .foregroundColor(.gray)
-                                    }
-                                    
-                                    if let location = calendarEvent.event.location, !location.isEmpty {
-                                        Text(location)
-                                            .font(.caption)
-                                            .foregroundColor(.gray)
                                     }
                                 }
-                                .padding(.vertical, 4)
                             }
                         }
                     }
                 }
             }
-            .navigationTitle("Calendar View")
+            .navigationTitle("Calendar")
             .navigationBarItems(
                 leading: Button("Settings") {
                     showingAuthPrompt = true
