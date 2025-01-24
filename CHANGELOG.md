@@ -28,6 +28,12 @@
   - Streamlined duration selection interface
   - Enhanced direct event creation without availability constraints
 
+- **Hangout Creation Enhancement**
+  - Renamed SchedulerView to CreateHangoutView for better clarity
+  - Updated navigation title to "Create Hangout" from "Schedule Hangout"
+  - Added automatic email population from friend's contact information
+  - Improved user experience by pre-filling email when available
+
 ### 2024-01-22
 #### Added
 - **Friend Creation Timestamp**

@@ -12,8 +12,8 @@ struct DailyScheduleView: View {
     
     private let hourHeight: CGFloat = 60
     private let timeWidth: CGFloat = 60
-    private let startHour = 8 // 8 AM
-    private let endHour = 20 // 8 PM
+    private let startHour = 7 // 7 AM
+    private let endHour = 24 // 11 PM
     
     var body: some View {
         ScrollView {

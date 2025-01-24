@@ -38,6 +38,10 @@ struct CreateHangoutView: View {
         self.friend = friend
         self.initialDate = initialDate
         _selectedDate = State(initialValue: initialDate ?? Date())
+        // Initialize emailRecipients with friend's email if it exists
+        if let friendEmail = friend.email {
+            _emailRecipients = State(initialValue: [friendEmail])
+        }
     }
     
     var body: some View {
