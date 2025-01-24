@@ -5,6 +5,7 @@ struct HangoutCompletionView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     let hangout: Hangout
+    @State private var showingMissedHangoutOptions = false
     
     var body: some View {
         NavigationStack {
@@ -23,13 +24,42 @@ struct HangoutCompletionView: View {
                     .foregroundColor(.green)
                     
                     Button("No, it didn't happen") {
-                        handleMissedHangout()
+                        showingMissedHangoutOptions = true
                     }
                     .foregroundColor(.red)
                 }
             }
             .navigationTitle("Hangout Check-in")
             .navigationBarTitleDisplayMode(.inline)
+            .confirmationDialog(
+                "What would you like to do?",
+                isPresented: $showingMissedHangoutOptions,
+                titleVisibility: .visible
+            ) {
+                Button("Reschedule") {
+                    // Keep them in scheduled view but mark as needing reschedule
+                    hangout.needsReschedule = true
+                    dismiss()
+                }
+                
+                Button("Move to To Connect List") {
+                    hangout.friend?.needsToConnectFlag = true
+                    modelContext.delete(hangout)
+                    dismiss()
+                }
+                
+                Button("Hold Off") {
+                    hangout.friend?.needsToConnectFlag = false
+                    modelContext.delete(hangout)
+                    dismiss()
+                }
+                
+                Button("Cancel", role: .cancel) {
+                    dismiss()
+                }
+            } message: {
+                Text("How would you like to handle the missed hangout?")
+            }
         }
     }
     
@@ -40,49 +70,6 @@ struct HangoutCompletionView: View {
         }
         hangout.isCompleted = true
         dismiss()
-    }
-    
-    private func handleMissedHangout() {
-        if let friend = hangout.friend {
-            // Reset the scheduled state
-            hangout.isScheduled = false
-            
-            // Show options for handling missed hangout
-            Task { @MainActor in
-                let alert = UIAlertController(
-                    title: "What would you like to do?",
-                    message: "How would you like to handle the missed hangout?",
-                    preferredStyle: .actionSheet
-                )
-                
-                alert.addAction(UIAlertAction(title: "Reschedule", style: .default) { _ in
-                    // Keep them in scheduled view but mark as needing reschedule
-                    hangout.needsReschedule = true
-                    dismiss()
-                })
-                
-                alert.addAction(UIAlertAction(title: "Move to To Connect List", style: .default) { _ in
-                    friend.needsToConnectFlag = true
-                    modelContext.delete(hangout)
-                    dismiss()
-                })
-                
-                alert.addAction(UIAlertAction(title: "Hold Off", style: .default) { _ in
-                    friend.needsToConnectFlag = false
-                    modelContext.delete(hangout)
-                    dismiss()
-                })
-                
-                alert.addAction(UIAlertAction(title: "Cancel", style: .cancel) { _ in
-                    dismiss()
-                })
-                
-                if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-                   let viewController = windowScene.windows.first?.rootViewController {
-                    viewController.present(alert, animated: true)
-                }
-            }
-        }
     }
 }
 
