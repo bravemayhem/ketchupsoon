@@ -235,6 +235,20 @@
   - Enhanced contact sync to include email updates
   - Maintained consistent UI patterns for email display and editing
 
+### 2025-01-24
+#### Added
+- **Page Subtitles**
+  - Added descriptive subtitle to Wishlist page
+  - Implemented subtitle support for all main navigation tabs
+  - Enhanced UI with proper iOS-style subtitle formatting and alignment
+  - Improved user understanding of page purposes through descriptive text
+
+#### Changed
+- **Navigation UI Enhancement**
+  - Updated navigation stack to support subtitles below page titles
+  - Maintained consistent left alignment with iOS design guidelines
+  - Enhanced visual hierarchy between titles and subtitles
+
 ## [1.0.0] - 2024-01-13
 
 ### Added

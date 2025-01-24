@@ -12,6 +12,7 @@ struct ContentView: View {
         TabView(selection: $selectedTab) {
             NavigationTab(
                 title: "Ketchups",
+                subtitle: "Your social calendar at your finger tips",
                 icon: "calendar",
                 showImportOptions: $showingImportOptions,
                 showingDebugAlert: $showingDebugAlert,
@@ -23,6 +24,7 @@ struct ContentView: View {
             
             NavigationTab(
                 title: "Wishlist",
+                subtitle: "Keep track of friends you want to see soon",
                 icon: "star",
                 showImportOptions: $showingImportOptions,
                 showingDebugAlert: $showingDebugAlert,
@@ -34,6 +36,7 @@ struct ContentView: View {
             
             NavigationTab(
                 title: "Friends",
+                subtitle: "Friends you've added to Ketchup Soon",
                 icon: "person.2",
                 showImportOptions: $showingImportOptions,
                 showingDebugAlert: $showingDebugAlert,
@@ -84,6 +87,7 @@ struct ContentView: View {
 
 private struct NavigationTab<Content: View>: View {
     let title: String
+    let subtitle: String?
     let icon: String
     @Binding var showImportOptions: Bool
     @Binding var showingDebugAlert: Bool
@@ -93,6 +97,7 @@ private struct NavigationTab<Content: View>: View {
     
     init(
         title: String,
+        subtitle: String? = nil,
         icon: String,
         showImportOptions: Binding<Bool>,
         showingDebugAlert: Binding<Bool>,
@@ -100,6 +105,7 @@ private struct NavigationTab<Content: View>: View {
         @ViewBuilder content: () -> Content
     ) {
         self.title = title
+        self.subtitle = subtitle
         self.icon = icon
         self._showImportOptions = showImportOptions
         self._showingDebugAlert = showingDebugAlert
@@ -140,6 +146,17 @@ private struct NavigationTab<Content: View>: View {
                 }
                 .sheet(isPresented: $showingSettings) {
                     SettingsView()
+                }
+                // Styling for page subtitles is contained here. TO DO: Styling for title & subtitle should be in the same place
+                .safeAreaInset(edge: .top, spacing: 0) {
+                    if let subtitle = subtitle {
+                        Text(subtitle)
+                            .font(.subheadline)
+                            .foregroundColor(AppColors.secondaryLabel)
+                            .padding(.horizontal, 16)
+                            .padding(.bottom, 8)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
                 }
         }
         .tabItem {
