@@ -52,7 +52,7 @@ struct HangoutCard: View {
                     Button(action: {
                         selectedFriend = friend
                     }) {
-                        CardContentView(friend: friend) {
+                        CardContentView(friend: friend, showChevron: false) {
                             VStack(alignment: .leading, spacing: 4) {
                                 HStack {
                                     Text(hangout.activity)
