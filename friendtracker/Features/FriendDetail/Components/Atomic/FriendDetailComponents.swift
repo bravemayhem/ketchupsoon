@@ -259,18 +259,14 @@ struct FriendLastSeenSection: View {
 
 struct FriendInfoSection: View {
     let friend: Friend
-    let onLastSeenTap: () -> Void
-    let onFrequencyTap: () -> Void
     @Bindable var cityService: CitySearchService
     @State private var showingContactView = false
     @State private var editableName: String
     @State private var editablePhone: String
     @State private var editableEmail: String
     
-    init(friend: Friend, onLastSeenTap: @escaping () -> Void, onFrequencyTap: @escaping () -> Void, cityService: CitySearchService) {
+    init(friend: Friend, cityService: CitySearchService) {
         self.friend = friend
-        self.onLastSeenTap = onLastSeenTap
-        self.onFrequencyTap = onFrequencyTap
         self._cityService = Bindable(wrappedValue: cityService)
         self._editableName = State(initialValue: friend.name)
         self._editablePhone = State(initialValue: friend.phoneNumber ?? "")
@@ -370,6 +366,25 @@ struct FriendInfoSection: View {
                 }
             }
             
+            // City
+            CitySearchField(service: cityService)
+        }
+        .listRowBackground(AppColors.secondarySystemBackground)
+        .sheet(isPresented: $showingContactView) {
+            if let identifier = friend.contactIdentifier {
+                ContactViewController(contactIdentifier: identifier, isPresented: $showingContactView)
+            }
+        }
+    }
+}
+
+struct FriendKetchupSection: View {
+    let friend: Friend
+    let onLastSeenTap: () -> Void
+    let onFrequencyTap: () -> Void
+    
+    var body: some View {
+        Section("Ketchup Details") {
             // Last Seen
             Button {
                 onLastSeenTap()
@@ -395,9 +410,6 @@ struct FriendInfoSection: View {
             }
             .buttonStyle(.borderless)
             
-            // City
-            CitySearchField(service: cityService)
-            
             // Catch Up Frequency
             Button(action: onFrequencyTap) {
                 HStack {
@@ -417,11 +429,6 @@ struct FriendInfoSection: View {
             .buttonStyle(.borderless)
         }
         .listRowBackground(AppColors.secondarySystemBackground)
-        .sheet(isPresented: $showingContactView) {
-            if let identifier = friend.contactIdentifier {
-                ContactViewController(contactIdentifier: identifier, isPresented: $showingContactView)
-            }
-        }
     }
 }
 
@@ -731,13 +738,31 @@ struct ContactViewController: UIViewControllerRepresentable {
                     phoneNumber: "(415) 555-0123",
                     catchUpFrequency: .monthly
                 ),
-                onLastSeenTap: {},
-                onFrequencyTap: {},
                 cityService: {
                     let service = CitySearchService()
                     service.selectedCity = "San Francisco"
                     return service
                 }()
+            )
+        }
+        .listStyle(.insetGrouped)
+    }
+    .modelContainer(for: [Friend.self, Tag.self, Hangout.self])
+}
+
+#Preview("FriendKetchupSection") {
+    NavigationStack {
+        List {
+            FriendKetchupSection(
+                friend: Friend(
+                    name: "Emma Thompson",
+                    lastSeen: Calendar.current.date(byAdding: .day, value: -5, to: Date())!,
+                    location: "San Francisco",
+                    phoneNumber: "(415) 555-0123",
+                    catchUpFrequency: .monthly
+                ),
+                onLastSeenTap: {},
+                onFrequencyTap: {}
             )
         }
         .listStyle(.insetGrouped)

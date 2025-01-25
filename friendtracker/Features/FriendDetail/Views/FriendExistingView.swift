@@ -37,13 +37,17 @@ struct FriendExistingView: View {
                 if config.showsLocation || config.showsLastSeen || config.showsName || config.showsCatchUpFrequency {
                     FriendInfoSection(
                         friend: viewModel.friend,
+                        cityService: cityService
+                    )
+                    
+                    FriendKetchupSection(
+                        friend: viewModel.friend,
                         onLastSeenTap: {
                             viewModel.showingDatePicker = true
                         },
                         onFrequencyTap: {
                             viewModel.showingFrequencyPicker = true
-                        },
-                        cityService: cityService
+                        }
                     )
                 }
                 
