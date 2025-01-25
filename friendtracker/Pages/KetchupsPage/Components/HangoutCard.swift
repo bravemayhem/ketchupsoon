@@ -6,7 +6,7 @@ import SwiftData
 struct HangoutCard: View {
     let hangout: Hangout
     @State private var selectedFriend: Friend?
-    @State private var showingMessageSheet = false
+    @State private var showingCompletionPrompt = false
     
     var statusColor: Color {
         if hangout.isCompleted {
@@ -16,33 +16,6 @@ struct HangoutCard: View {
         } else {
             return AppColors.accent
         }
-    }
-    
-    var statusText: String {
-        if hangout.isCompleted {
-            return "Completed"
-        } else if hangout.date <= Date() {
-            return "Needs Confirmation"
-        } else {
-            return "Upcoming"
-        }
-    }
-    
-    var messageText: String {
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateStyle = .full
-        dateFormatter.timeStyle = .short
-        
-        var message = "Hey! Here are the details for our hangout:\n\n"
-        message += "🗓 \(dateFormatter.string(from: hangout.date))\n"
-        message += "🎯 \(hangout.activity)\n"
-        if !hangout.location.isEmpty {
-            message += "📍 \(hangout.location)\n"
-        }
-        
-        message += "\n\nSee you there! 👋"
-        
-        return message
     }
     
     var body: some View {
@@ -59,15 +32,25 @@ struct HangoutCard: View {
                                         .font(.subheadline)
                                         .foregroundColor(AppColors.label)
                                     Spacer()
-                                    Text(statusText)
-                                        .font(AppTheme.captionFont)
-                                        .foregroundColor(statusColor)
-                                        .padding(.horizontal, 8)
-                                        .padding(.vertical, 4)
-                                        .background(
-                                            Capsule()
-                                                .fill(statusColor.opacity(0.1))
-                                        )
+                                    if hangout.isCompleted {
+                                        Label("Completed", systemImage: "checkmark.circle.fill")
+                                            .font(AppTheme.captionFont)
+                                            .foregroundColor(.green)
+                                    } else if hangout.date <= Date() {
+                                        Button(action: {
+                                            showingCompletionPrompt = true
+                                        }) {
+                                            Text("Confirm")
+                                                .font(AppTheme.captionFont)
+                                                .foregroundColor(.white)
+                                                .padding(.horizontal, 8)
+                                                .padding(.vertical, 4)
+                                                .background(
+                                                    Capsule()
+                                                        .fill(AppColors.accent)
+                                                )
+                                        }
+                                    }
                                 }
                                 
                                 if !hangout.location.isEmpty {
@@ -87,28 +70,12 @@ struct HangoutCard: View {
                             }
                         }
                     }
-                    
-                    if !hangout.isCompleted && hangout.date > Date() && friend.phoneNumber != nil {
-                        Button {
-                            showingMessageSheet = true
-                        } label: {
-                            Label("Share Details", systemImage: "square.and.arrow.up")
-                                .font(AppTheme.bodyFont)
-                                .foregroundColor(AppColors.accent)
-                        }
-                        .padding(.horizontal)
-                        .padding(.bottom, 4)
-                    }
                 }
             }
         }
         .friendSheetPresenter(selectedFriend: $selectedFriend)
-        .sheet(isPresented: $showingMessageSheet) {
-            if let phoneNumber = hangout.friend?.phoneNumber {
-                MessageComposeView(recipient: phoneNumber, message: messageText)
-                    .presentationDetents([.height(400), .large])
-                    .presentationDragIndicator(.visible)
-            }
+        .sheet(isPresented: $showingCompletionPrompt) {
+            HangoutCompletionView(hangout: hangout)
         }
     }
 }

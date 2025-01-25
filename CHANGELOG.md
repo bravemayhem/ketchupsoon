@@ -27,12 +27,19 @@
   - Removed suggested times feature for more straightforward scheduling
   - Streamlined duration selection interface
   - Enhanced direct event creation without availability constraints
+  - Removed Share Details feature in favor of calendar invites
 
 - **Hangout Creation Enhancement**
   - Renamed SchedulerView to CreateHangoutView for better clarity
   - Updated navigation title to "Create Hangout" from "Schedule Hangout"
   - Added automatic email population from friend's contact information
   - Improved user experience by pre-filling email when available
+
+- **Hangout Confirmation Enhancement**
+  - Replaced "Needs Confirmation" banner with a prominent Confirm button
+  - Improved user interaction by making confirmation action more explicit
+  - Removed automatic confirmation prompts for better user control
+  - Streamlined the confirmation flow for past hangouts
 
 ### 2024-01-22
 #### Added

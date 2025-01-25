@@ -18,8 +18,6 @@ struct KetchupsView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: [SortDescriptor(\Hangout.date, order: .forward)]) private var hangouts: [Hangout]
     @Query(sort: [SortDescriptor(\Friend.lastSeen, order: .forward)]) private var friends: [Friend]
-    @State private var hangoutToCheck: Hangout?
-    @State private var showingCompletionPrompt = false
     @State private var selectedFriend: Friend?
     @State private var showingScheduler = false
     @State private var showingMessageSheet = false
@@ -106,12 +104,6 @@ struct KetchupsView: View {
                         ForEach(pastHangouts) { hangout in
                             HangoutCard(hangout: hangout)
                                 .padding(.horizontal)
-                                .onAppear {
-                                    if !hangout.isCompleted {
-                                        hangoutToCheck = hangout
-                                        showingCompletionPrompt = true
-                                    }
-                                }
                         }
                     } header: {
                         Text("Past Ketchups - Need Confirmation")
@@ -179,13 +171,6 @@ struct KetchupsView: View {
             .padding(.vertical)
         }
         .background(AppColors.systemBackground)
-        .sheet(isPresented: $showingCompletionPrompt, onDismiss: {
-            hangoutToCheck = nil
-        }) {
-            if let hangout = hangoutToCheck {
-                HangoutCompletionView(hangout: hangout)
-            }
-        }
         .sheet(isPresented: $showingScheduler) {
             if let friend = selectedFriend {
                 NavigationStack {
