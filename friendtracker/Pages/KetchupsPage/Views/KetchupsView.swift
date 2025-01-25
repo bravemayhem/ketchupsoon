@@ -22,6 +22,9 @@ struct KetchupsView: View {
     @State private var showingScheduler = false
     @State private var showingMessageSheet = false
     @State private var showingCalendarOverlay = false
+    @State private var showingAllUpcoming = false
+    @State private var showingAllPast = false
+    @State private var showingAllCompleted = false
     
     private var scheduledFriendIds: Set<UUID> {
         Set(upcomingHangouts.compactMap { $0.friend?.id })
@@ -82,26 +85,29 @@ struct KetchupsView: View {
                 }
                 .padding(.horizontal)
                 
+                // Upcoming Hangouts Section
                 if !upcomingHangouts.isEmpty {
-                    Section {
-                        ForEach(upcomingHangouts) { hangout in
+                    KetchupSectionView(
+                        title: "Upcoming",
+                        count: upcomingHangouts.count,
+                        onSeeAllTapped: { showingAllUpcoming = true }
+                    ) {
+                        ForEach(upcomingHangouts.prefix(3)) { hangout in
                             HangoutCard(hangout: hangout)
                                 .padding(.horizontal)
                         }
-                    } header: {
-                        Text("Upcoming")
-                            .font(AppTheme.headlineFont)
-                            .foregroundColor(AppColors.label)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.horizontal)
-                            .padding(.vertical, 8)
-                            .background(AppColors.systemBackground)
                     }
                 }
                 
+                // Needs Scheduling Section
                 if !upcomingCheckIns.isEmpty {
-                    Section {
-                        ForEach(upcomingCheckIns) { friend in
+                    KetchupSectionView(
+                        title: "Needs Scheduling",
+                        count: upcomingCheckIns.count,
+                        showSeeAll: false,
+                        onSeeAllTapped: {}
+                    ) {
+                        ForEach(upcomingCheckIns.prefix(3)) { friend in
                             UnscheduledCheckInCard(
                                 friend: friend,
                                 onScheduleTapped: {
@@ -118,48 +124,34 @@ struct KetchupsView: View {
                             )
                             .padding(.horizontal)
                         }
-                    } header: {
-                        Text("Needs Scheduling")
-                            .font(AppTheme.headlineFont)
-                            .foregroundColor(AppColors.label)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.horizontal)
-                            .padding(.vertical, 8)
-                            .background(AppColors.systemBackground)
                     }
                 }
                 
+                // Past Hangouts Section
                 if !pastHangouts.isEmpty {
-                    Section {
-                        ForEach(pastHangouts) { hangout in
+                    KetchupSectionView(
+                        title: "Past Ketchups - Need Confirmation",
+                        count: pastHangouts.count,
+                        onSeeAllTapped: { showingAllPast = true }
+                    ) {
+                        ForEach(pastHangouts.prefix(3)) { hangout in
                             HangoutCard(hangout: hangout)
                                 .padding(.horizontal)
                         }
-                    } header: {
-                        Text("Past Ketchups - Need Confirmation")
-                            .font(AppTheme.headlineFont)
-                            .foregroundColor(AppColors.label)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.horizontal)
-                            .padding(.vertical, 8)
-                            .background(AppColors.systemBackground)
                     }
                 }
                 
+                // Completed Hangouts Section
                 if !completedHangouts.isEmpty {
-                    Section {
-                        ForEach(completedHangouts) { hangout in
+                    KetchupSectionView(
+                        title: "Completed",
+                        count: completedHangouts.count,
+                        onSeeAllTapped: { showingAllCompleted = true }
+                    ) {
+                        ForEach(completedHangouts.prefix(3)) { hangout in
                             HangoutCard(hangout: hangout)
                                 .padding(.horizontal)
                         }
-                    } header: {
-                        Text("Completed")
-                            .font(AppTheme.headlineFont)
-                            .foregroundColor(AppColors.label)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.horizontal)
-                            .padding(.vertical, 8)
-                            .background(AppColors.systemBackground)
                     }
                 }
                 
@@ -187,6 +179,15 @@ struct KetchupsView: View {
         }
         .sheet(isPresented: $showingCalendarOverlay) {
             CalendarOverlayView()
+        }
+        .sheet(isPresented: $showingAllUpcoming) {
+            HangoutListView(title: "Upcoming", hangouts: upcomingHangouts, maxItems: 10)
+        }
+        .sheet(isPresented: $showingAllPast) {
+            HangoutListView(title: "Need Confirmation", hangouts: pastHangouts, maxItems: 10)
+        }
+        .sheet(isPresented: $showingAllCompleted) {
+            HangoutListView(title: "Completed", hangouts: completedHangouts, maxItems: 10)
         }
         .onChange(of: selectedFriend) { _, newValue in
             if newValue == nil {
