@@ -258,6 +258,13 @@
   - Maintained consistent left alignment with iOS design guidelines
   - Enhanced visual hierarchy between titles and subtitles
 
+- **Sort Controls Enhancement**
+  - Enhanced sort functionality with three-state toggle (none/ascending/descending)
+  - Improved sort controls UI with consistent sizing and spacing
+  - Added visual feedback with accent color for active sort state
+  - Updated sort direction indicator with clear up/down arrows
+  - Maintained left alignment for sort field selection
+
 ## [1.0.0] - 2024-01-13
 
 ### Added
@@ -382,6 +389,13 @@
   - Updated navigation stack to support subtitles below page titles
   - Maintained consistent left alignment with iOS design guidelines
   - Enhanced visual hierarchy between titles and subtitles
+
+- **Sort Controls Enhancement**
+  - Enhanced sort functionality with three-state toggle (none/ascending/descending)
+  - Improved sort controls UI with consistent sizing and spacing
+  - Added visual feedback with accent color for active sort state
+  - Updated sort direction indicator with clear up/down arrows
+  - Maintained left alignment for sort field selection
 
 ## [1.0.0] - 2024-01-13
 

@@ -9,7 +9,8 @@ struct FriendsListView: View {
     @State private var selectedFriend: Friend?
     @State private var searchText = ""
     @State private var selectedTags: Set<Tag> = []
-    @State private var sortOption: SortOption = .nameAsc
+    @State private var sortOption: SortOption = .name
+    @State private var sortDirection: SortDirection = .none
     @State private var showingTagPicker = false
     @State private var showingSortPicker = false
     
@@ -19,31 +20,44 @@ struct FriendsListView: View {
         _allTags = Query()
     }
     
-    enum SortOption: String, CaseIterable {
-        case nameAsc = "Name (A to Z)"
-        case nameDesc = "Name (Z to A)"
-        case lastSeenDesc = "Last Seen (Recent First)"
-        case lastSeenAsc = "Last Seen (Oldest First)"
+    enum SortDirection {
+        case ascending
+        case descending
+        case none
         
-        var descriptor: SortDescriptor<Friend> {
+        var systemImage: String {
             switch self {
-            case .nameAsc:
-                return SortDescriptor(\Friend.name)
-            case .nameDesc:
-                return SortDescriptor(\Friend.name, order: .reverse)
-            case .lastSeenDesc:
-                return SortDescriptor(\Friend.lastSeen, order: .reverse)
-            case .lastSeenAsc:
-                return SortDescriptor(\Friend.lastSeen)
+            case .ascending:
+                return "arrow.up"
+            case .descending:
+                return "arrow.down"
+            case .none:
+                return "arrow.up.arrow.down"
             }
         }
         
-        var iconName: String {
+        mutating func toggle() {
             switch self {
-            case .nameAsc, .lastSeenAsc:
-                return "arrow.up"
-            case .nameDesc, .lastSeenDesc:
-                return "arrow.down"
+            case .none:
+                self = .ascending
+            case .ascending:
+                self = .descending
+            case .descending:
+                self = .none
+            }
+        }
+    }
+    
+    enum SortOption: String, CaseIterable {
+        case name = "Name"
+        case lastSeen = "Last Seen"
+        
+        var descriptor: SortDescriptor<Friend> {
+            switch self {
+            case .name:
+                return SortDescriptor(\Friend.name)
+            case .lastSeen:
+                return SortDescriptor(\Friend.lastSeen, order: .reverse)
             }
         }
     }
@@ -63,18 +77,22 @@ struct FriendsListView: View {
             }
         }
         
-        // Apply sort
-        switch sortOption {
-        case .lastSeenAsc, .lastSeenDesc:
-            result.sort { friend1, friend2 in
-                guard let date1 = friend1.lastSeen else { return false }
-                guard let date2 = friend2.lastSeen else { return true }
-                return sortOption == .lastSeenDesc ? date1 > date2 : date1 < date2
+        // Apply sort based on direction and option
+        if sortDirection != .none {
+            switch sortOption {
+            case .name:
+                result.sort { friend1, friend2 in
+                    sortDirection == .ascending ? 
+                        friend1.name < friend2.name :
+                        friend1.name > friend2.name
+                }
+            case .lastSeen:
+                result.sort { friend1, friend2 in
+                    guard let date1 = friend1.lastSeen else { return false }
+                    guard let date2 = friend2.lastSeen else { return true }
+                    return sortDirection == .ascending ? date1 < date2 : date1 > date2
+                }
             }
-        case .nameAsc:
-            result.sort { $0.name < $1.name }
-        case .nameDesc:
-            result.sort { $0.name > $1.name }
         }
         
         return result
@@ -99,27 +117,44 @@ struct FriendsListView: View {
                 
                 // Sort and Filter Controls
                 HStack(spacing: 8) {
-                    // Sort Button
-                    Button(action: { showingSortPicker = true }) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "arrow.up.arrow.down")
+                    // Sort Controls Group
+                    HStack(spacing: 0) {
+                        // Direction Toggle Button
+                        Button(action: { sortDirection.toggle() }) {
+                            Image(systemName: sortDirection.systemImage)
                                 .font(.system(size: 14))
-                            Text("Sort")
-                                .font(.system(size: 14))
-                            Spacer()
-                            Text(sortOption.rawValue)
-                                .font(.system(size: 14))
-                                .foregroundColor(AppColors.secondaryLabel)
-                            Image(systemName: sortOption.iconName)
-                                .font(.system(size: 12))
-                                .foregroundColor(AppColors.secondaryLabel)
                         }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        .background(Color(.systemGray6))
-                        .cornerRadius(8)
+                        .frame(width: 32, height: 32)
+                        .background(sortDirection == .none ? Color(.systemGray6) : AppColors.accent)
+                        .foregroundColor(sortDirection == .none ? AppColors.label : .white)
+                        
+                        // Sort Label
+                        Text("Sort")
+                            .font(.system(size: 14))
+                            .foregroundColor(AppColors.label)
+                            .padding(.horizontal, 8)
+                        
+                        Spacer(minLength: 0)
+                        
+                        // Sort Option Button
+                        Button(action: { showingSortPicker = true }) {
+                            HStack(spacing: 4) {
+                                Text(sortOption.rawValue)
+                                    .font(.system(size: 14))
+                                    .foregroundColor(AppColors.secondaryLabel)
+                                Image(systemName: "chevron.down")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(AppColors.secondaryLabel)
+                            }
+                            .frame(minWidth: 80, alignment: .leading)
+                        }
+                        .padding(.trailing, 8)
                     }
-                    .foregroundColor(AppColors.label)
+                    .padding(.leading, 0)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 32)
+                    .background(Color(.systemGray6))
+                    .cornerRadius(8)
                     
                     // Filter Button
                     Button(action: { showingTagPicker = true }) {
@@ -128,18 +163,16 @@ struct FriendsListView: View {
                                 .font(.system(size: 14))
                             Text("Filter")
                                 .font(.system(size: 14))
-                            Spacer()
                             if !selectedTags.isEmpty {
                                 Text("\(selectedTags.count)")
                                     .font(.system(size: 14))
                                     .foregroundColor(AppColors.secondaryLabel)
-                                Image(systemName: "chevron.down")
-                                    .font(.system(size: 12))
-                                    .foregroundColor(AppColors.secondaryLabel)
                             }
+                            Spacer()
                         }
                         .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 32)
                         .background(Color(.systemGray6))
                         .cornerRadius(8)
                     }
@@ -317,8 +350,6 @@ struct SortPickerView: View {
                                 Image(systemName: "checkmark")
                                     .foregroundColor(AppColors.accent)
                             }
-                            Image(systemName: option.iconName)
-                                .foregroundColor(AppColors.secondaryLabel)
                         }
                     }
                     .listRowBackground(AppColors.systemBackground)
@@ -434,4 +465,20 @@ struct FriendsListPreviewContainer: View {
 
 #Preview("With Friends") {
     FriendsListPreviewContainer(state: .withFriends)
+}
+
+extension View {
+    func cornerRadius(_ radius: CGFloat, corners: UIRectCorner) -> some View {
+        clipShape(RoundedCorner(radius: radius, corners: corners))
+    }
+}
+
+struct RoundedCorner: Shape {
+    var radius: CGFloat = .infinity
+    var corners: UIRectCorner = .allCorners
+
+    func path(in rect: CGRect) -> Path {
+        let path = UIBezierPath(roundedRect: rect, byRoundingCorners: corners, cornerRadii: CGSize(width: radius, height: radius))
+        return Path(path.cgPath)
+    }
 }
