@@ -14,6 +14,7 @@ struct ContentView: View {
                 title: "Ketchups",
                 subtitle: "Your social calendar at your finger tips",
                 icon: "calendar",
+                subtitleAlwaysVisible: false,
                 showImportOptions: $showingImportOptions,
                 showingDebugAlert: $showingDebugAlert,
                 clearData: clearAllData
@@ -26,6 +27,7 @@ struct ContentView: View {
                 title: "Wishlist",
                 subtitle: "Keep track of friends you want to see soon",
                 icon: "star",
+                subtitleAlwaysVisible: false,
                 showImportOptions: $showingImportOptions,
                 showingDebugAlert: $showingDebugAlert,
                 clearData: clearAllData
@@ -38,6 +40,7 @@ struct ContentView: View {
                 title: "Friends",
                 subtitle: "Friends you've added to Ketchup Soon",
                 icon: "person.2",
+                subtitleAlwaysVisible: true,
                 showImportOptions: $showingImportOptions,
                 showingDebugAlert: $showingDebugAlert,
                 clearData: clearAllData
@@ -99,6 +102,7 @@ private struct NavigationTab<Content: View>: View {
         title: String,
         subtitle: String? = nil,
         icon: String,
+        subtitleAlwaysVisible: Bool = false,
         showImportOptions: Binding<Bool>,
         showingDebugAlert: Binding<Bool>,
         clearData: @escaping () async -> Void,
@@ -115,53 +119,60 @@ private struct NavigationTab<Content: View>: View {
     
     var body: some View {
         NavigationStack {
-            content
-                .navigationTitle(title)
-                .navigationBarTitleDisplayMode(.large)
-                .toolbar {
-                    ToolbarItem(placement: .topBarLeading) {
-                        Button {
-                            showingSettings = true
-                        } label: {
-                            Image(systemName: "gear")
-                                .font(.title2)
-                                .foregroundColor(AppColors.label)
-                        }
-                    }
-                    
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button {
-                            showImportOptions = true
-                        } label: {
-                            Image(systemName: "plus")
-                                .font(.title2)
-                                .foregroundColor(AppColors.label)
-                        }
-                        #if DEBUG
-                        .onLongPressGesture {
-                            showingDebugAlert = true
-                        }
-                        #endif
+            VStack(spacing: 0) {
+                if let subtitle = subtitle {
+                    Text(subtitle)
+                        .font(.subheadline)
+                        .foregroundColor(AppColors.secondaryLabel)
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 8)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                
+                content
+            }
+            .navigationTitle(title)
+            .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        showingSettings = true
+                    } label: {
+                        Image(systemName: "gear")
+                            .font(.title2)
+                            .foregroundColor(AppColors.label)
                     }
                 }
-                .sheet(isPresented: $showingSettings) {
-                    SettingsView()
-                }
-                // Styling for page subtitles is contained here. TO DO: Styling for title & subtitle should be in the same place
-                .safeAreaInset(edge: .top, spacing: 0) {
-                    if let subtitle = subtitle {
-                        Text(subtitle)
-                            .font(.subheadline)
-                            .foregroundColor(AppColors.secondaryLabel)
-                            .padding(.horizontal, 16)
-                            .padding(.bottom, 8)
-                            .frame(maxWidth: .infinity, alignment: .leading)
+                
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        showImportOptions = true
+                    } label: {
+                        Image(systemName: "plus")
+                            .font(.title2)
+                            .foregroundColor(AppColors.label)
                     }
+                    #if DEBUG
+                    .onLongPressGesture {
+                        showingDebugAlert = true
+                    }
+                    #endif
                 }
+            }
+            .sheet(isPresented: $showingSettings) {
+                SettingsView()
+            }
         }
         .tabItem {
             Label(title, systemImage: icon)
         }
+    }
+}
+
+struct ScrollOffsetPreferenceKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
     }
 }
 

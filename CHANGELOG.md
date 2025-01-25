@@ -238,8 +238,10 @@
 ### 2025-01-24
 #### Added
 - **Page Subtitles**
-  - Added descriptive subtitle to Wishlist page
-  - Implemented subtitle support for all main navigation tabs
+  - Added descriptive subtitles to all main navigation pages:
+    - Ketchups: "Your social calendar at your finger tips"
+    - Wishlist: "Keep track of friends you want to see soon"
+    - Friends: "Friends you've added to Ketchup Soon"
   - Enhanced UI with proper iOS-style subtitle formatting and alignment
   - Improved user understanding of page purposes through descriptive text
 
