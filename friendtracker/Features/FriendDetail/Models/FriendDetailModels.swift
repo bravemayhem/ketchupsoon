@@ -65,7 +65,7 @@ enum FriendDetail {
         var selectedTags: Set<Tag> { get set }
         var input: NewFriendInput? { get }
         var isFromContacts: Bool { get }
-        func createFriend(in modelContext: ModelContext) throws
+        func createFriend(in modelContext: ModelContext) throws -> Friend
     }
     
     // MARK: - View Model Implementations
@@ -161,7 +161,7 @@ enum FriendDetail {
             }
         }
         
-        func createFriend(in modelContext: ModelContext) throws {
+        func createFriend(in modelContext: ModelContext) throws -> Friend {
             // Check for duplicates before creating
             try checkForDuplicates(in: modelContext)
             
@@ -178,6 +178,7 @@ enum FriendDetail {
             )
             friend.tags = Array(selectedTags)
             modelContext.insert(friend)
+            return friend
         }
     }
 }

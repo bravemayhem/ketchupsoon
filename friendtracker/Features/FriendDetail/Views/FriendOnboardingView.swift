@@ -13,7 +13,9 @@ struct FriendOnboardingView: View {
     @State private var showingError = false
     @Query(sort: [SortDescriptor<Tag>(\.name)]) private var allTags: [Tag]
     
-    init(contact: (name: String, identifier: String?, phoneNumber: String?, email: String?, imageData: Data?, city: String?)) {
+    var onComplete: ((Friend?) -> Void)?
+    
+    init(contact: (name: String, identifier: String?, phoneNumber: String?, email: String?, imageData: Data?, city: String?), onComplete: ((Friend?) -> Void)? = nil) {
         let input = FriendDetail.NewFriendInput(
             name: contact.name,
             identifier: contact.identifier,
@@ -23,6 +25,7 @@ struct FriendOnboardingView: View {
             city: contact.city
         )
         self._viewModel = State(initialValue: FriendDetail.OnboardingViewModel(input: input))
+        self.onComplete = onComplete
         
         // Initialize cityService if we have a city from contacts
         if let city = contact.city {
@@ -94,19 +97,28 @@ struct FriendOnboardingView: View {
     }
     
     private func handleCancel() {
+        onComplete?(nil)
         dismiss()
     }
     
     private func handleAdd() {
         viewModel.selectedCity = cityService.selectedCity
         do {
-            try viewModel.createFriend(in: modelContext)
+            let friend = try viewModel.createFriend(in: modelContext)
+            onComplete?(friend)
             dismiss()
         } catch let friendError as FriendDetail.FriendError {
-            error = friendError
-            showingError = true
+            // For duplicate errors, treat it as a skip and move to next friend
+            if case .duplicateContact = friendError {
+                onComplete?(nil)
+                dismiss()
+            } else {
+                error = friendError
+                showingError = true
+            }
         } catch {
             print("Unexpected error: \(error)")
+            onComplete?(nil)
             dismiss()
         }
     }

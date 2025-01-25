@@ -41,6 +41,18 @@
   - Removed automatic confirmation prompts for better user control
   - Streamlined the confirmation flow for past hangouts
 
+#### Fixed
+- **Bulk Contact Import Flow**
+  - Fixed issue where friend details weren't updating during bulk contact import
+  - Added proper view refresh when moving between contacts
+  - Improved state management for contact onboarding flow
+  - Enhanced user experience with smoother transitions between contacts
+  - Fixed duplicate contact creation during bulk import:
+    - Added duplicate checking to "Skip All" functionality
+    - Improved duplicate detection by checking existing contact identifiers
+    - Optimized performance by fetching existing friends once
+    - Prevented duplicate entries across all import paths
+
 ### 2024-01-22
 #### Added
 - **Friend Creation Timestamp**
