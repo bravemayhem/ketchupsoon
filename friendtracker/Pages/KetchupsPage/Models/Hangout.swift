@@ -11,6 +11,7 @@ final class Hangout: Identifiable {
     var isScheduled: Bool
     var isCompleted: Bool
     var needsReschedule: Bool
+    var originalHangoutId: UUID?  // Track if this is a rescheduled hangout
     @Relationship(deleteRule: .nullify, inverse: \Friend.hangouts) var friend: Friend?
     
     init(date: Date, activity: String, location: String, isScheduled: Bool, friend: Friend, duration: TimeInterval = 3600) {
@@ -22,7 +23,29 @@ final class Hangout: Identifiable {
         self.isScheduled = isScheduled
         self.isCompleted = false
         self.needsReschedule = false
+        self.originalHangoutId = nil
         self.friend = friend
+    }
+    
+    // Create a new hangout as a reschedule of this one
+    func createRescheduled(newDate: Date, duration: TimeInterval = 3600) -> Hangout? {
+        guard let friend = self.friend else { return nil }
+        
+        let rescheduled = Hangout(
+            date: newDate,
+            activity: self.activity,
+            location: self.location,
+            isScheduled: true,
+            friend: friend,
+            duration: duration
+        )
+        rescheduled.originalHangoutId = self.id
+        return rescheduled
+    }
+    
+    // Check if this is a rescheduled hangout
+    var isRescheduled: Bool {
+        originalHangoutId != nil
     }
     
     var formattedDate: String {

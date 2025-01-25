@@ -99,6 +99,36 @@ struct KetchupsView: View {
                     }
                 }
                 
+                if !upcomingCheckIns.isEmpty {
+                    Section {
+                        ForEach(upcomingCheckIns) { friend in
+                            UnscheduledCheckInCard(
+                                friend: friend,
+                                onScheduleTapped: {
+                                    selectedFriend = friend
+                                    showingScheduler = true
+                                },
+                                onMessageTapped: {
+                                    selectedFriend = friend
+                                    showingMessageSheet = true
+                                },
+                                onCardTapped: {
+                                    selectedFriend = friend
+                                }
+                            )
+                            .padding(.horizontal)
+                        }
+                    } header: {
+                        Text("Needs Scheduling")
+                            .font(AppTheme.headlineFont)
+                            .foregroundColor(AppColors.label)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal)
+                            .padding(.vertical, 8)
+                            .background(AppColors.systemBackground)
+                    }
+                }
+                
                 if !pastHangouts.isEmpty {
                     Section {
                         ForEach(pastHangouts) { hangout in
@@ -124,36 +154,6 @@ struct KetchupsView: View {
                         }
                     } header: {
                         Text("Completed")
-                            .font(AppTheme.headlineFont)
-                            .foregroundColor(AppColors.label)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.horizontal)
-                            .padding(.vertical, 8)
-                            .background(AppColors.systemBackground)
-                    }
-                }
-                
-                if !upcomingCheckIns.isEmpty {
-                    Section {
-                        ForEach(upcomingCheckIns) { friend in
-                            UnscheduledCheckInCard(
-                                friend: friend,
-                                onScheduleTapped: {
-                                    selectedFriend = friend
-                                    showingScheduler = true
-                                },
-                                onMessageTapped: {
-                                    selectedFriend = friend
-                                    showingMessageSheet = true
-                                },
-                                onCardTapped: {
-                                    selectedFriend = friend
-                                }
-                            )
-                            .padding(.horizontal)
-                        }
-                    } header: {
-                        Text("Needs Scheduling")
                             .font(AppTheme.headlineFont)
                             .foregroundColor(AppColors.label)
                             .frame(maxWidth: .infinity, alignment: .leading)

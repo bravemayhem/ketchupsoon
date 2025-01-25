@@ -6,6 +6,7 @@ struct HangoutCompletionView: View {
     @Environment(\.modelContext) private var modelContext
     let hangout: Hangout
     @State private var showingMissedHangoutOptions = false
+    @State private var showingCalendarOverlay = false
     
     var body: some View {
         NavigationStack {
@@ -37,9 +38,8 @@ struct HangoutCompletionView: View {
                 titleVisibility: .visible
             ) {
                 Button("Reschedule") {
-                    // Keep them in scheduled view but mark as needing reschedule
                     hangout.needsReschedule = true
-                    dismiss()
+                    showingCalendarOverlay = true
                 }
                 
                 Button("Move to Wish List") {
@@ -60,12 +60,20 @@ struct HangoutCompletionView: View {
             } message: {
                 Text("How would you like to handle the missed hangout?")
             }
+            .sheet(isPresented: $showingCalendarOverlay, onDismiss: {
+                if hangout.needsReschedule {
+                    modelContext.delete(hangout)
+                }
+                dismiss()
+            }) {
+                CalendarOverlayView()
+            }
         }
     }
     
     private func markHangoutComplete() {
         if let friend = hangout.friend {
-            friend.lastSeen = hangout.date // Directly set the date instead of using updateLastSeen()
+            friend.lastSeen = hangout.date
             friend.needsToConnectFlag = false
         }
         hangout.isCompleted = true
@@ -80,8 +88,8 @@ struct HangoutCompletionView: View {
     let hangout = Hangout(
         date: Date(),
         activity: "Coffee",
-        location: "Starbucks",  // Add location
-        isScheduled: true,      // Add isScheduled
+        location: "Starbucks",
+        isScheduled: true,
         friend: friend
     )
     
