@@ -65,6 +65,9 @@ struct FriendOnboardingView: View {
                     showingDatePicker: $showingDatePicker
                 )
             }
+            .scrollContentBackground(.hidden)
+            .background(AppColors.systemBackground)
+            .listStyle(.insetGrouped)
             .navigationTitle("Add Friend Details")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
