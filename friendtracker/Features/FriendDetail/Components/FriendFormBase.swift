@@ -67,7 +67,7 @@ struct BaseFriendForm<Content: View>: View {
         }
         .scrollContentBackground(.hidden)
         .listStyle(.insetGrouped)
-        .listSectionSpacing(20)
+        .listSectionSpacing(0)
         .environment(\.defaultMinListHeaderHeight, 0)
         .background(AppColors.systemBackground)
     }
