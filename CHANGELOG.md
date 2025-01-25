@@ -309,4 +309,129 @@
 ### Changed
 - Improved calendar navigation with date picker and view mode toggle
 - Enhanced event visualization in daily view
+- Streamlined scheduling workflow
+
+#### Added
+- **Hangout Rescheduling Enhancement**
+  - Added ability to track original hangout when rescheduling
+  - Improved rescheduling flow through calendar overlay
+  - Added support for preserving hangout details (activity, location) when rescheduling
+
+### Changed
+- Refactored tag selection logic to use a dedicated `TagSelectionState` enum for better type safety and clarity
+- Updated `TagsSection`, `TagsContentView`, and `TagsSelectionView` to use the new tag selection state management
+
+### 2024-03-26
+#### Added
+- **Settings Interface**
+  - Added settings gear icon to the left side of all navigation bars
+  - Created new Settings view with profile, app settings, and data management sections
+  - Implemented basic settings structure for future feature expansion
+  - Added navigation links for Profile Settings, Notifications, and Calendar Integration
+  - Included data management option for clearing app data
+
+#### Changed
+- **Calendar Integration Enhancement**
+  - Integrated existing CalendarManager with new settings interface
+  - Added visual status indicators for Apple and Google Calendar connections
+  - Implemented connected calendars list showing all synced calendars
+  - Improved calendar authorization flow for both Apple and Google calendars
+  - Enhanced user feedback with clear connection states
+
+#### Fixed
+- **Google Calendar Authentication**
+  - Fixed Google Calendar sign-in persistence issue
+  - Added proper session restoration on app launch
+  - Implemented sign-out functionality
+  - Enhanced error handling for Google authentication
+  - Added proper state management for Google Calendar connection
+
+### 2024-03-27
+#### Added
+- **Dark Mode Support**
+  - Added toggle in settings for light/dark mode preference
+  - Enhanced app appearance with system-wide dark mode support
+  - Improved visual consistency across all views in both modes
+
+#### Changed
+- **Tag Management UI Enhancement**
+  - Updated tag management interface with consistent theme colors
+  - Fixed tag section background visibility
+  - Enhanced create tag sheet with proper color scheme
+  - Improved visual hierarchy in both light and dark modes
+
+- **Email Support**
+  - Added email field to friend details for both new and existing friends
+  - Implemented email import from contacts when adding friends from address book
+  - Added editable email field for manually added friends
+  - Enhanced contact sync to include email updates
+  - Maintained consistent UI patterns for email display and editing
+
+### 2025-01-24
+#### Added
+- **Page Subtitles**
+  - Added descriptive subtitles to all main navigation pages:
+    - Ketchups: "Your social calendar at your finger tips"
+    - Wishlist: "Keep track of friends you want to see soon"
+    - Friends: "Friends you've added to Ketchup Soon"
+  - Enhanced UI with proper iOS-style subtitle formatting and alignment
+  - Improved user understanding of page purposes through descriptive text
+
+#### Changed
+- **Navigation UI Enhancement**
+  - Updated navigation stack to support subtitles below page titles
+  - Maintained consistent left alignment with iOS design guidelines
+  - Enhanced visual hierarchy between titles and subtitles
+
+## [1.0.0] - 2024-01-13
+
+### Added
+- Initial release
+- Basic friend management functionality
+- Tag system for categorizing friends
+- Catch-up scheduling features
+- Contact integration
+- **Duplicate Friend Prevention**
+  - Added validation to prevent adding duplicate friends
+  - Checks for duplicate contact identifiers when importing from contacts
+  - Performs case-insensitive name comparison to prevent duplicate names
+  - Shows clear error messages when duplicates are detected
+  - Improves data integrity by preventing duplicate entries
+
+### Added
+- Search functionality in Friends List
+  - Real-time search by friend name
+  - Case-insensitive search
+- Sort functionality in Friends List
+  - Sort by name (default)
+  - Sort by last seen date
+- Tag filtering in Friends List
+  - Filter friends by multiple tags
+  - Visual tag chips with remove option
+  - Tag picker with Clear All option
+- UI Improvements
+  - Compact search and filter controls
+  - Visual indicators for active filters
+  - Improved empty states for search/filter results
+
+### Added
+- Calendar integration feature
+  - Added daily and list view of calendar events
+  - Support for both Apple Calendar and Google Calendar integration
+  - Long-press gesture to schedule hangouts at specific times
+  - Visual distinction between Apple and Google calendar events
+  - Friend picker for quick scheduling
+  - Real-time calendar event synchronization
+  - Support for all-day events
+  - Calendar authorization management
+  - Event details including title, time, and location display
+
+### Fixed
+- Calendar initialization and authorization handling
+- Duplicate event ID handling
+- Event loading and display synchronization
+
+### Changed
+- Improved calendar navigation with date picker and view mode toggle
+- Enhanced event visualization in daily view
 - Streamlined scheduling workflow 

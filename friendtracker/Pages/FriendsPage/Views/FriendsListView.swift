@@ -9,7 +9,7 @@ struct FriendsListView: View {
     @State private var selectedFriend: Friend?
     @State private var searchText = ""
     @State private var selectedTags: Set<Tag> = []
-    @State private var sortOption: SortOption = .name
+    @State private var sortOption: SortOption = .nameAsc
     @State private var showingTagPicker = false
     @State private var showingSortPicker = false
     
@@ -20,15 +20,30 @@ struct FriendsListView: View {
     }
     
     enum SortOption: String, CaseIterable {
-        case name = "Name"
-        case lastSeen = "Last Seen"
+        case nameAsc = "Name (A to Z)"
+        case nameDesc = "Name (Z to A)"
+        case lastSeenDesc = "Last Seen (Recent First)"
+        case lastSeenAsc = "Last Seen (Oldest First)"
         
         var descriptor: SortDescriptor<Friend> {
             switch self {
-            case .name:
+            case .nameAsc:
                 return SortDescriptor(\Friend.name)
-            case .lastSeen:
+            case .nameDesc:
+                return SortDescriptor(\Friend.name, order: .reverse)
+            case .lastSeenDesc:
                 return SortDescriptor(\Friend.lastSeen, order: .reverse)
+            case .lastSeenAsc:
+                return SortDescriptor(\Friend.lastSeen)
+            }
+        }
+        
+        var iconName: String {
+            switch self {
+            case .nameAsc, .lastSeenAsc:
+                return "arrow.up"
+            case .nameDesc, .lastSeenDesc:
+                return "arrow.down"
             }
         }
     }
@@ -48,13 +63,18 @@ struct FriendsListView: View {
             }
         }
         
-        // Apply sort if it's not the default name sort
-        if sortOption == .lastSeen {
+        // Apply sort
+        switch sortOption {
+        case .lastSeenAsc, .lastSeenDesc:
             result.sort { friend1, friend2 in
                 guard let date1 = friend1.lastSeen else { return false }
                 guard let date2 = friend2.lastSeen else { return true }
-                return date1 > date2
+                return sortOption == .lastSeenDesc ? date1 > date2 : date1 < date2
             }
+        case .nameAsc:
+            result.sort { $0.name < $1.name }
+        case .nameDesc:
+            result.sort { $0.name > $1.name }
         }
         
         return result
@@ -90,7 +110,7 @@ struct FriendsListView: View {
                             Text(sortOption.rawValue)
                                 .font(.system(size: 14))
                                 .foregroundColor(AppColors.secondaryLabel)
-                            Image(systemName: "chevron.down")
+                            Image(systemName: sortOption.iconName)
                                 .font(.system(size: 12))
                                 .foregroundColor(AppColors.secondaryLabel)
                         }
@@ -297,6 +317,8 @@ struct SortPickerView: View {
                                 Image(systemName: "checkmark")
                                     .foregroundColor(AppColors.accent)
                             }
+                            Image(systemName: option.iconName)
+                                .foregroundColor(AppColors.secondaryLabel)
                         }
                     }
                     .listRowBackground(AppColors.systemBackground)
