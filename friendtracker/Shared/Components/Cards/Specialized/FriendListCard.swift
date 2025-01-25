@@ -17,7 +17,7 @@ struct FriendListCard: View {
     
     var body: some View {
         BaseCardView {
-            CardContentView(friend: friend) {
+            CardContentView(friend: friend, showChevron: false) {
                 VStack(alignment: .leading, spacing: 4) {
                     if let location = friend.location {
                         HStack(spacing: 4) {
