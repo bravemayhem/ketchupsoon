@@ -42,13 +42,13 @@ struct HangoutCompletionView: View {
                     dismiss()
                 }
                 
-                Button("Move to To Connect List") {
+                Button("Move to Wish List") {
                     hangout.friend?.needsToConnectFlag = true
                     modelContext.delete(hangout)
                     dismiss()
                 }
                 
-                Button("Hold Off") {
+                Button("Discard") {
                     hangout.friend?.needsToConnectFlag = false
                     modelContext.delete(hangout)
                     dismiss()
