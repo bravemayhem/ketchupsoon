@@ -547,4 +547,21 @@
 - Updated KetchupsView to show a maximum of 3 items per section (Upcoming, Past, Completed)
 - Added "See All" functionality to view up to 10 items in each section
 - Created new reusable KetchupSectionView component for consistent section styling
-- Added new HangoutListView for displaying full list of hangouts in a sheet 
+- Added new HangoutListView for displaying full list of hangouts in a sheet
+
+### 2024-01-28
+#### Added
+- **Smart Calendar Default Selection**
+  - Implemented automatic default calendar selection based on authorization status
+  - Google Calendar preferred when available (supports invites)
+  - Apple Calendar used as fallback option
+  - Automatic updates when calendar services connect/disconnect
+  - Clear UI feedback about invite support limitations
+
+#### Changed
+- **Calendar Integration Settings**
+  - Enhanced calendar integration view with clearer service status
+  - Added dynamic default calendar preference management
+  - Improved error handling for Google sign-in
+  - Added clear messaging about calendar invite capabilities
+  - Disabled preference selection when no calendars are authorized 

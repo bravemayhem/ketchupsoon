@@ -5,6 +5,7 @@ import GoogleSignIn
 struct CalendarIntegrationView: View {
     @StateObject private var calendarManager = CalendarManager()
     @Environment(\.dismiss) private var dismiss
+    @AppStorage("defaultCalendarType") private var defaultCalendarType: Friend.CalendarType = .apple
     
     var body: some View {
         Form {
@@ -19,6 +20,10 @@ struct CalendarIntegrationView: View {
                         Button("Connect") {
                             Task {
                                 await calendarManager.requestAccess()
+                                // Set default to Apple Calendar if Google is not authorized
+                                if !calendarManager.isGoogleAuthorized {
+                                    defaultCalendarType = .apple
+                                }
                             }
                         }
                         .foregroundColor(AppColors.accent)
@@ -35,6 +40,10 @@ struct CalendarIntegrationView: View {
                             Button("Sign Out") {
                                 Task {
                                     await calendarManager.signOutGoogle()
+                                    // Set default to Apple Calendar if it's authorized
+                                    if calendarManager.isAuthorized {
+                                        defaultCalendarType = .apple
+                                    }
                                 }
                             }
                             .foregroundColor(AppColors.accent)
@@ -42,7 +51,15 @@ struct CalendarIntegrationView: View {
                     } else {
                         Button("Sign In") {
                             Task {
-                                try? await calendarManager.requestGoogleAccess()
+                                do {
+                                    try await calendarManager.requestGoogleAccess()
+                                    // Set default to Google Calendar when authorized
+                                    if calendarManager.isGoogleAuthorized {
+                                        defaultCalendarType = .google
+                                    }
+                                } catch {
+                                    print("Failed to sign in to Google: \(error)")
+                                }
                             }
                         }
                         .foregroundColor(AppColors.accent)
@@ -52,6 +69,20 @@ struct CalendarIntegrationView: View {
                 Text("Calendar Services")
             } footer: {
                 Text("Connect your calendars to automatically sync your hangouts.")
+            }
+            
+            Section {
+                Picker("Default Calendar", selection: $defaultCalendarType) {
+                    Text("Apple Calendar").tag(Friend.CalendarType.apple)
+                    Text("Google Calendar").tag(Friend.CalendarType.google)
+                }
+                .pickerStyle(.menu)
+                .disabled(!calendarManager.isAuthorized && !calendarManager.isGoogleAuthorized)
+            } header: {
+                Text("Calendar Invite Preferences")
+            } footer: {
+                Text("Note: Calendar invites with attendee notifications are only supported when using Google Calendar. Apple Calendar will create local events only.")
+                    .foregroundColor(.secondary)
             }
             
             if !calendarManager.connectedCalendars.isEmpty {

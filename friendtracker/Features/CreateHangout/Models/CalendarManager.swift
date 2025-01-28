@@ -29,6 +29,17 @@ class CalendarManager: ObservableObject {
         await requestAccess()
         await setupGoogleCalendar()
         isInitialized = true
+        
+        // Set default calendar type based on authorization status
+        if isGoogleAuthorized {
+            selectedCalendarType = .google
+            // Update UserDefaults to persist this preference
+            UserDefaults.standard.set(Friend.CalendarType.google.rawValue, forKey: "defaultCalendarType")
+        } else if isAuthorized {
+            selectedCalendarType = .apple
+            // Update UserDefaults to persist this preference
+            UserDefaults.standard.set(Friend.CalendarType.apple.rawValue, forKey: "defaultCalendarType")
+        }
     }
     
     func ensureInitialized() async {

@@ -61,6 +61,7 @@ private struct DateTimeSection: View {
     @Binding var showingCustomDurationInput: Bool
     @Binding var errorMessage: String?
     @StateObject var calendarManager: CalendarManager
+    @AppStorage("defaultCalendarType") private var defaultCalendarType: Friend.CalendarType = .apple
     
     func formatDuration(_ duration: TimeInterval) -> String {
         let hours = Int(duration) / 3600
@@ -84,6 +85,10 @@ private struct DateTimeSection: View {
             Picker("Calendar", selection: $selectedCalendarType) {
                 Text("Apple Calendar").tag(CalendarManager.CalendarType.apple)
                 Text("Google Calendar").tag(CalendarManager.CalendarType.google)
+            }
+            .onChange(of: selectedCalendarType) { _, newType in
+                // Update the default calendar type when user changes it
+                defaultCalendarType = newType == .apple ? .apple : .google
             }
             
             if selectedCalendarType == .google && !calendarManager.isGoogleAuthorized {
@@ -236,7 +241,7 @@ struct CreateHangoutView: View {
     @State private var selectedDuration: TimeInterval? = nil
     @State private var isLoading = false
     @State private var errorMessage: String?
-    @State private var selectedCalendarType: CalendarManager.CalendarType = .apple
+    @State private var selectedCalendarType: CalendarManager.CalendarType
     @State private var showingCustomDurationInput = false
     @State private var customHours: Int = 1
     @State private var customMinutes: Int = 0
@@ -249,6 +254,11 @@ struct CreateHangoutView: View {
         if let friendEmail = friend.email {
             _emailRecipients = State(initialValue: [friendEmail])
         }
+        
+        // Initialize calendar type from UserDefaults
+        let defaultType = UserDefaults.standard.string(forKey: "defaultCalendarType") ?? Friend.CalendarType.apple.rawValue
+        let calendarType = Friend.CalendarType(rawValue: defaultType) ?? .apple
+        _selectedCalendarType = State(initialValue: calendarType == .apple ? .apple : .google)
         
         // Configure UIDatePicker to snap to 5-minute intervals
         UIDatePicker.appearance().minuteInterval = 5
