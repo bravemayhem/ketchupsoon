@@ -1,7 +1,7 @@
 # Calendar Integration
 
 ## Overview
-The calendar integration feature allows users to view their existing calendar events and schedule new hangouts directly from a unified calendar view. It supports both Apple Calendar and Google Calendar integration, with smart default selection based on available calendar services.
+The calendar integration feature allows users to view their existing calendar events and schedule new hangouts directly from a unified calendar view. It supports both Apple Calendar and Google Calendar integration, with smart default selection based on available calendar services and clear visibility of which account is being used for calendar operations.
 
 ## Key Components
 
@@ -14,6 +14,10 @@ The calendar integration feature allows users to view their existing calendar ev
   - Prefers Google Calendar when authorized (supports invites)
   - Falls back to Apple Calendar when Google is unavailable
   - Updates defaults automatically based on authorization changes
+- Exposes user email information:
+  - Google account email from user profile
+  - Apple calendar email from calendar source
+  - Updates email info when authorization status changes
 
 ### CalendarIntegrationView
 - Main view for calendar service management
@@ -28,6 +32,14 @@ The calendar integration feature allows users to view their existing calendar ev
 - User-configurable with clear UI feedback
 - Automatic updates when calendar services connect/disconnect
 - Clear indication of invite support limitations
+- Visual feedback showing active calendar account
+
+### Event Creation
+- Clear display of which account will be used for calendar operations
+- Shows user's email address for both Apple and Google calendars
+- Visual distinction between calendar types
+- Proper handling of invite capabilities based on calendar type
+- Automatic email display updates when switching calendars
 
 ### CalendarOverlayView
 - Main view for calendar interaction
@@ -55,6 +67,7 @@ The calendar integration feature allows users to view their existing calendar ev
 3. Persistent authorization state
 4. User-triggered re-authorization through settings
 5. Automatic default calendar updates
+6. Email information retrieval and updates
 
 ### Scheduling Flow
 1. Long-press on desired time slot
@@ -63,6 +76,7 @@ The calendar integration feature allows users to view their existing calendar ev
 4. Pre-filled scheduler with selected time
 5. Complete hangout details
 6. Event created in selected calendar (with invites if Google)
+7. Clear indication of which account is being used
 
 ## Technical Decisions
 
@@ -72,20 +86,19 @@ The calendar integration feature allows users to view their existing calendar ev
 - Automatic updates based on authorization changes
 - User preferences preserved across app launches
 
-### Why Two View Modes?
-- Daily view: Better for time slot visualization and scheduling
-- List view: Better for quick event scanning and details
-
-### Event ID Generation
-- Combined source + event ID to prevent duplicates
-- Handles cases where event ID might be nil
-- Ensures unique identification across calendar sources
+### Email Display Implementation
+- Apple email retrieved from calendar source title
+- Google email retrieved from user profile
+- Consistent UI presentation for both calendar types
+- Automatic updates when authorization changes
+- Clear visual feedback with envelope icon
 
 ### Authorization Handling
 - Separate flags for Apple and Google
 - Initialization check before operations
 - Clear error states and user feedback
 - Automatic default updates on auth changes
+- Email information management
 
 ## Future Considerations
 
@@ -97,12 +110,14 @@ The calendar integration feature allows users to view their existing calendar ev
 5. Enhanced invite customization options
 6. Calendar color customization
 7. Calendar-specific notification preferences
+8. Multiple account support for same calendar type
 
 ### Known Limitations
 1. Apple Calendar doesn't support proper invites through the API
 2. Limited to primary Google Calendar
 3. No support for complex recurrence rules
 4. Initial authorization may require app restart
+5. Apple Calendar email might not match Apple ID
 
 ## Testing Notes
 - Test authorization flows thoroughly
@@ -111,4 +126,6 @@ The calendar integration feature allows users to view their existing calendar ev
 - Verify long-press behavior
 - Test with various calendar configurations
 - Verify default calendar selection behavior
-- Test invite delivery with both calendar types 
+- Test invite delivery with both calendar types
+- Verify email display accuracy for both calendar types
+- Test email updates when switching accounts 
