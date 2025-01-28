@@ -12,6 +12,8 @@ class CalendarManager: ObservableObject {
     @Published var isGoogleAuthorized = false
     @Published var connectedCalendars: [Friend.ConnectedCalendar] = []
     @Published var selectedCalendarType: CalendarType = .apple
+    @Published var googleUserEmail: String?
+    @Published var appleUserEmail: String?
     private var isInitialized = false
     
     enum CalendarType {
@@ -58,10 +60,12 @@ class CalendarManager: ObservableObject {
             let currentUser = try await GIDSignIn.sharedInstance.restorePreviousSignIn()
             isGoogleAuthorized = true
             googleService?.authorizer = currentUser.fetcherAuthorizer
+            googleUserEmail = currentUser.profile?.email
             await loadConnectedCalendars()
         } catch {
             print("Error restoring Google sign-in: \(error)")
             isGoogleAuthorized = false
+            googleUserEmail = nil
         }
     }
     
@@ -71,21 +75,33 @@ class CalendarManager: ObservableObject {
             do {
                 try await eventStore.requestFullAccessToEvents()
                 isAuthorized = true
+                // Get the default calendar's source (which contains the user's email)
+                if let defaultCalendar = eventStore.defaultCalendarForNewEvents,
+                   let source = defaultCalendar.source {
+                    appleUserEmail = source.title
+                }
                 await loadConnectedCalendars()
             } catch {
                 print("Error requesting calendar access: \(error)")
                 isAuthorized = false
+                appleUserEmail = nil
             }
         } else {
             do {
                 let granted = try await eventStore.requestAccess(to: .event)
                 isAuthorized = granted
                 if granted {
+                    // Get the default calendar's source (which contains the user's email)
+                    if let defaultCalendar = eventStore.defaultCalendarForNewEvents,
+                       let source = defaultCalendar.source {
+                        appleUserEmail = source.title
+                    }
                     await loadConnectedCalendars()
                 }
             } catch {
                 print("Error requesting calendar access: \(error)")
                 isAuthorized = false
+                appleUserEmail = nil
             }
         }
     }
@@ -108,9 +124,12 @@ class CalendarManager: ObservableObject {
             
             isGoogleAuthorized = true
             googleService?.authorizer = result.user.fetcherAuthorizer
+            googleUserEmail = result.user.profile?.email
             await loadConnectedCalendars()
         } catch {
             print("Error signing in with Google: \(error)")
+            isGoogleAuthorized = false
+            googleUserEmail = nil
             throw error
         }
     }
@@ -119,6 +138,7 @@ class CalendarManager: ObservableObject {
         GIDSignIn.sharedInstance.signOut()
         isGoogleAuthorized = false
         googleService?.authorizer = nil
+        googleUserEmail = nil
         await loadConnectedCalendars()
     }
     

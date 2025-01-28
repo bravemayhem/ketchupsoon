@@ -91,29 +91,49 @@ private struct DateTimeSection: View {
                 defaultCalendarType = newType == .apple ? .apple : .google
             }
             
-            if selectedCalendarType == .google && !calendarManager.isGoogleAuthorized {
-                Button(action: {
-                    Task {
-                        do {
-                            try await calendarManager.requestGoogleAccess()
-                        } catch {
-                            errorMessage = "Failed to connect: \(error.localizedDescription)"
+            if selectedCalendarType == .google {
+                if calendarManager.isGoogleAuthorized {
+                    HStack {
+                        Image(systemName: "envelope")
+                            .foregroundColor(.gray)
+                        if let email = calendarManager.googleUserEmail {
+                            Text(email)
+                                .foregroundColor(.secondary)
                         }
                     }
-                }) {
-                    HStack {
-                        Image(systemName: "g.circle.fill")
-                            .foregroundColor(.blue)
-                        Text("Sign in with Google")
+                } else {
+                    Button(action: {
+                        Task {
+                            do {
+                                try await calendarManager.requestGoogleAccess()
+                            } catch {
+                                errorMessage = "Failed to connect: \(error.localizedDescription)"
+                            }
+                        }
+                    }) {
+                        HStack {
+                            Image(systemName: "g.circle.fill")
+                                .foregroundColor(.blue)
+                            Text("Sign in with Google")
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color(.systemBackground))
+                        .cornerRadius(8)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(Color.blue, lineWidth: 1)
+                        )
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color(.systemBackground))
-                    .cornerRadius(8)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 8)
-                            .stroke(Color.blue, lineWidth: 1)
-                    )
+                }
+            } else if selectedCalendarType == .apple && calendarManager.isAuthorized {
+                if let email = calendarManager.appleUserEmail {
+                    HStack {
+                        Image(systemName: "envelope")
+                            .foregroundColor(.gray)
+                        Text(email)
+                            .foregroundColor(.secondary)
+                    }
                 }
             }
             
