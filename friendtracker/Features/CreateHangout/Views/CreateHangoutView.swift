@@ -251,6 +251,8 @@ struct CreateHangoutView: View {
     @Environment(\.modelContext) private var modelContext
     let friend: Friend
     let initialDate: Date?
+    let initialLocation: String?
+    let initialTitle: String?
     
     @State private var hangoutTitle: String = ""
     @State private var selectedDate: Date
@@ -267,10 +269,15 @@ struct CreateHangoutView: View {
     @State private var customMinutes: Int = 0
     @State private var showingWishlistPrompt = false
     
-    init(friend: Friend, initialDate: Date? = nil) {
+    init(friend: Friend, initialDate: Date? = nil, initialLocation: String? = nil, initialTitle: String? = nil) {
         self.friend = friend
         self.initialDate = initialDate
+        self.initialLocation = initialLocation
+        self.initialTitle = initialTitle
         _selectedDate = State(initialValue: initialDate ?? Date())
+        _selectedLocation = State(initialValue: initialLocation ?? "")
+        _hangoutTitle = State(initialValue: initialTitle?.replacingOccurrences(of: " with .*$", with: "", options: .regularExpression) ?? "")
+        
         if let friendEmail = friend.email {
             _emailRecipients = State(initialValue: [friendEmail])
         }

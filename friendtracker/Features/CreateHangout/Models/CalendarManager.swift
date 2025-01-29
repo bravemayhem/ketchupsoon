@@ -212,6 +212,7 @@ class CalendarManager: ObservableObject {
             let event = GTLRCalendar_Event()
             event.summary = "\(activity) with \(friend.name)"
             event.location = location
+            event.descriptionProperty = "KetchupSoon Event" // Add marker for Ketchup events
             
             let startDateTime = GTLRDateTime(date: date)
             let endDateTime = GTLRDateTime(date: date.addingTimeInterval(duration))
@@ -268,7 +269,7 @@ class CalendarManager: ObservableObject {
             }
         }
         
-        // For Apple Calendar (existing code)
+        // For Apple Calendar
         guard isAuthorized else { throw CalendarError.unauthorized }
         
         let event = EKEvent(eventStore: eventStore)
@@ -277,11 +278,12 @@ class CalendarManager: ObservableObject {
         event.startDate = date
         event.endDate = date.addingTimeInterval(duration)
         event.calendar = eventStore.defaultCalendarForNewEvents
+        event.notes = "KetchupSoon Event" // Add marker for Ketchup events
         
         // Add notes with email recipients if any
         if !emailRecipients.isEmpty {
             let emailList = emailRecipients.joined(separator: ", ")
-            event.notes = "Participants: \(emailList)"
+            event.notes = "KetchupSoon Event\nParticipants: \(emailList)"
         }
         
         do {
@@ -298,12 +300,16 @@ class CalendarManager: ObservableObject {
         let id: String
         let event: EKEvent
         let source: CalendarSource
+        let isKetchupEvent: Bool
         
         init(event: EKEvent, source: CalendarSource) {
             self.event = event
             self.source = source
             // Create a unique ID combining the event ID and source
             self.id = "\(source)_\(event.eventIdentifier ?? UUID().uuidString)"
+            // Check if this is a Ketchup event by looking for a specific note or title pattern
+            self.isKetchupEvent = event.notes?.contains("KetchupSoon Event") ?? false || 
+                                 event.title.contains("with") // Simple heuristic for Ketchup events
         }
         
         enum CalendarSource: String {
