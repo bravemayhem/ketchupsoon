@@ -3,7 +3,7 @@ import Foundation
 enum CatchUpFrequency: String, CaseIterable, Codable, Hashable {
     case daily = "Daily"
     case weekly = "Weekly"
-    case biweekly = "Bi-weekly"
+    case biweekly = "Every 2 weeks"
     case monthly = "Monthly"
     case quarterly = "Quarterly"
     case semiannually = "Every 6 months"

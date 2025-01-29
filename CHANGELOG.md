@@ -277,6 +277,14 @@
   - Updated sort direction indicator with clear up/down arrows
   - Maintained left alignment for sort field selection
 
+### Added
+- Push notification support for hangouts and catch-up reminders
+  - Configurable reminder times for upcoming hangouts
+  - Catch-up frequency notifications based on friend preferences
+  - Notification settings management in Settings
+  - Visual feedback for notification authorization status
+  - Ability to clear all pending notifications
+
 ## [1.0.0] - 2024-01-13
 
 ### Added

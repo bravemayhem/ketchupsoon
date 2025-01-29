@@ -20,7 +20,7 @@ struct SettingsView: View {
                 
                 Section("App Settings") {
                     NavigationLink {
-                        Text("Notifications")
+                        NotificationSettingsView()
                     } label: {
                         Label("Notifications", systemImage: "bell")
                     }
@@ -61,7 +61,7 @@ struct SettingsView: View {
                     }
                 }
             } message: {
-                Text("This will delete all your friends and hangouts data. This action cannot be undone.")
+                Text("This will delete all friends and hangouts. This action cannot be undone.")
             }
         }
     }
