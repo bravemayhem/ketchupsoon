@@ -6,6 +6,7 @@ struct FriendPickerView: View {
     @Binding var selectedFriend: Friend?
     @Query(sort: [SortDescriptor(\Friend.name)]) private var friends: [Friend]
     @State private var searchText = ""
+    let selectedTime: Date?
     
     var filteredFriends: [Friend] {
         if searchText.isEmpty {
@@ -16,24 +17,21 @@ struct FriendPickerView: View {
     
     var body: some View {
         NavigationStack {
-            List {
-                ForEach(filteredFriends) { friend in
-                    Button {
-                        selectedFriend = friend
-                        dismiss()
-                    } label: {
-                        HStack {
-                            Text(friend.name)
-                                .foregroundColor(AppColors.label)
-                            Spacer()
-                            Image(systemName: "chevron.right")
-                                .foregroundColor(AppColors.secondaryLabel)
-                        }
+            List(filteredFriends) { friend in
+                Button(action: {
+                    selectedFriend = friend
+                    dismiss()
+                }) {
+                    HStack {
+                        Text(friend.name)
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .foregroundColor(.gray)
                     }
                 }
             }
             .searchable(text: $searchText, prompt: "Search friends")
-            .navigationTitle("Select Friend")
+            .navigationTitle("Select Friend for \(formatTime(selectedTime ?? Date()))")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -44,9 +42,15 @@ struct FriendPickerView: View {
             }
         }
     }
+    
+    private func formatTime(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.timeStyle = .short
+        return formatter.string(from: date)
+    }
 }
 
 #Preview {
-    FriendPickerView(selectedFriend: .constant(nil))
+    FriendPickerView(selectedFriend: .constant(nil), selectedTime: Date())
         .modelContainer(for: [Friend.self], inMemory: true)
-} 
+}

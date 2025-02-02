@@ -105,30 +105,7 @@ struct DailyScheduleView: View {
             }
         }
         .sheet(isPresented: $showingScheduler) {
-            NavigationStack {
-                List(friends) { friend in
-                    Button(action: {
-                        selectedFriend = friend
-                        showingScheduler = false
-                    }) {
-                        HStack {
-                            Text(friend.name)
-                            Spacer()
-                            Image(systemName: "chevron.right")
-                                .foregroundColor(.gray)
-                        }
-                    }
-                }
-                .navigationTitle("Select Friend for \(formatTime(selectedTime ?? Date()))")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button("Cancel") {
-                            showingScheduler = false
-                        }
-                    }
-                }
-            }
+            FriendPickerView(selectedFriend: $selectedFriend, selectedTime: selectedTime)
         }
     }
     

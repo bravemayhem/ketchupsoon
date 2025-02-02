@@ -67,7 +67,10 @@ struct EventDetailView: View {
             }
         }
         .sheet(isPresented: $showingFriendPicker) {
-            FriendPickerView(selectedFriend: $selectedFriend)
+            FriendPickerView(
+                selectedFriend: $selectedFriend,
+                selectedTime: event.event.startDate
+            )
         }
         .onChange(of: selectedFriend) { _, _ in
             showingScheduler = selectedFriend != nil
