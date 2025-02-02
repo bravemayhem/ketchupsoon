@@ -439,7 +439,7 @@ struct FriendsListPreviewContainer: View {
                 activity: "Coffee",
                 location: "Blue Bottle",
                 isScheduled: true,
-                friend: friends[0]
+                friends: [friends[0]]
             )
             
             // Insert everything into context

@@ -28,17 +28,17 @@ struct HangoutListView: View {
             activity: "Coffee",
             location: "Starbucks",
             isScheduled: true,
-            friend: friend
+            friends: [friend]
         ),
         Hangout(
             date: Date().addingTimeInterval(172800),
             activity: "Lunch",
             location: "Restaurant",
             isScheduled: true,
-            friend: friend
+            friends: [friend]
         )
     ]
     
-    return HangoutListView(title: "Upcoming", hangouts: hangouts, maxItems: 10)
+    HangoutListView(title: "Upcoming", hangouts: hangouts, maxItems: 10)
         .modelContainer(for: [Friend.self, Hangout.self], inMemory: true)
 } 

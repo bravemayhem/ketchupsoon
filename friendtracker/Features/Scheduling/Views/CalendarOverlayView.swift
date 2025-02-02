@@ -12,8 +12,7 @@ struct CalendarOverlayView: View {
     @State private var showingAuthPrompt = false
     @State private var isLoading = false
     @State private var viewMode: DailyScheduleView.ViewMode = .daily
-    @State private var selectedFriend: Friend?
-    @State private var showingScheduler = false
+    @State private var showingCreateHangout = false
     @State private var selectedTime: Date?
     @State private var selectedEvent: CalendarManager.CalendarEvent?
     @State private var showingEventDetails = false
@@ -57,28 +56,19 @@ struct CalendarOverlayView: View {
                     await loadEvents(for: newDate)
                 }
             }
-            .onChange(of: selectedFriend) { _, _ in
-                if selectedFriend != nil {
-                    selectedTime = selectedDate
-                    showingScheduler = true
-                }
-            }
             .sheet(isPresented: $showingAuthPrompt) {
                 NavigationStack {
                     CalendarIntegrationView()
                 }
             }
-            .sheet(isPresented: $showingScheduler, onDismiss: {
-                selectedFriend = nil
+            .sheet(isPresented: $showingCreateHangout, onDismiss: {
                 selectedTime = nil
                 Task {
                     await loadEvents(for: selectedDate)
                 }
             }) {
-                if let friend = selectedFriend {
-                    NavigationStack {
-                        CreateHangoutView(friend: friend, initialDate: selectedTime)
-                    }
+                NavigationStack {
+                    CreateHangoutView(initialDate: selectedTime)
                 }
             }
             .sheet(isPresented: $showingEventDetails) {
@@ -139,9 +129,12 @@ struct CalendarOverlayView: View {
             events: events,
             date: selectedDate,
             viewMode: viewMode,
-            selectedFriend: $selectedFriend,
             selectedEvent: $selectedEvent,
-            showingEventDetails: $showingEventDetails
+            showingEventDetails: $showingEventDetails,
+            onTimeSelected: { time in
+                selectedTime = time
+                showingCreateHangout = true
+            }
         )
     }
     
@@ -167,4 +160,5 @@ struct CalendarOverlayView: View {
 
 #Preview {
     CalendarOverlayView()
+        .modelContainer(for: [Friend.self, Hangout.self])
 } 

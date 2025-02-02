@@ -1,8 +1,8 @@
 import SwiftUI
 import SwiftData
 
-/// A card component that displays a scheduled or completed hangout with a friend,
-/// including the friend's profile, hangout details, and interaction options.
+/// A card component that displays a scheduled or completed hangout,
+/// including the event title, attendees, and details.
 struct HangoutCard: View {
     let hangout: Hangout
     @State private var selectedFriend: Friend?
@@ -20,55 +20,73 @@ struct HangoutCard: View {
     
     var body: some View {
         BaseCardView {
-            if let friend = hangout.friend {
-                VStack(spacing: 12) {
-                    Button(action: {
-                        selectedFriend = friend
-                    }) {
-                        CardContentView(friend: friend, showChevron: false) {
-                            VStack(alignment: .leading, spacing: 4) {
-                                HStack {
-                                    Text(hangout.activity)
-                                        .font(.subheadline)
-                                        .foregroundColor(AppColors.label)
-                                    Spacer()
-                                    if hangout.isCompleted {
-                                        Label("Completed", systemImage: "checkmark.circle.fill")
-                                            .font(AppTheme.captionFont)
-                                            .foregroundColor(.green)
-                                    } else if hangout.date <= Date() {
-                                        Button(action: {
-                                            showingCompletionPrompt = true
-                                        }) {
-                                            Text("Confirm")
-                                                .font(AppTheme.captionFont)
-                                                .foregroundColor(.white)
-                                                .padding(.horizontal, 8)
-                                                .padding(.vertical, 4)
-                                                .background(
-                                                    Capsule()
-                                                        .fill(AppColors.accent)
-                                                )
-                                        }
-                                    }
-                                }
-                                
-                                if !hangout.location.isEmpty {
-                                    HStack(spacing: 4) {
-                                        Image(systemName: "mappin.and.ellipse")
-                                            .font(AppTheme.captionFont)
-                                            .foregroundColor(AppColors.secondaryLabel)
-                                        Text(hangout.location).cardSecondaryText()
-                                    }
-                                }
-                                
-                                if let frequency = friend.catchUpFrequency {
-                                    Text(frequency.displayText).cardSecondaryText()
-                                }
-                                
-                                Text(hangout.formattedDate).cardSecondaryText()
+            VStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    // Title and Status
+                    HStack {
+                        Text(hangout.activity)
+                            .font(.headline)
+                            .foregroundColor(AppColors.label)
+                        Spacer()
+                        if hangout.isCompleted {
+                            Label("Completed", systemImage: "checkmark.circle.fill")
+                                .font(AppTheme.captionFont)
+                                .foregroundColor(.green)
+                        } else if hangout.date <= Date() {
+                            Button(action: {
+                                showingCompletionPrompt = true
+                            }) {
+                                Text("Confirm")
+                                    .font(AppTheme.captionFont)
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .background(
+                                        Capsule()
+                                            .fill(AppColors.accent)
+                                    )
                             }
                         }
+                    }
+                    
+                    // Attendees
+                    if !hangout.friends.isEmpty {
+                        ForEach(hangout.friends) { friend in
+                            Button(action: {
+                                selectedFriend = friend
+                            }) {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "person.fill")
+                                        .font(AppTheme.captionFont)
+                                        .foregroundColor(AppColors.secondaryLabel)
+                                    Text(friend.name)
+                                        .cardSecondaryText()
+                                    if let email = friend.email, !email.isEmpty {
+                                        Image(systemName: "envelope.fill")
+                                            .font(AppTheme.captionFont)
+                                            .foregroundColor(AppColors.secondaryLabel)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Location
+                    if !hangout.location.isEmpty {
+                        HStack(spacing: 4) {
+                            Image(systemName: "mappin.and.ellipse")
+                                .font(AppTheme.captionFont)
+                                .foregroundColor(AppColors.secondaryLabel)
+                            Text(hangout.location).cardSecondaryText()
+                        }
+                    }
+                    
+                    // Date and Time
+                    HStack(spacing: 4) {
+                        Image(systemName: "calendar")
+                            .font(AppTheme.captionFont)
+                            .foregroundColor(AppColors.secondaryLabel)
+                        Text(hangout.formattedDate).cardSecondaryText()
                     }
                 }
             }
@@ -81,13 +99,14 @@ struct HangoutCard: View {
 }
 
 #Preview {
-    let friend = Friend(name: "Test Friend")
+    let friend1 = Friend(name: "Test Friend 1")
+    let friend2 = Friend(name: "Test Friend 2")
     let hangout = Hangout(
         date: Date().addingTimeInterval(86400),
         activity: "Coffee",
         location: "Starbucks",
         isScheduled: true,
-        friend: friend
+        friends: [friend1, friend2]
     )
     
     return HangoutCard(hangout: hangout)

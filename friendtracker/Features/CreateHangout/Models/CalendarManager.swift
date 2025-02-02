@@ -207,15 +207,15 @@ class CalendarManager: ObservableObject {
         case eventNotFound
     }
     
-    func createHangoutEvent(with friend: Friend, activity: String, location: String, date: Date, duration: TimeInterval, emailRecipients: [String] = []) async throws -> String {
+    func createHangoutEvent(activity: String, location: String, date: Date, duration: TimeInterval, emailRecipients: [String] = [], attendeeNames: [String] = []) async throws -> String {
         // For Google Calendar
         if selectedCalendarType == .google && isGoogleAuthorized {
             guard let service = googleService else { throw CalendarError.unauthorized }
             
             let event = GTLRCalendar_Event()
-            event.summary = "\(activity) with \(friend.name)"
+            event.summary = activity
             event.location = location
-            event.descriptionProperty = "KetchupSoon Event" // Add marker for Ketchup events
+            event.descriptionProperty = "KetchupSoon Event\nAttendees: \(attendeeNames.joined(separator: ", "))"
             
             let startDateTime = GTLRDateTime(date: date)
             let endDateTime = GTLRDateTime(date: date.addingTimeInterval(duration))
@@ -228,22 +228,13 @@ class CalendarManager: ObservableObject {
             end.dateTime = endDateTime
             event.end = end
             
-            // Add attendees
-            var attendees: [GTLRCalendar_EventAttendee] = []
-            for email in emailRecipients {
-                let attendee = GTLRCalendar_EventAttendee()
-                attendee.email = email
-                attendees.append(attendee)
-            }
-            
-            // Add friend's email if available
-            if let friendEmail = friend.email, !emailRecipients.contains(friendEmail) {
-                let attendee = GTLRCalendar_EventAttendee()
-                attendee.email = friendEmail
-                attendees.append(attendee)
-            }
-            
-            if !attendees.isEmpty {
+            // Add all attendees from emailRecipients
+            if !emailRecipients.isEmpty {
+                let attendees = emailRecipients.map { email in
+                    let attendee = GTLRCalendar_EventAttendee()
+                    attendee.email = email
+                    return attendee
+                }
                 event.attendees = attendees
             }
             
@@ -276,18 +267,19 @@ class CalendarManager: ObservableObject {
         guard isAuthorized else { throw CalendarError.unauthorized }
         
         let event = EKEvent(eventStore: eventStore)
-        event.title = "\(activity) with \(friend.name)"
+        event.title = activity
         event.location = location
         event.startDate = date
         event.endDate = date.addingTimeInterval(duration)
         event.calendar = eventStore.defaultCalendarForNewEvents
-        event.notes = "KetchupSoon Event" // Add marker for Ketchup events
         
-        // Add notes with email recipients if any
+        // Add notes with attendees and email recipients
+        var notes = ["KetchupSoon Event"]
+        notes.append("Attendees: \(attendeeNames.joined(separator: ", "))")
         if !emailRecipients.isEmpty {
-            let emailList = emailRecipients.joined(separator: ", ")
-            event.notes = "KetchupSoon Event\nParticipants: \(emailList)"
+            notes.append("Email Recipients: \(emailRecipients.joined(separator: ", "))")
         }
+        event.notes = notes.joined(separator: "\n")
         
         do {
             try eventStore.save(event, span: .thisEvent)

@@ -3,6 +3,42 @@ import SwiftUI
 import SwiftData
 import Contacts
 
+// MARK: - Email Array Transformer
+@objc(EmailArrayValueTransformer)
+final class EmailArrayValueTransformer: ValueTransformer {
+    override class func transformedValueClass() -> AnyClass {
+        NSData.self
+    }
+    
+    override class func allowsReverseTransformation() -> Bool {
+        true
+    }
+    
+    override func transformedValue(_ value: Any?) -> Any? {
+        guard let emails = value as? [String] else { return nil }
+        return try? JSONEncoder().encode(emails)
+    }
+    
+    override func reverseTransformedValue(_ value: Any?) -> Any? {
+        guard let data = value as? Data else { return [] }
+        return try? JSONDecoder().decode([String].self, from: data)
+    }
+}
+
+extension NSValueTransformerName {
+    static let emailArrayTransformer = NSValueTransformerName(rawValue: "EmailArrayValueTransformer")
+}
+
+// Register the transformer
+extension EmailArrayValueTransformer {
+    static func register() {
+        ValueTransformer.setValueTransformer(
+            EmailArrayValueTransformer(),
+            forName: .emailArrayTransformer
+        )
+    }
+}
+
 @Model
 final class Friend: Identifiable {
     @Attribute(.unique) var id: UUID
@@ -12,7 +48,8 @@ final class Friend: Identifiable {
     var contactIdentifier: String?
     var needsToConnectFlag: Bool
     var phoneNumber: String?
-    var email: String?
+    var email: String?  // Primary email
+    @Attribute(.transformable(by: EmailArrayValueTransformer.self)) private var _additionalEmails: [String]?
     var photoData: Data?
     var catchUpFrequency: CatchUpFrequency?
     var calendarIntegrationEnabled: Bool
@@ -25,6 +62,15 @@ final class Friend: Identifiable {
     // Lazy loading for hangouts
     @Transient private var _scheduledHangoutsCache: [Hangout]?
 
+    
+    var additionalEmails: [String] {
+        get {
+            return _additionalEmails ?? []
+        }
+        set {
+            _additionalEmails = newValue
+        }
+    }
     
     init(name: String,
          lastSeen: Date? = nil,
@@ -48,6 +94,7 @@ final class Friend: Identifiable {
         self.calendarIntegrationEnabled = false
         self.calendarVisibilityPreference = .none
         self.createdAt = Date()
+        self._additionalEmails = nil
         self.hangouts = []
         self.tags = []
         self._lastSeenTextCache = nil

@@ -23,7 +23,7 @@ struct EmailRecipientsSection: View {
                     Text(email)
                     Spacer()
                     Button(action: {
-                        viewModel.emailRecipients.removeAll { $0 == email }
+                        viewModel.removeEmailRecipient(email)
                     }) {
                         Image(systemName: "minus.circle.fill")
                             .foregroundColor(.red)
@@ -39,7 +39,7 @@ struct EmailRecipientsSection: View {
                 
                 Button(action: {
                     if !viewModel.newEmail.isEmpty && viewModel.newEmail.contains("@") {
-                        viewModel.emailRecipients.append(viewModel.newEmail)
+                        viewModel.addEmailRecipient(viewModel.newEmail)
                         viewModel.newEmail = ""
                     }
                 }) {
@@ -142,6 +142,7 @@ struct DateTimeSection: View {
 // MARK: - Schedule Button Section
 struct ScheduleButtonSection: View {
     @ObservedObject var viewModel: CreateHangoutViewModel
+    @Environment(\.dismiss) private var dismiss
     
     var body: some View {
         Section {
@@ -149,11 +150,15 @@ struct ScheduleButtonSection: View {
                 Text(error)
                     .foregroundColor(.red)
                     .font(.callout)
+                    .padding(.bottom, 8)
             }
             
             Button {
                 Task {
                     await viewModel.scheduleHangout()
+                    if viewModel.errorMessage == nil {
+                        dismiss()
+                    }
                 }
             } label: {
                 if viewModel.isLoading {

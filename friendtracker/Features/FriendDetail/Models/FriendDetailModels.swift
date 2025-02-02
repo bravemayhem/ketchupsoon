@@ -87,10 +87,17 @@ enum FriendDetail {
         
         func updateLastSeenDate(to date: Date) {
             friend.updateLastSeen(to: date)
+            // Update last seen date for all friends in shared hangouts
+            let sharedHangouts = friend.hangouts.filter { !$0.isCompleted && $0.date <= Date() }
+            for hangout in sharedHangouts {
+                for friend in hangout.friends {
+                    friend.updateLastSeen(to: date)
+                }
+            }
         }
         
         func markAsSeen() {
-            friend.updateLastSeen()
+            updateLastSeenDate(to: Date())
         }
     }
     

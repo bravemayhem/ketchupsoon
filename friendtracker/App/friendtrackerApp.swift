@@ -23,6 +23,9 @@ struct friendtrackerApp: App {
     @Environment(\.scenePhase) private var scenePhase
     
     init() {
+        // Register the email array transformer first
+        EmailArrayValueTransformer.register()
+        
         // Initialize ModelContainer
         do {
             // Define the schema

@@ -12,9 +12,9 @@ final class Hangout: Identifiable {
     var isCompleted: Bool
     var needsReschedule: Bool
     var originalHangoutId: UUID?  // Track if this is a rescheduled hangout
-    @Relationship(deleteRule: .nullify, inverse: \Friend.hangouts) var friend: Friend?
+    @Relationship(deleteRule: .cascade) var friends: [Friend]
     
-    init(date: Date, activity: String, location: String, isScheduled: Bool, friend: Friend, duration: TimeInterval = 3600) {
+    init(date: Date, activity: String, location: String, isScheduled: Bool, friends: [Friend], duration: TimeInterval = 3600) {
         self.id = UUID()
         self.date = date
         self.endDate = date.addingTimeInterval(duration)
@@ -24,19 +24,17 @@ final class Hangout: Identifiable {
         self.isCompleted = false
         self.needsReschedule = false
         self.originalHangoutId = nil
-        self.friend = friend
+        self.friends = friends
     }
     
     // Create a new hangout as a reschedule of this one
-    func createRescheduled(newDate: Date, duration: TimeInterval = 3600) -> Hangout? {
-        guard let friend = self.friend else { return nil }
-        
+    func createRescheduled(newDate: Date, duration: TimeInterval = 3600) -> Hangout {
         let rescheduled = Hangout(
             date: newDate,
             activity: self.activity,
             location: self.location,
             isScheduled: true,
-            friend: friend,
+            friends: self.friends,
             duration: duration
         )
         rescheduled.originalHangoutId = self.id
@@ -65,10 +63,8 @@ final class Hangout: Identifiable {
         let endDate = dateFormatter.string(from: endDate)
         
         // Create event description
-        var description = "Hangout with"
-        if let friendName = friend?.name {
-            description += " \(friendName)"
-        }
+        let friendNames = friends.map(\.name).joined(separator: ", ")
+        let description = "Hangout with \(friendNames)"
         
         // Create iCal content
         var iCalContent = """
@@ -90,9 +86,11 @@ final class Hangout: Identifiable {
             iCalContent += "\nLOCATION:\(location)"
         }
         
-        // Add friend as attendee if they have an email
-        if let email = friend?.email {
-            iCalContent += "\nATTENDEE;CUTYPE=INDIVIDUAL;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=TRUE;CN=\(friend?.name ?? "Friend"):mailto:\(email)"
+        // Add all friends with emails as attendees
+        for friend in friends {
+            if let email = friend.email {
+                iCalContent += "\nATTENDEE;CUTYPE=INDIVIDUAL;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=TRUE;CN=\(friend.name):mailto:\(email)"
+            }
         }
         
         iCalContent += """

@@ -6,12 +6,9 @@ struct DailyScheduleView: View {
     let events: [CalendarManager.CalendarEvent]
     let date: Date
     let viewMode: ViewMode
-    @State private var showingScheduler = false
-    @State private var selectedTime: Date?
-    @Binding var selectedFriend: Friend?
     @Binding var selectedEvent: CalendarManager.CalendarEvent?
     @Binding var showingEventDetails: Bool
-    @Query private var friends: [Friend]
+    let onTimeSelected: (Date) -> Void
     
     private let hourHeight: CGFloat = 60
     private let timeWidth: CGFloat = 60
@@ -56,8 +53,7 @@ struct DailyScheduleView: View {
                                         components.hour = hour
                                         components.minute = 0
                                         if let newDate = calendar.date(from: components) {
-                                            selectedTime = newDate
-                                            showingScheduler = true
+                                            onTimeSelected(newDate)
                                         }
                                     }
                             }
@@ -104,21 +100,12 @@ struct DailyScheduleView: View {
                 }
             }
         }
-        .sheet(isPresented: $showingScheduler) {
-            FriendPickerView(selectedFriend: $selectedFriend, selectedTime: selectedTime)
-        }
     }
     
     private func formatHour(_ hour: Int) -> String {
         let suffix = hour >= 12 ? "PM" : "AM"
         let displayHour = hour > 12 ? hour - 12 : hour
         return "\(displayHour) \(suffix)"
-    }
-    
-    private func formatTime(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.timeStyle = .short
-        return formatter.string(from: date)
     }
     
     private struct EventPosition {
@@ -214,9 +201,9 @@ struct EventView: View {
         events: [],
         date: Date(),
         viewMode: .daily,
-        selectedFriend: .constant(nil),
         selectedEvent: .constant(nil),
-        showingEventDetails: .constant(false)
+        showingEventDetails: .constant(false),
+        onTimeSelected: { _ in }
     )
     .modelContainer(for: [Friend.self])
 } 
