@@ -6,15 +6,22 @@ struct SettingsView: View {
     @Environment(\.modelContext) private var modelContext
     @StateObject private var colorSchemeManager = ColorSchemeManager.shared
     @State private var showingClearDataAlert = false
+    @State private var showingComingSoonAlert = false
     
     var body: some View {
         NavigationStack {
             Form {
                 Section("Profile") {
-                    NavigationLink {
-                        Text("Profile Settings")
+                    Button {
+                        showingComingSoonAlert = true
                     } label: {
-                        Label("Profile Settings", systemImage: "person.circle")
+                        Label {
+                            Text("Profile Settings")
+                                .foregroundColor(.primary)
+                        } icon: {
+                            Image(systemName: "person.circle")
+                                .foregroundColor(AppColors.accent)
+                        }
                     }
                 }
                 
@@ -62,6 +69,11 @@ struct SettingsView: View {
                 }
             } message: {
                 Text("This will delete all friends and hangouts. This action cannot be undone.")
+            }
+            .alert("Coming soon!", isPresented: $showingComingSoonAlert) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text("Profile settings are coming in a future update.")
             }
         }
     }

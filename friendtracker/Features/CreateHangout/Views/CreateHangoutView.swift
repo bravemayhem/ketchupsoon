@@ -60,7 +60,7 @@ private struct DateTimeSection: View {
     @Binding var selectedDuration: TimeInterval?
     @Binding var showingCustomDurationInput: Bool
     @Binding var errorMessage: String?
-    @StateObject var calendarManager: CalendarManager
+    @StateObject private var calendarManager = CalendarManager.shared
     @AppStorage("defaultCalendarType") private var defaultCalendarType: Friend.CalendarType = .apple
     
     func formatDuration(_ duration: TimeInterval) -> String {
@@ -259,7 +259,7 @@ struct CreateHangoutView: View {
     @State private var selectedLocation = ""
     @State private var emailRecipients: [String] = []
     @State private var newEmail: String = ""
-    @StateObject private var calendarManager = CalendarManager()
+    @StateObject private var calendarManager = CalendarManager.shared
     @State private var selectedDuration: TimeInterval? = nil
     @State private var isLoading = false
     @State private var errorMessage: String?
@@ -365,8 +365,7 @@ struct CreateHangoutView: View {
                     selectedCalendarType: $selectedCalendarType,
                     selectedDuration: $selectedDuration,
                     showingCustomDurationInput: $showingCustomDurationInput,
-                    errorMessage: $errorMessage,
-                    calendarManager: calendarManager
+                    errorMessage: $errorMessage
                 )
                 
                 Section("Location") {

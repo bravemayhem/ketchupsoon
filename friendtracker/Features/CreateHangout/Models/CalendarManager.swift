@@ -5,6 +5,8 @@ import GoogleAPIClientForREST_Calendar
 
 @MainActor
 class CalendarManager: ObservableObject {
+    static let shared = CalendarManager()
+    
     private let eventStore = EKEventStore()
     private var googleService: GTLRCalendarService?
     
@@ -14,6 +16,7 @@ class CalendarManager: ObservableObject {
     @Published var selectedCalendarType: CalendarType = .apple
     @Published var googleUserEmail: String?
     @Published var appleUserEmail: String?
+    @Published private(set) var eventCache: [String: (date: Date, events: [CalendarEvent])] = [:]
     private var isInitialized = false
     
     enum CalendarType {
@@ -21,7 +24,7 @@ class CalendarManager: ObservableObject {
         case google
     }
     
-    init() {
+    private init() {
         Task {
             await initialize()
         }
@@ -405,5 +408,62 @@ class CalendarManager: ObservableObject {
         let sortedEvents = allEvents.sorted { $0.event.startDate < $1.event.startDate }
         print("Total events found: \(sortedEvents.count)")
         return sortedEvents
+    }
+    
+    func preloadTodaysEvents() async {
+        let today = Date()
+        print("🗓 Preloading events for today: \(today)")
+        
+        let calendar = Calendar.current
+        let dateKey = calendar.startOfDay(for: today).ISO8601Format()
+        
+        // Check if we already have fresh cached events
+        if let cached = eventCache[dateKey],
+           calendar.isDate(cached.date, inSameDayAs: today),
+           Date().timeIntervalSince(cached.date) < 300 {
+            print("✅ Using existing cache for today, last updated: \(cached.date)")
+            return
+        }
+        
+        print("🔄 Cache expired or not found, fetching fresh events")
+        _ = await getEventsForDate(today)
+        print("✅ Today's events cached successfully")
+    }
+    
+    func getEventsForDate(_ date: Date) async -> [CalendarEvent] {
+        await ensureInitialized()
+        
+        guard isAuthorized || isGoogleAuthorized else {
+            print("❌ No calendar authorization")
+            return []
+        }
+        
+        let calendar = Calendar.current
+        let dateKey = calendar.startOfDay(for: date).ISO8601Format()
+        
+        // Check if we have cached events for this date
+        if let cached = eventCache[dateKey],
+           calendar.isDate(cached.date, inSameDayAs: date) {
+            // If the cache is less than 5 minutes old, use it
+            if Date().timeIntervalSince(cached.date) < 300 {
+                print("📅 Using cached events for \(dateKey), count: \(cached.events.count)")
+                return cached.events
+            }
+            print("🕒 Cache expired for \(dateKey), last updated: \(cached.date)")
+        }
+        
+        // If not cached or cache is old, fetch new events
+        print("🔍 Fetching new events for \(dateKey)")
+        let events = await fetchEventsForDate(date)
+        print("📥 Fetched \(events.count) events for \(dateKey)")
+        
+        await MainActor.run {
+            self.eventCache[dateKey] = (date: Date(), events: events)
+        }
+        return events
+    }
+    
+    func clearCache() {
+        eventCache.removeAll()
     }
 }

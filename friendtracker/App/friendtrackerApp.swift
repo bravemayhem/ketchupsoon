@@ -19,6 +19,8 @@ import SwiftData
 struct friendtrackerApp: App {
     let modelContainer: ModelContainer
     @StateObject private var colorSchemeManager = ColorSchemeManager.shared
+    @StateObject private var calendarManager = CalendarManager.shared
+    @Environment(\.scenePhase) private var scenePhase
     
     init() {
         // Initialize ModelContainer
@@ -67,6 +69,13 @@ struct friendtrackerApp: App {
         }
         
         configureAppearance()
+        
+        // Preload calendar events
+        if !ProcessInfo.processInfo.isPreview {
+            Task { @MainActor in
+                await CalendarManager.shared.preloadTodaysEvents()
+            }
+        }
     }
     
     private func configureAppearance() {
@@ -116,6 +125,14 @@ struct friendtrackerApp: App {
         WindowGroup {
             ContentView()
                 .preferredColorScheme(colorSchemeManager.colorScheme)
+                .onChange(of: scenePhase) { _, newPhase in
+                    if newPhase == .active {
+                        // Refresh calendar events when app becomes active
+                        Task {
+                            await calendarManager.preloadTodaysEvents()
+                        }
+                    }
+                }
         }
         .modelContainer(modelContainer)
     }

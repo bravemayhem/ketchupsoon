@@ -3,7 +3,7 @@ import EventKit
 import GoogleSignIn
 
 struct CalendarIntegrationView: View {
-    @StateObject private var calendarManager = CalendarManager()
+    @StateObject private var calendarManager = CalendarManager.shared
     @Environment(\.dismiss) private var dismiss
     @AppStorage("defaultCalendarType") private var defaultCalendarType: Friend.CalendarType = .apple
     

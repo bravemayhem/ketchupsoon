@@ -6,7 +6,7 @@ import SwiftData
 struct CalendarOverlayView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
-    @StateObject private var calendarManager = CalendarManager()
+    @StateObject private var calendarManager = CalendarManager.shared
     @State private var selectedDate = Date()
     @State private var events: [CalendarManager.CalendarEvent] = []
     @State private var showingAuthPrompt = false
@@ -34,7 +34,7 @@ struct CalendarOverlayView: View {
                         
                         Divider()
                         
-                        if isLoading {
+                        if isLoading && events.isEmpty {
                             ProgressView()
                                 .padding()
                         } else {
@@ -90,6 +90,11 @@ struct CalendarOverlayView: View {
             }
         }
         .task {
+            let calendar = Calendar.current
+            let dateKey = calendar.startOfDay(for: selectedDate).ISO8601Format()
+            if let cached = calendarManager.eventCache[dateKey] {
+                self.events = cached.events
+            }
             await loadEvents(for: selectedDate)
         }
     }
@@ -141,18 +146,17 @@ struct CalendarOverlayView: View {
     }
     
     private func loadEvents(for date: Date) async {
-        await calendarManager.ensureInitialized()
-        
         guard calendarManager.isAuthorized || calendarManager.isGoogleAuthorized else {
             return
         }
         
-        await MainActor.run {
-            isLoading = true
-            events = []
+        if events.isEmpty {
+            await MainActor.run {
+                isLoading = true
+            }
         }
         
-        let fetchedEvents = await calendarManager.fetchEventsForDate(date)
+        let fetchedEvents = await calendarManager.getEventsForDate(date)
         
         await MainActor.run {
             self.events = fetchedEvents
