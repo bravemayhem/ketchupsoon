@@ -6,8 +6,7 @@ class CreateHangoutViewModel: ObservableObject {
     @Published var hangoutTitle: String = ""
     @Published var selectedDate: Date
     @Published var selectedLocation: String = ""
-    @Published var emailRecipients: [String] = []
-    @Published var newEmail: String = ""
+    @Published var selectedFriends: [Friend] = []
     @Published var selectedDuration: TimeInterval? = nil
     @Published var isLoading = false
     @Published var errorMessage: String?
@@ -16,17 +15,34 @@ class CreateHangoutViewModel: ObservableObject {
     @Published var customHours: Int = 1
     @Published var customMinutes: Int = 0
     @Published var showingWishlistPrompt = false
+    @Published var newEmail: String = ""
+    @Published private var additionalEmailRecipients: [String] = []
     
-    let friend: Friend
     let calendarManager: CalendarManager
     private let modelContext: ModelContext
     
     var isScheduleButtonDisabled: Bool {
-        hangoutTitle.isEmpty
+        hangoutTitle.isEmpty || selectedFriends.isEmpty
     }
     
-    init(friend: Friend, modelContext: ModelContext, initialDate: Date? = nil, initialLocation: String? = nil, initialTitle: String? = nil) {
-        self.friend = friend
+    var emailRecipients: [String] {
+        let friendEmails = selectedFriends.compactMap { (friend: Friend) -> String? in
+            guard let email = friend.email, !email.isEmpty else { return nil }
+            return email
+        }
+        return friendEmails + additionalEmailRecipients
+    }
+    
+    func addEmailRecipient(_ email: String) {
+        guard !additionalEmailRecipients.contains(email) else { return }
+        additionalEmailRecipients.append(email)
+    }
+    
+    func removeEmailRecipient(_ email: String) {
+        additionalEmailRecipients.removeAll { $0 == email }
+    }
+    
+    init(modelContext: ModelContext, initialDate: Date? = nil, initialLocation: String? = nil, initialTitle: String? = nil, initialSelectedFriends: [Friend]? = nil) {
         self.modelContext = modelContext
         self.calendarManager = CalendarManager.shared
         
@@ -37,28 +53,27 @@ class CreateHangoutViewModel: ObservableObject {
         self._selectedDate = Published(initialValue: initialDate ?? Date())
         self._selectedLocation = Published(initialValue: initialLocation ?? "")
         self._hangoutTitle = Published(initialValue: initialTitle?.replacingOccurrences(of: " with .*$", with: "", options: .regularExpression) ?? "")
-        
-        if let friendEmail = friend.email {
-            self._emailRecipients = Published(initialValue: [friendEmail])
-        }
+        self._selectedFriends = Published(initialValue: initialSelectedFriends ?? [])
     }
     
     func createHangout() async throws {
+        // Create a single calendar event with all friends as attendees
         _ = try await calendarManager.createHangoutEvent(
-            with: friend,
             activity: hangoutTitle,
             location: selectedLocation,
             date: selectedDate,
             duration: selectedDuration ?? 7200,
-            emailRecipients: emailRecipients
+            emailRecipients: emailRecipients,
+            attendeeNames: selectedFriends.map(\.name)
         )
         
+        // Create a single Hangout record with all friends
         let hangout = Hangout(
             date: selectedDate,
             activity: hangoutTitle,
             location: selectedLocation,
             isScheduled: true,
-            friend: friend,
+            friends: selectedFriends,
             duration: selectedDuration ?? 7200
         )
         modelContext.insert(hangout)
@@ -73,7 +88,8 @@ class CreateHangoutViewModel: ObservableObject {
             try await createHangout()
             isLoading = false
             
-            if friend.needsToConnectFlag {
+            let wishlistFriends = selectedFriends.filter(\.needsToConnectFlag)
+            if !wishlistFriends.isEmpty {
                 showingWishlistPrompt = true
             }
         } catch {
@@ -83,7 +99,9 @@ class CreateHangoutViewModel: ObservableObject {
     }
     
     func removeFromWishlist() {
-        friend.needsToConnectFlag = false
+        for friend in selectedFriends {
+            friend.needsToConnectFlag = false
+        }
     }
     
     func formatDuration(_ duration: TimeInterval) -> String {

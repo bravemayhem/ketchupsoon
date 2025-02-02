@@ -27,7 +27,9 @@ struct KetchupsView: View {
     @State private var showingAllCompleted = false
     
     private var scheduledFriendIds: Set<UUID> {
-        Set(upcomingHangouts.compactMap { $0.friend?.id })
+        Set(upcomingHangouts.flatMap { hangout in
+            hangout.friends.map(\.id)
+        })
     }
     
     private var twoWeeksFromNow: Date {
@@ -166,7 +168,7 @@ struct KetchupsView: View {
         .sheet(isPresented: $showingScheduler) {
             if let friend = selectedFriend {
                 NavigationStack {
-                    CreateHangoutView(friend: friend)
+                    CreateHangoutView(initialSelectedFriends: [friend])
                 }
             }
         }

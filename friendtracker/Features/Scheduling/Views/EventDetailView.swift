@@ -7,7 +7,7 @@ struct EventDetailView: View {
     let modelContext: ModelContext
     @Environment(\.dismiss) private var dismiss
     @State private var showingFriendPicker = false
-    @State private var selectedFriend: Friend?
+    @State private var selectedFriends: [Friend] = []
     @State private var showingScheduler = false
     
     var body: some View {
@@ -68,20 +68,19 @@ struct EventDetailView: View {
         }
         .sheet(isPresented: $showingFriendPicker) {
             FriendPickerView(
-                selectedFriend: $selectedFriend,
+                selectedFriends: $selectedFriends,
                 selectedTime: event.event.startDate
             )
         }
-        .onChange(of: selectedFriend) { _, _ in
-            showingScheduler = selectedFriend != nil
+        .onChange(of: selectedFriends) { _, newValue in
+            showingScheduler = !newValue.isEmpty
         }
         .sheet(isPresented: $showingScheduler, onDismiss: {
-            selectedFriend = nil
+            selectedFriends = []
         }) {
-            if let friend = selectedFriend {
+            if !selectedFriends.isEmpty {
                 NavigationStack {
                     CreateHangoutView(
-                        friend: friend,
                         initialDate: event.event.startDate,
                         initialLocation: event.event.location,
                         initialTitle: event.event.title

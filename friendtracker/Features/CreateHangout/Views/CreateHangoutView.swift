@@ -6,14 +6,15 @@ struct CreateHangoutView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     @StateObject private var viewModel: CreateHangoutViewModel
+    @State private var showingFriendPicker = false
     
-    init(friend: Friend, initialDate: Date? = nil, initialLocation: String? = nil, initialTitle: String? = nil) {
+    init(initialDate: Date? = nil, initialLocation: String? = nil, initialTitle: String? = nil, initialSelectedFriends: [Friend]? = nil) {
         _viewModel = StateObject(wrappedValue: CreateHangoutViewModel(
-            friend: friend,
             modelContext: ModelContext(try! ModelContainer(for: Friend.self, configurations: ModelConfiguration(isStoredInMemoryOnly: false))),
             initialDate: initialDate,
             initialLocation: initialLocation,
-            initialTitle: initialTitle
+            initialTitle: initialTitle,
+            initialSelectedFriends: initialSelectedFriends
         ))
         
         // Configure UIDatePicker to snap to 5-minute intervals
@@ -23,13 +24,64 @@ struct CreateHangoutView: View {
     var body: some View {
         NavigationStack {
             Form {
-                FriendSection(friendName: viewModel.friend.name)
+                Section {
+                    if viewModel.selectedFriends.isEmpty {
+                        Button {
+                            showingFriendPicker = true
+                        } label: {
+                            HStack {
+                                Text("Add Friends")
+                                    .foregroundColor(.accentColor)
+                                Spacer()
+                                Image(systemName: "plus.circle.fill")
+                                    .foregroundColor(.accentColor)
+                            }
+                        }
+                    } else {
+                        ForEach(viewModel.selectedFriends) { friend in
+                            HStack {
+                                VStack(alignment: .leading) {
+                                    Text(friend.name)
+                                    if let email = friend.email, !email.isEmpty {
+                                        Text(email)
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    } else {
+                                        Text("No email address")
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
+                            }
+                        }
+                        
+                        Button {
+                            showingFriendPicker = true
+                        } label: {
+                            HStack {
+                                Text("Add More Friends")
+                                    .foregroundColor(.accentColor)
+                                Spacer()
+                                Image(systemName: "plus.circle.fill")
+                                    .foregroundColor(.accentColor)
+                            }
+                        }
+                    }
+                } header: {
+                    Text("Friends")
+                } footer: {
+                    if !viewModel.selectedFriends.isEmpty {
+                        let missingEmails = viewModel.selectedFriends.filter { $0.email?.isEmpty ?? true }.count
+                        if missingEmails > 0 {
+                            Text("\(missingEmails) friend\(missingEmails > 1 ? "s" : "") missing email address\(missingEmails > 1 ? "es" : "") - they won't receive calendar invites")
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
                 
                 Section("Hangout Title") {
                     TextField("Enter title", text: $viewModel.hangoutTitle)
                 }
-                
-                EmailRecipientsSection(viewModel: viewModel)
                 
                 DateTimeSection(viewModel: viewModel)
                 
@@ -48,6 +100,9 @@ struct CreateHangoutView: View {
                     }
                 }
             }
+            .sheet(isPresented: $showingFriendPicker) {
+                FriendPickerView(selectedFriends: $viewModel.selectedFriends, selectedTime: viewModel.selectedDate)
+            }
             .sheet(isPresented: $viewModel.showingCustomDurationInput) {
                 CustomDurationInputView(viewModel: viewModel)
             }
@@ -61,12 +116,12 @@ struct CreateHangoutView: View {
                 dismiss()
             }
         } message: {
-            Text("You've scheduled time with \(viewModel.friend.name). Would you like to remove them from your wishlist?")
+            Text("You've scheduled time with \(viewModel.selectedFriends.map(\.name).joined(separator: ", ")). Would you like to remove them from your wishlist?")
         }
     }
 }
 
 #Preview {
-    CreateHangoutView(friend: Friend(name: "Test Friend"))
+    CreateHangoutView(initialDate: Date())
         .modelContainer(for: [Friend.self, Hangout.self], inMemory: true)
 }

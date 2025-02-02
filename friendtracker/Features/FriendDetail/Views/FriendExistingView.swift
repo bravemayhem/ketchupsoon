@@ -107,7 +107,7 @@ struct FriendExistingView: View {
             TagsSelectionView(friend: viewModel.friend)
         }
         .sheet(isPresented: $viewModel.showingScheduler) {
-            CreateHangoutView(friend: viewModel.friend)
+            CreateHangoutView(initialSelectedFriends: [viewModel.friend])
         }
         .sheet(isPresented: $viewModel.showingMessageSheet) {
             if let phoneNumber = viewModel.friend.phoneNumber {
