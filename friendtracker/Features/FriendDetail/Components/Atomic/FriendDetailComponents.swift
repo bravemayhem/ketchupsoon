@@ -269,6 +269,19 @@ struct FriendInfoSection: View {
     @State private var isUpdatingContact = false
     @State private var errorMessage: String?
     @State private var showingError = false
+    @State private var activeSheet: ActiveSheet?
+    
+    private enum ActiveSheet: Identifiable {
+        case contact
+        case addEmail
+        
+        var id: Int {
+            switch self {
+            case .contact: return 1
+            case .addEmail: return 2
+            }
+        }
+    }
     
     init(friend: Friend, cityService: CitySearchService) {
         self.friend = friend
@@ -283,7 +296,7 @@ struct FriendInfoSection: View {
             // Name
             if friend.contactIdentifier != nil {
                 Button {
-                    showingContactView = true
+                    activeSheet = .contact
                 } label: {
                     HStack {
                         Text("Name")
@@ -310,7 +323,7 @@ struct FriendInfoSection: View {
             // Phone
             if friend.contactIdentifier != nil {
                 Button {
-                    showingContactView = true
+                    activeSheet = .contact
                 } label: {
                     HStack {
                         Text("Phone")
@@ -350,58 +363,55 @@ struct FriendInfoSection: View {
             CitySearchField(service: cityService)
         }
         .listRowBackground(AppColors.secondarySystemBackground)
-        .sheet(isPresented: $showingContactView) {
-            if let identifier = friend.contactIdentifier {
-                ContactViewController(contactIdentifier: identifier, isPresented: $showingContactView)
-            }
-        }
-        .sheet(isPresented: $showingAddEmailAlert) {
-            NavigationStack {
-                Form {
-                    Section {
-                        TextField("Email Address", text: $newEmailInput)
-                            .textContentType(.emailAddress)
-                            .keyboardType(.emailAddress)
-                            .autocapitalization(.none)
-                    } footer: {
-                        if friend.contactIdentifier != nil {
-                            Text("This email will be saved to the contact")
+        .sheet(item: $activeSheet) { sheet in
+            switch sheet {
+            case .contact:
+                if let identifier = friend.contactIdentifier {
+                    ContactViewController(contactIdentifier: identifier, isPresented: .constant(true))
+                        .onDisappear {
+                            activeSheet = nil
+                        }
+                }
+            case .addEmail:
+                NavigationStack {
+                    Form {
+                        Section {
+                            TextField("Email Address", text: $newEmailInput)
+                                .textContentType(.emailAddress)
+                                .keyboardType(.emailAddress)
+                                .autocapitalization(.none)
+                        } footer: {
+                            if friend.contactIdentifier != nil {
+                                Text("This email will be saved to the contact")
+                            }
+                        }
+                    }
+                    .scrollContentBackground(.hidden)
+                    .background(AppColors.systemBackground)
+                    .navigationTitle("Add New Email")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Cancel") {
+                                newEmailInput = ""
+                                activeSheet = nil
+                            }
+                        }
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Add") {
+                                addNewEmail(newEmailInput)
+                                activeSheet = nil
+                            }
                         }
                     }
                 }
-                .scrollContentBackground(.hidden)
-                .background(AppColors.systemBackground)
-                .navigationTitle("Add New Email")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button("Cancel") {
-                            newEmailInput = ""
-                            showingAddEmailAlert = false
-                        }
-                    }
-                    ToolbarItem(placement: .confirmationAction) {
-                        Button("Add") {
-                            addNewEmail(newEmailInput)
-                            showingAddEmailAlert = false
-                        }
-                    }
-                }
+                .presentationDetents([.medium])
             }
-            .presentationDetents([.medium])
         }
         .alert("Error", isPresented: $showingError) {
             Button("OK", role: .cancel) { }
         } message: {
             Text(errorMessage ?? "An unknown error occurred")
-        }
-        .overlay {
-            if isUpdatingContact {
-                ProgressView()
-                    .padding()
-                    .background(Color.black.opacity(0.2))
-                    .cornerRadius(8)
-            }
         }
     }
     
@@ -435,7 +445,7 @@ struct FriendInfoSection: View {
             
             // Add new email option
             Button {
-                showingAddEmailAlert = true
+                activeSheet = .addEmail
             } label: {
                 Label("Add New Email", systemImage: "plus")
             }
@@ -444,12 +454,16 @@ struct FriendInfoSection: View {
                 Text("Email")
                     .foregroundColor(AppColors.label)
                 Spacer()
-                if isUpdatingContact {
-                    ProgressView()
-                        .scaleEffect(0.7)
-                } else if let primaryEmail = friend.email {
-                    Text(primaryEmail)
-                        .foregroundColor(AppColors.accent)
+                if let primaryEmail = friend.email {
+                    HStack(spacing: 4) {
+                        Text(primaryEmail)
+                            .foregroundColor(AppColors.accent)
+                        if isUpdatingContact {
+                            ProgressView()
+                                .scaleEffect(0.5)
+                                .tint(AppColors.accent)
+                        }
+                    }
                 } else {
                     Text("Not set")
                         .foregroundColor(AppColors.tertiaryLabel)
@@ -504,7 +518,7 @@ struct FriendInfoSection: View {
             
             // Add new email option
             Button {
-                showingAddEmailAlert = true
+                activeSheet = .addEmail
             } label: {
                 Label("Add New Email", systemImage: "plus")
             }

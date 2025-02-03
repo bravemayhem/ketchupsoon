@@ -25,10 +25,7 @@ struct FriendSheetPresenter: ViewModifier {
             }) {
                 if let friend = selectedFriend {
                     NavigationStack {
-                        FriendExistingView(
-                            friend: friend,
-                            presentationStyle: .sheet($showingFriendSheet)
-                        )
+                        FriendExistingView(friend: friend)
                     }
                 }
             }

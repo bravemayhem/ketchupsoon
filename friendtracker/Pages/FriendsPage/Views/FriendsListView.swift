@@ -207,31 +207,28 @@ struct FriendsListView: View {
                         .listRowSeparator(.hidden)
                 } else {
                     ForEach(filteredFriends) { friend in
-                        FriendListCard(friend: friend)
-                            .friendCardStyle()
-                            .onTapGesture {
-                                #if DEBUG
-                                debugLog("Tapped friend card: \(friend.name)")
-                                #endif
-                                selectedFriend = nil  // Reset first to ensure onChange triggers
-                                selectedFriend = friend
+                        NavigationLink {
+                            FriendExistingView(friend: friend)
+                        } label: {
+                            FriendListCard(friend: friend)
+                                .friendCardStyle()
+                        }
+                        .listRowSeparator(.hidden)
+                        .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                            Button {
+                                friend.needsToConnectFlag.toggle()
+                            } label: {
+                                Label(friend.needsToConnectFlag ? "Remove" : "Add", 
+                                      systemImage: friend.needsToConnectFlag ? "star.slash.fill" : "star.fill")
                             }
-                            .swipeActions(edge: .leading, allowsFullSwipe: true) {
-                                Button {
-                                    friend.needsToConnectFlag.toggle()
-                                } label: {
-                                    Label(friend.needsToConnectFlag ? "Remove" : "Add", 
-                                          systemImage: friend.needsToConnectFlag ? "star.slash.fill" : "star.fill")
-                                }
-                                .tint(friend.needsToConnectFlag ? .red : AppColors.success)
-                            }
+                            .tint(friend.needsToConnectFlag ? .red : AppColors.success)
+                        }
                     }
                 }
             }
             .listStyle(.plain)
         }
         .friendListStyle()
-        .friendSheetPresenter(selectedFriend: $selectedFriend)
         .sheet(isPresented: $showingTagPicker) {
             TagPickerView(selectedTags: $selectedTags, allTags: allTags)
         }

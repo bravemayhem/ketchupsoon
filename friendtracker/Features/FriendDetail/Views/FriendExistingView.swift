@@ -17,11 +17,9 @@ struct FriendExistingView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var viewModel: FriendDetail.ViewModel
     @State private var cityService = CitySearchService()
-    let presentationStyle: FriendDetail.PresentationStyle
     
-    init(friend: Friend, presentationStyle: FriendDetail.PresentationStyle) {
+    init(friend: Friend) {
         self._viewModel = State(initialValue: FriendDetail.ViewModel(friend: friend))
-        self.presentationStyle = presentationStyle
         // Initialize cityService with friend's location
         let service = CitySearchService()
         if let location = friend.location {
@@ -82,17 +80,6 @@ struct FriendExistingView: View {
         }
         .navigationTitle(viewModel.friend.name)
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            if case .sheet(let isPresented) = presentationStyle {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
-                        viewModel.friend.location = cityService.selectedCity
-                        isPresented.wrappedValue = false
-                    }
-                    .foregroundColor(AppColors.accent)
-                }
-            }
-        }
         .datePickerSheet(
             isPresented: $viewModel.showingDatePicker,
             date: $viewModel.lastSeenDate,
@@ -128,8 +115,7 @@ struct FriendExistingView: View {
                 lastSeen: Date(),
                 location: "Los Angeles, CA",
                 phoneNumber: "+1234567890"
-            ),
-            presentationStyle: .navigation
+            )
         )
     }
     .modelContainer(for: Friend.self)
