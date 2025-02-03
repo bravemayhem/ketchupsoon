@@ -43,6 +43,49 @@ class ContactsManager: ObservableObject {
         }
     }
     
+    // New method to update contact emails
+    nonisolated func updateContactEmails(identifier: String, primaryEmail: String?, additionalEmails: [String]) async throws {
+        let capturedStore = await MainActor.run { self.store }
+        
+        return try await Task.detached(priority: .userInitiated) {
+            let predicate = CNContact.predicateForContacts(withIdentifiers: [identifier])
+            let keysToFetch = [CNContactEmailAddressesKey] as [CNKeyDescriptor]
+            
+            let contacts = try capturedStore.unifiedContacts(matching: predicate, keysToFetch: keysToFetch)
+            guard let contact = contacts.first else {
+                throw ContactError.contactNotFound
+            }
+            
+            let mutableContact = contact.mutableCopy() as! CNMutableContact
+            
+            // Clear existing email addresses
+            mutableContact.emailAddresses.removeAll()
+            
+            // Add primary email first if it exists
+            if let primaryEmail = primaryEmail {
+                let emailAddress = CNLabeledValue(label: CNLabelHome, value: primaryEmail as NSString)
+                mutableContact.emailAddresses.append(emailAddress)
+            }
+            
+            // Add additional emails
+            for email in additionalEmails {
+                let emailAddress = CNLabeledValue(label: CNLabelOther, value: email as NSString)
+                mutableContact.emailAddresses.append(emailAddress)
+            }
+            
+            // Save the changes
+            let saveRequest = CNSaveRequest()
+            saveRequest.update(mutableContact)
+            
+            do {
+                try capturedStore.execute(saveRequest)
+            } catch {
+                print("Error updating contact: \(error)")
+                throw ContactError.updateFailed(error)
+            }
+        }.value
+    }
+    
     nonisolated func fetchContacts() async -> [CNContact] {
         #if DEBUG
         if let previewContacts = await MainActor.run(body: { self.previewContacts }) {
@@ -87,7 +130,20 @@ class ContactsManager: ObservableObject {
                 await MainActor.run {
                     friend.name = "\(contact.givenName) \(contact.familyName)".trimmingCharacters(in: .whitespaces)
                     friend.phoneNumber = contact.phoneNumbers.first?.value.stringValue
-                    friend.email = contact.emailAddresses.first?.value as String?
+                    
+                    // Handle email addresses
+                    let emailAddresses = contact.emailAddresses.map { $0.value as String }
+                    if !emailAddresses.isEmpty {
+                        // Set primary email
+                        friend.email = emailAddresses[0]
+                        // Set additional emails
+                        if emailAddresses.count > 1 {
+                            friend.additionalEmails = Array(emailAddresses.dropFirst())
+                        } else {
+                            friend.additionalEmails = []
+                        }
+                    }
+                    
                     friend.location = contact.postalAddresses.first?.value.city
                     friend.photoData = contact.thumbnailImageData
                 }
@@ -98,5 +154,19 @@ class ContactsManager: ObservableObject {
                 return false
             }
         }.value
+    }
+    
+    enum ContactError: Error {
+        case contactNotFound
+        case updateFailed(Error)
+        
+        var localizedDescription: String {
+            switch self {
+            case .contactNotFound:
+                return "Contact not found in address book"
+            case .updateFailed(let error):
+                return "Failed to update contact: \(error.localizedDescription)"
+            }
+        }
     }
 } 

@@ -700,3 +700,43 @@
   - Fixed unnecessary refresh on calendar view open
   - Fixed loading indicator showing too frequently
   - Improved handling of calendar authorization states
+
+### 2025-02-02
+#### Changed
+- **Multi-Friend Hangout Support**
+  - Updated hangout creation flow to support multiple friends
+  - Changed from single friend selection to group selection
+  - Modified calendar event creation to handle multiple attendees
+  - Enhanced email handling for group invites
+  - Updated UI to show all participants in hangout cards
+  - Improved calendar invite handling for multiple recipients
+
+#### Added
+- **Enhanced Email Management**
+  - Added dropdown email selector for each friend
+  - Implemented multiple email storage per friend using SwiftData transformable attributes
+  - Added ability to select from primary and additional emails
+  - Created UI for adding new emails that persist with contacts
+  - Added email status indicators and warnings
+  - Implemented swipe-to-delete for friend removal
+  - Added manual attendee section for non-app users
+
+#### Technical
+- **Data Model Updates**
+  - Modified Friend-Hangout relationship to support many-to-many
+  - Implemented custom EmailArrayValueTransformer for SwiftData
+  - Fixed email array serialization issue by preventing double transformation
+  - Added proper email validation and storage
+  - Enhanced model relationship cascade rules
+  - Improved state management for email selection
+  - Fixed SwiftData transformable registration timing
+  - Simplified email array property accessors
+
+#### Fixed
+- Fixed email selection UI to use dropdown instead of long-press
+- Resolved SwiftData transformable registration issues
+- Fixed email array serialization by removing double transformation
+- Fixed email state management conflicts
+- Improved friend removal UX with swipe gestures
+- Enhanced email validation and feedback
+- Added loading states for email operations

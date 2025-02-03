@@ -23,7 +23,7 @@ struct friendtrackerApp: App {
     @Environment(\.scenePhase) private var scenePhase
     
     init() {
-        // Register the email array transformer first
+        // Register the email array transformer
         EmailArrayValueTransformer.register()
         
         // Initialize ModelContainer

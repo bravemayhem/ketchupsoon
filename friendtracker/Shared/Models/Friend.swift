@@ -3,42 +3,6 @@ import SwiftUI
 import SwiftData
 import Contacts
 
-// MARK: - Email Array Transformer
-@objc(EmailArrayValueTransformer)
-final class EmailArrayValueTransformer: ValueTransformer {
-    override class func transformedValueClass() -> AnyClass {
-        NSData.self
-    }
-    
-    override class func allowsReverseTransformation() -> Bool {
-        true
-    }
-    
-    override func transformedValue(_ value: Any?) -> Any? {
-        guard let emails = value as? [String] else { return nil }
-        return try? JSONEncoder().encode(emails)
-    }
-    
-    override func reverseTransformedValue(_ value: Any?) -> Any? {
-        guard let data = value as? Data else { return [] }
-        return try? JSONDecoder().decode([String].self, from: data)
-    }
-}
-
-extension NSValueTransformerName {
-    static let emailArrayTransformer = NSValueTransformerName(rawValue: "EmailArrayValueTransformer")
-}
-
-// Register the transformer
-extension EmailArrayValueTransformer {
-    static func register() {
-        ValueTransformer.setValueTransformer(
-            EmailArrayValueTransformer(),
-            forName: .emailArrayTransformer
-        )
-    }
-}
-
 @Model
 final class Friend: Identifiable {
     @Attribute(.unique) var id: UUID
@@ -49,7 +13,8 @@ final class Friend: Identifiable {
     var needsToConnectFlag: Bool
     var phoneNumber: String?
     var email: String?  // Primary email
-    @Attribute(.transformable(by: EmailArrayValueTransformer.self)) private var _additionalEmails: [String]?
+    @Attribute(.transformable(by: EmailArrayValueTransformer.self))
+    private var _additionalEmails: Data?
     var photoData: Data?
     var catchUpFrequency: CatchUpFrequency?
     var calendarIntegrationEnabled: Bool
@@ -61,14 +26,14 @@ final class Friend: Identifiable {
     @Transient private var _lastSeenTextCache: (Date, String)?
     // Lazy loading for hangouts
     @Transient private var _scheduledHangoutsCache: [Hangout]?
-
     
     var additionalEmails: [String] {
         get {
-            return _additionalEmails ?? []
+            guard let data = _additionalEmails else { return [] }
+            return (try? JSONDecoder().decode([String].self, from: data)) ?? []
         }
         set {
-            _additionalEmails = newValue
+            _additionalEmails = try? JSONEncoder().encode(newValue)
         }
     }
     
