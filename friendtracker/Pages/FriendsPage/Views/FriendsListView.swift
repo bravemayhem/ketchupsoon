@@ -207,12 +207,11 @@ struct FriendsListView: View {
                         .listRowSeparator(.hidden)
                 } else {
                     ForEach(filteredFriends) { friend in
-                        NavigationLink {
-                            FriendExistingView(friend: friend)
-                        } label: {
+                        NavigationLink(value: friend) {
                             FriendListCard(friend: friend)
                                 .friendCardStyle()
                         }
+                        .buttonStyle(.plain)
                         .listRowSeparator(.hidden)
                         .swipeActions(edge: .leading, allowsFullSwipe: true) {
                             Button {
@@ -227,8 +226,12 @@ struct FriendsListView: View {
                 }
             }
             .listStyle(.plain)
+            .navigationDestination(for: Friend.self) { friend in
+                FriendExistingView(friend: friend)
+            }
         }
         .friendListStyle()
+        .friendSheetPresenter(selectedFriend: $selectedFriend)
         .sheet(isPresented: $showingTagPicker) {
             TagPickerView(selectedTags: $selectedTags, allTags: allTags)
         }
