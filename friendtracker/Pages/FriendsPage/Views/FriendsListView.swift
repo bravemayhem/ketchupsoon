@@ -216,6 +216,7 @@ struct FriendsListView: View {
                         .buttonStyle(.plain)
                         .listRowSeparator(.hidden)
                         .listRowBackground(Color.clear)
+
                         .tint(.clear)
                         .swipeActions(edge: .leading, allowsFullSwipe: true) {
                             Button {
