@@ -207,12 +207,15 @@ struct FriendsListView: View {
                         .listRowSeparator(.hidden)
                 } else {
                     ForEach(filteredFriends) { friend in
-                        NavigationLink(value: friend) {
+                        BetterNavigationLink {
                             FriendListCard(friend: friend)
                                 .friendCardStyle()
+                        } destination: {
+                            FriendExistingView(friend: friend)
                         }
                         .buttonStyle(.plain)
                         .listRowSeparator(.hidden)
+                        .tint(.clear)
                         .swipeActions(edge: .leading, allowsFullSwipe: true) {
                             Button {
                                 friend.needsToConnectFlag.toggle()
@@ -225,7 +228,6 @@ struct FriendsListView: View {
                     }
                 }
             }
-            .listStyle(.plain)
             .navigationDestination(for: Friend.self) { friend in
                 FriendExistingView(friend: friend)
             }

@@ -32,4 +32,16 @@ extension View {
     func friendCardStyle() -> some View {
         modifier(FriendCardStyle())
     }
+}
+
+#Preview {
+    List {
+        ForEach(["Alice", "Bob", "Charlie"], id: \.self) { name in
+            Text(name)
+                .friendCardStyle()
+        }
+    }
+    .friendListStyle()
 } 
+
+
