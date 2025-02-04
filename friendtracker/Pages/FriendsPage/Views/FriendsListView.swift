@@ -215,6 +215,7 @@ struct FriendsListView: View {
                         }
                         .buttonStyle(.plain)
                         .listRowSeparator(.hidden)
+                        .listRowBackground(Color.clear)
                         .tint(.clear)
                         .swipeActions(edge: .leading, allowsFullSwipe: true) {
                             Button {
@@ -228,6 +229,7 @@ struct FriendsListView: View {
                     }
                 }
             }
+            .listStyle(.plain)
             .navigationDestination(for: Friend.self) { friend in
                 FriendExistingView(friend: friend)
             }

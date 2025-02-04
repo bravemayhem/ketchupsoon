@@ -22,21 +22,28 @@ struct BetterNavigationLink<Label: View, Destination: View>: View {
                 EmptyView()
             }
             .opacity(0)
+            .allowsHitTesting(false)  // Disable hit testing on the hidden NavigationLink
 
             self.label
+                .contentShape(Rectangle())  // Make the hit testing area match the visible content
         }
+        .allowsHitTesting(true)  // Enable hit testing on the ZStack
     }
 }
 
 #Preview {
     NavigationStack {
-        BetterNavigationLink {
-            Text("Example Item")
-                .padding()
-                .background(Color.gray.opacity(0.2))
-                .cornerRadius(8)
-        } destination: {
-            Text("Destination View")
+        List {
+            BetterNavigationLink {
+                Text("Example Item")
+                    .padding()
+                    .background(Color.gray.opacity(0.2))
+                    .cornerRadius(8)
+            } destination: {
+                Text("Destination View")
+            }
+            .listRowInsets(EdgeInsets())
+            .listRowBackground(Color.clear)
         }
     }
 } 
