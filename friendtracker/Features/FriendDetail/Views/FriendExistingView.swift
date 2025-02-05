@@ -11,7 +11,6 @@ import MessageUI
 /// It can be presented either through navigation or as a modal sheet, and provides
 /// full editing capabilities for all friend properties.
 
-// MARK: - Updated FriendExistingView
 struct FriendExistingView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
@@ -33,7 +32,7 @@ struct FriendExistingView: View {
         BaseFriendForm(configuration: FormConfiguration.existing) { config in
             Group {
                 if config.showsLocation || config.showsLastSeen || config.showsName || config.showsCatchUpFrequency {
-                    FriendInfoSection(
+                    FriendInfoExistingSection(
                         friend: viewModel.friend,
                         cityService: cityService
                     )
