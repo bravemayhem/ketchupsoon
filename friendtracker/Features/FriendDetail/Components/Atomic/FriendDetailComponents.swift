@@ -808,104 +808,205 @@ struct ContactViewController: UIViewControllerRepresentable {
     @Binding var isPresented: Bool
     @Environment(\.modelContext) private var modelContext
     
-    func makeUIViewController(context: Context) -> UIViewController {
-        let contactVC = UIViewController()
-        return contactVC
+    func makeCoordinator() -> Coordinator {
+        print("DEBUG: Creating coordinator")
+        return Coordinator(parent: self)
     }
     
-    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
-        guard isPresented else {
-            uiViewController.presentedViewController?.dismiss(animated: true)
+    func makeUIViewController(context: Context) -> UINavigationController {
+        print("DEBUG: makeUIViewController called")
+        let navController = UINavigationController()
+        navController.modalPresentationStyle = .pageSheet
+        navController.isModalInPresentation = true
+        
+        if let sheet = navController.sheetPresentationController {
+            print("DEBUG: Configuring initial sheet presentation")
+            sheet.prefersGrabberVisible = true
+            sheet.detents = [.large()]
+            sheet.prefersScrollingExpandsWhenScrolledToEdge = true
+            sheet.preferredCornerRadius = 12
+        }
+        
+        // Add a loading view controller initially
+        let loadingVC = UIHostingController(rootView: 
+            ProgressView("Loading Contact...")
+                .progressViewStyle(.circular)
+        )
+        navController.setViewControllers([loadingVC], animated: false)
+        
+        // Load contact after ensuring view is ready
+        Task { @MainActor in
+            // Small delay to ensure view hierarchy is ready
+            try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
+            if context.coordinator.isLoadingContact == false {
+                loadContact(into: navController, context: context)
+            }
+        }
+        
+        return navController
+    }
+    
+    private func loadContact(into navController: UINavigationController, context: Context) {
+        // Prevent multiple simultaneous loads
+        guard !context.coordinator.isLoadingContact else {
+            print("DEBUG: Already loading contact, skipping")
             return
         }
         
-        guard uiViewController.presentedViewController == nil else { return }
+        context.coordinator.isLoadingContact = true
         
         Task {
             do {
+                print("DEBUG: Requesting contacts access")
                 let granted = await ContactsManager.shared.requestAccess()
                 guard granted else {
+                    print("DEBUG: Contacts access denied")
                     await MainActor.run {
-                        self.isPresented = false
+                        context.coordinator.isLoadingContact = false
+                        context.coordinator.showAlert(
+                            title: "Contacts Access Required",
+                            message: "Please enable contacts access in Settings to view contact details."
+                        ) {
+                            self.isPresented = false
+                        }
                     }
                     return
                 }
                 
+                print("DEBUG: Fetching contact for identifier: \(contactIdentifier)")
                 let contact = try await ContactsManager.shared.getContactViewController(for: contactIdentifier)
                 
                 await MainActor.run {
+                    guard isPresented else {
+                        context.coordinator.isLoadingContact = false
+                        return
+                    }
+                    
+                    print("DEBUG: Setting up CNContactViewController")
                     let contactVC = CNContactViewController(for: contact)
                     contactVC.allowsEditing = true
                     contactVC.allowsActions = true
+                    // Use context.coordinator directly instead of storing it
                     contactVC.delegate = context.coordinator
                     
-                    let navController = UINavigationController(rootViewController: contactVC)
-                    navController.modalPresentationStyle = .pageSheet
+                    context.coordinator.contactIdentifier = contactIdentifier
                     
-                    if let sheet = navController.sheetPresentationController {
-                        sheet.prefersGrabberVisible = true
-                        sheet.detents = [.large()]
-                        sheet.prefersScrollingExpandsWhenScrolledToEdge = true
-                        sheet.preferredCornerRadius = 12
+                    // Only set view controllers if we're still meant to be presented
+                    if isPresented {
+                        print("DEBUG: Setting view controllers")
+                        // Use animated: false to prevent potential race conditions
+                        navController.setViewControllers([contactVC], animated: false)
                     }
                     
-                    context.coordinator.currentNavController = navController
-                    
-                    if uiViewController.view.window != nil {
-                        uiViewController.present(navController, animated: true)
-                    } else {
-                        self.isPresented = false
-                    }
+                    context.coordinator.isLoadingContact = false
                 }
             } catch {
-                print("Error fetching contact: \(error)")
+                print("DEBUG: Error loading contact: \(error.localizedDescription)")
                 await MainActor.run {
-                    self.isPresented = false
+                    context.coordinator.isLoadingContact = false
+                    context.coordinator.showAlert(
+                        title: "Error Loading Contact",
+                        message: error.localizedDescription
+                    ) {
+                        self.isPresented = false
+                    }
                 }
             }
         }
     }
     
-    func makeCoordinator() -> Coordinator {
-        Coordinator(parent: self)
+    func updateUIViewController(_ uiViewController: UINavigationController, context: Context) {
+        print("DEBUG: updateUIViewController called, isPresented: \(isPresented)")
+        
+        // Only handle dismissal when explicitly set to false and there's a presented view controller
+        if !isPresented && uiViewController.presentedViewController != nil {
+            print("DEBUG: Dismissing view controller due to isPresented = false")
+            context.coordinator.cleanupPresentation()
+            
+            // Ensure we're on the main thread for dismissal
+            Task { @MainActor in
+                uiViewController.dismiss(animated: true)
+            }
+        }
+    }
+    
+    static func dismantleUIViewController(_ uiViewController: UINavigationController, coordinator: Coordinator) {
+        print("DEBUG: Dismantling view controller")
+        coordinator.cleanupPresentation()
     }
     
     class Coordinator: NSObject, CNContactViewControllerDelegate {
         let parent: ContactViewController
-        var currentNavController: UINavigationController?
+        var contactIdentifier: String?
+        var isLoadingContact = false
         
         init(parent: ContactViewController) {
+            print("DEBUG: Initializing coordinator")
             self.parent = parent
             super.init()
         }
         
-        @objc func dismissContactVC() {
+        func cleanupPresentation() {
+            print("DEBUG: Cleaning up presentation, clearing contactIdentifier")
+            contactIdentifier = nil
+            isLoadingContact = false
+        }
+        
+        func showAlert(title: String, message: String, completion: (() -> Void)? = nil) {
             Task { @MainActor in
-                if let navController = currentNavController {
-                    navController.dismiss(animated: true)
+                if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                   let viewController = windowScene.windows.first?.rootViewController {
+                    let alert = UIAlertController(
+                        title: title,
+                        message: message,
+                        preferredStyle: .alert
+                    )
+                    alert.addAction(UIAlertAction(title: "OK", style: .default) { _ in
+                        completion?()
+                    })
+                    viewController.present(alert, animated: true)
+                } else {
+                    completion?()
                 }
-                
-                let identifier = parent.contactIdentifier
-                let descriptor = FetchDescriptor<Friend>(
-                    predicate: #Predicate<Friend> { friend in
-                        friend.contactIdentifier == identifier
-                    }
-                )
-                
-                if let friend = try? parent.modelContext.fetch(descriptor).first {
-                    if await ContactsManager.shared.handleContactChange(for: friend) {
-                        print("Successfully synced contact info for \(friend.name)")
-                    } else {
-                        print("Failed to sync contact info for \(friend.name)")
-                    }
-                }
-                
-                parent.isPresented = false
             }
         }
         
+        // MARK: - CNContactViewControllerDelegate
+        
         func contactViewController(_ viewController: CNContactViewController, didCompleteWith contact: CNContact?) {
-            dismissContactVC()
+            print("DEBUG: Contact view controller did complete, contact: \(contact != nil)")
+            Task { @MainActor in
+                if let identifier = contactIdentifier,
+                   let friend = try? parent.modelContext.fetch(FetchDescriptor<Friend>(
+                    predicate: #Predicate<Friend> { friend in
+                        friend.contactIdentifier == identifier
+                    }
+                   )).first {
+                    if await ContactsManager.shared.handleContactChange(for: friend) {
+                        print("DEBUG: Successfully synced contact info for \(friend.name)")
+                    } else {
+                        print("DEBUG: Failed to sync contact info for \(friend.name)")
+                        showAlert(
+                            title: "Sync Error",
+                            message: "Failed to sync contact information. Please try again."
+                        )
+                    }
+                }
+                
+                print("DEBUG: Setting isPresented to false and cleaning up")
+                parent.isPresented = false
+                cleanupPresentation()
+            }
+        }
+        
+        func contactViewController(_ viewController: CNContactViewController, shouldPerformDefaultActionFor property: CNContactProperty) -> Bool {
+            print("DEBUG: Should perform default action for property: \(property.key)")
+            return true
+        }
+        
+        func contactViewController(_ viewController: CNContactViewController, shouldShowLinkedContacts contact: CNContact) -> Bool {
+            print("DEBUG: Should show linked contacts")
+            return true
         }
     }
 }
