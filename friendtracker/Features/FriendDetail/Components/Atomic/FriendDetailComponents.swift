@@ -815,53 +815,30 @@ struct ContactViewController: UIViewControllerRepresentable {
     
     func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
         guard isPresented else {
-            // If not presented, make sure any presented view controller is dismissed
             uiViewController.presentedViewController?.dismiss(animated: true)
             return
         }
         
-        // Don't try to present if we already have a presented view controller
         guard uiViewController.presentedViewController == nil else { return }
         
-        let store = CNContactStore()
-        store.requestAccess(for: .contacts) { granted, error in
-            guard granted else {
-                DispatchQueue.main.async {
-                    self.isPresented = false
-                }
-                return
-            }
-            
+        Task {
             do {
-                let predicate = CNContact.predicateForContacts(withIdentifiers: [contactIdentifier])
-                let baseKeys = [
-                    CNContactGivenNameKey,
-                    CNContactFamilyNameKey,
-                    CNContactPhoneNumbersKey,
-                    CNContactImageDataKey,
-                    CNContactThumbnailImageDataKey,
-                    CNContactPostalAddressesKey,
-                    CNContactIdentifierKey
-                ] as [CNKeyDescriptor]
-                
-                let keys = baseKeys + [CNContactViewController.descriptorForRequiredKeys()]
-                let contacts = try store.unifiedContacts(matching: predicate, keysToFetch: keys)
-                
-                guard let contact = contacts.first else {
-                    DispatchQueue.main.async {
+                let granted = await ContactsManager.shared.requestAccess()
+                guard granted else {
+                    await MainActor.run {
                         self.isPresented = false
                     }
                     return
                 }
                 
-                DispatchQueue.main.async {
-                    // Create and configure the contact view controller
+                let contact = try await ContactsManager.shared.getContactViewController(for: contactIdentifier)
+                
+                await MainActor.run {
                     let contactVC = CNContactViewController(for: contact)
                     contactVC.allowsEditing = true
                     contactVC.allowsActions = true
                     contactVC.delegate = context.coordinator
                     
-                    // Create and configure the navigation controller
                     let navController = UINavigationController(rootViewController: contactVC)
                     navController.modalPresentationStyle = .pageSheet
                     
@@ -872,10 +849,8 @@ struct ContactViewController: UIViewControllerRepresentable {
                         sheet.preferredCornerRadius = 12
                     }
                     
-                    // Store the navigation controller in the coordinator
                     context.coordinator.currentNavController = navController
                     
-                    // Present only if the view is in the window hierarchy
                     if uiViewController.view.window != nil {
                         uiViewController.present(navController, animated: true)
                     } else {
@@ -884,7 +859,7 @@ struct ContactViewController: UIViewControllerRepresentable {
                 }
             } catch {
                 print("Error fetching contact: \(error)")
-                DispatchQueue.main.async {
+                await MainActor.run {
                     self.isPresented = false
                 }
             }
@@ -906,12 +881,10 @@ struct ContactViewController: UIViewControllerRepresentable {
         
         @objc func dismissContactVC() {
             Task { @MainActor in
-                // Dismiss the current navigation controller if it exists
                 if let navController = currentNavController {
                     navController.dismiss(animated: true)
                 }
                 
-                // Get the friend and sync contact info
                 let identifier = parent.contactIdentifier
                 let descriptor = FetchDescriptor<Friend>(
                     predicate: #Predicate<Friend> { friend in
@@ -920,14 +893,13 @@ struct ContactViewController: UIViewControllerRepresentable {
                 )
                 
                 if let friend = try? parent.modelContext.fetch(descriptor).first {
-                    if await ContactsManager.shared.syncContactInfo(for: friend) {
+                    if await ContactsManager.shared.handleContactChange(for: friend) {
                         print("Successfully synced contact info for \(friend.name)")
                     } else {
                         print("Failed to sync contact info for \(friend.name)")
                     }
                 }
                 
-                // Update the presentation state
                 parent.isPresented = false
             }
         }

@@ -1,4 +1,5 @@
 import Contacts
+import ContactsUI
 
 @MainActor
 class ContactsManager: ObservableObject {
@@ -11,16 +12,20 @@ class ContactsManager: ObservableObject {
     #endif
     
     private let store = CNContactStore()
-    private let keysToFetch = [
-        CNContactGivenNameKey,
-        CNContactFamilyNameKey,
-        CNContactPhoneNumbersKey,
-        CNContactEmailAddressesKey,
-        CNContactImageDataKey,
-        CNContactThumbnailImageDataKey,
-        CNContactPostalAddressesKey,
-        CNContactIdentifierKey
-    ] as [CNKeyDescriptor]
+    
+    // Centralized key descriptors
+    static let baseKeys: [CNKeyDescriptor] = [
+        CNContactGivenNameKey as CNKeyDescriptor,
+        CNContactFamilyNameKey as CNKeyDescriptor,
+        CNContactPhoneNumbersKey as CNKeyDescriptor,
+        CNContactEmailAddressesKey as CNKeyDescriptor,
+        CNContactImageDataKey as CNKeyDescriptor,
+        CNContactThumbnailImageDataKey as CNKeyDescriptor,
+        CNContactPostalAddressesKey as CNKeyDescriptor,
+        CNContactIdentifierKey as CNKeyDescriptor
+    ]
+    
+    private let keysToFetch: [CNKeyDescriptor] = baseKeys
     
     private init() {}
     
@@ -156,9 +161,27 @@ class ContactsManager: ObservableObject {
         }.value
     }
     
+    // New method to get contact for viewing/editing
+    func getContactViewController(for identifier: String) async throws -> CNContact {
+        let predicate = CNContact.predicateForContacts(withIdentifiers: [identifier])
+        let keys = ContactsManager.baseKeys + [CNContactViewController.descriptorForRequiredKeys()]
+        
+        let contacts = try store.unifiedContacts(matching: predicate, keysToFetch: keys)
+        guard let contact = contacts.first else {
+            throw ContactError.contactNotFound
+        }
+        return contact
+    }
+    
+    // New method to handle contact changes after editing
+    func handleContactChange(for friend: Friend) async -> Bool {
+        return await syncContactInfo(for: friend)
+    }
+    
     enum ContactError: Error {
         case contactNotFound
         case updateFailed(Error)
+        case accessDenied
         
         var localizedDescription: String {
             switch self {
@@ -166,6 +189,8 @@ class ContactsManager: ObservableObject {
                 return "Contact not found in address book"
             case .updateFailed(let error):
                 return "Failed to update contact: \(error.localizedDescription)"
+            case .accessDenied:
+                return "Access to contacts was denied"
             }
         }
     }
