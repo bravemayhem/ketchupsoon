@@ -17,12 +17,13 @@ import SwiftData
 
 @main
 struct friendtrackerApp: App {
-    let modelContainer: ModelContainer
+    let container: ModelContainer
     @StateObject private var colorSchemeManager = ColorSchemeManager.shared
     @StateObject private var calendarManager = CalendarManager.shared
     @Environment(\.scenePhase) private var scenePhase
     
     init() {
+        PerformanceMonitor.shared.startMeasuring("AppLaunch")
         // Register the email array transformer
         EmailArrayValueTransformer.register()
         
@@ -38,35 +39,22 @@ struct friendtrackerApp: App {
             // Create configuration
             let modelConfiguration = ModelConfiguration(
                 schema: schema,
-                isStoredInMemoryOnly: ProcessInfo.processInfo.isPreview,
+                isStoredInMemoryOnly: false,
                 allowsSave: true
             )
             
             // Create container
-            let container = try ModelContainer(
+            container = try ModelContainer(
                 for: schema,
                 configurations: [modelConfiguration]
             )
             
             // Initialize predefined tags if needed
-            if ProcessInfo.processInfo.isPreview == false {
-                Task { @MainActor in
-                    let context = container.mainContext
-                    let tagDescriptor = FetchDescriptor<Tag>(predicate: #Predicate<Tag> { tag in
-                        tag.isPredefined == true
-                    })
-                    
-                    if let existingTags = try? context.fetch(tagDescriptor), existingTags.isEmpty {
-                        Tag.predefinedTags.forEach { tagName in
-                            let tag = Tag.createPredefinedTag(tagName)
-                            context.insert(tag)
-                        }
-                        try? context.save()
-                    }
-                }
+            if !ProcessInfo.processInfo.isPreview {
+                initializePredefinedTags()
             }
             
-            self.modelContainer = container
+            debugLog("Model container initialized successfully")
         } catch {
             fatalError("Could not initialize ModelContainer: \(error)")
         }
@@ -77,6 +65,23 @@ struct friendtrackerApp: App {
         if !ProcessInfo.processInfo.isPreview {
             Task { @MainActor in
                 await CalendarManager.shared.preloadTodaysEvents()
+            }
+        }
+    }
+    
+    private func initializePredefinedTags() {
+        Task { @MainActor in
+            let context = container.mainContext
+            let tagDescriptor = FetchDescriptor<Tag>(predicate: #Predicate<Tag> { tag in
+                tag.isPredefined == true
+            })
+            
+            if let existingTags = try? context.fetch(tagDescriptor), existingTags.isEmpty {
+                Tag.predefinedTags.forEach { tagName in
+                    let tag = Tag.createPredefinedTag(tagName)
+                    context.insert(tag)
+                }
+                try? context.save()
             }
         }
     }
@@ -136,8 +141,11 @@ struct friendtrackerApp: App {
                         }
                     }
                 }
+                .onAppear {
+                    PerformanceMonitor.shared.stopMeasuring("AppLaunch")
+                }
         }
-        .modelContainer(modelContainer)
+        .modelContainer(container)
     }
 }
 

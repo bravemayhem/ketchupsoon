@@ -71,10 +71,15 @@ struct FriendsListView: View {
             SortPickerView(sortOption: $viewModel.sortOption)
         }
         .onAppear {
-            #if DEBUG
-            debugLog("FriendsListView appeared with \(allFriends.count) friends")
-            #endif
+            let stopMeasuring = PerformanceMonitor.shared.measureAsync("FriendsListView-Load")
+            DispatchQueue.main.async {
+                debugLog("FriendsListView appeared with \(allFriends.count) friends")
+                stopMeasuring()
+            }
         }
+        #if DEBUG
+        .measurePerformance(name: "FriendsListView-Render")
+        #endif
     }
     
     @ViewBuilder

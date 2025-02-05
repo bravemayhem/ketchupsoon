@@ -271,40 +271,18 @@ struct ContactPickerPreviewContainer: View {
         ContactPickerView()
             .modelContainer(container)
             .onAppear {
-                // Mock the contacts manager for preview
                 if state == .withContacts {
-                    let mockContacts = [
-                        createMockContact(
-                            givenName: "Emma",
-                            familyName: "Thompson",
-                            phoneNumber: "(415) 555-0123",
-                            city: "San Francisco"
-                        ),
-                        createMockContact(
-                            givenName: "James",
-                            familyName: "Wilson",
-                            phoneNumber: "(555) 123-4567",
-                            city: "Oakland"
-                        ),
-                        createMockContact(
-                            givenName: "Sarah",
-                            familyName: "Chen",
-                            phoneNumber: "(650) 555-0199",
-                            city: "Mountain View"
-                        ),
-                        createMockContact(
-                            givenName: "Alex",
-                            familyName: "Rodriguez",
-                            phoneNumber: "(510) 555-0145",
-                            city: "Berkeley"
-                        )
-                    ]
-                    ContactsManager.shared.previewContacts = mockContacts
+                    #if DEBUG
+                    ContactsManager.shared.previewContacts = Self.mockContacts
+                    #endif
                 }
             }
     }
-    
-    private func createMockContact(
+}
+
+#if DEBUG
+extension ContactPickerPreviewContainer {
+    static func createMockContact(
         givenName: String,
         familyName: String,
         phoneNumber: String,
@@ -325,6 +303,35 @@ struct ContactPickerPreviewContainer: View {
         
         return contact.copy() as! CNContact
     }
+    
+    static var mockContacts: [CNContact] {
+        [
+            createMockContact(
+                givenName: "Emma",
+                familyName: "Thompson",
+                phoneNumber: "(415) 555-0123",
+                city: "San Francisco"
+            ),
+            createMockContact(
+                givenName: "James",
+                familyName: "Wilson",
+                phoneNumber: "(555) 123-4567",
+                city: "Oakland"
+            ),
+            createMockContact(
+                givenName: "Sarah",
+                familyName: "Chen",
+                phoneNumber: "(650) 555-0199",
+                city: "Mountain View"
+            ),
+            createMockContact(
+                givenName: "Alex",
+                familyName: "Rodriguez",
+                phoneNumber: "(510) 555-0145",
+                city: "Berkeley"
+            )
+        ]
+    }
 }
 
 #Preview("Loading State") {
@@ -336,5 +343,7 @@ struct ContactPickerPreviewContainer: View {
 }
 
 #Preview("With Contacts") {
-    ContactPickerPreviewContainer(state: .withContacts)
-} 
+    ContactsManager.shared.previewContacts = ContactPickerPreviewContainer.mockContacts
+    return ContactPickerPreviewContainer(state: .withContacts)
+}
+#endif 
