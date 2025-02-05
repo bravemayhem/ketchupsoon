@@ -145,49 +145,6 @@ struct EmailOptionRow: View {
     }
 }
 
-// MARK: - EmailEditView
-struct EmailEditView: View {
-    let friend: Friend
-    @ObservedObject var viewModel: CreateHangoutViewModel
-    
-    var body: some View {
-        if viewModel.tempEmail(for: friend) == nil {
-            Button(action: {
-                viewModel.startEditingEmail(for: friend)
-            }) {
-                Text("Add Email")
-                    .font(.caption)
-                    .foregroundColor(.accentColor)
-            }
-            .buttonStyle(BorderlessButtonStyle())
-        } else {
-            HStack {
-                TextField("Enter email", text: viewModel.emailBinding(for: friend))
-                    .textContentType(.emailAddress)
-                    .keyboardType(.emailAddress)
-                    .autocapitalization(.none)
-                    .font(.caption)
-                
-                Button(action: {
-                    viewModel.saveEmail(for: friend)
-                }) {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(.green)
-                }
-                .buttonStyle(BorderlessButtonStyle())
-                .disabled(!viewModel.isValidEmail(viewModel.tempEmail(for: friend) ?? ""))
-                
-                Button(action: {
-                    viewModel.cancelEditingEmail(for: friend)
-                }) {
-                    Image(systemName: "xmark.circle.fill")
-                        .foregroundColor(.red)
-                }
-                .buttonStyle(BorderlessButtonStyle())
-            }
-        }
-    }
-}
 
 // MARK: - Previews
 #Preview("Email Dropdown") {
@@ -221,27 +178,3 @@ struct EmailEditView: View {
     .padding()
 }
 
-#Preview("Email Edit (Add Mode)") {
-    let modelContext = ModelContext(try! ModelContainer(for: Friend.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true)))
-    let viewModel = CreateHangoutViewModel(modelContext: modelContext)
-    let friend = Friend(name: "John Smith", email: "john@example.com")
-    
-    return Form {
-        Section {
-            EmailEditView(friend: friend, viewModel: viewModel)
-        }
-    }
-}
-
-#Preview("Email Edit (Editing Mode)") {
-    let modelContext = ModelContext(try! ModelContainer(for: Friend.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true)))
-    let viewModel = CreateHangoutViewModel(modelContext: modelContext)
-    let friend = Friend(name: "Jane Doe", email: "")
-    viewModel.startEditingEmail(for: friend)
-    
-    return Form {
-        Section {
-            EmailEditView(friend: friend, viewModel: viewModel)
-        }
-    }
-} 
