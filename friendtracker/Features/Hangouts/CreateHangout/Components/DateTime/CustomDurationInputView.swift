@@ -10,9 +10,8 @@ struct CustomDurationInputView: View {
                 Section {
                     Stepper("Hours: \(viewModel.customHours)", value: $viewModel.customHours, in: 0...12)
                     Stepper("Minutes: \(viewModel.customMinutes)", value: $viewModel.customMinutes, in: 0...59)
-                    
-                    Text("Total Duration: \(viewModel.formatDuration(TimeInterval(viewModel.customHours * 3600 + viewModel.customMinutes * 60)))")
-                        .foregroundColor(.secondary)
+                } footer: {
+                    Text("Total duration: \(viewModel.formatDuration(TimeInterval(viewModel.customHours * 3600 + viewModel.customMinutes * 60)))")
                 }
             }
             .navigationTitle("Custom Duration")
@@ -20,14 +19,14 @@ struct CustomDurationInputView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") {
-                        viewModel.showingCustomDurationInput = false
+                        dismiss()
                     }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Set") {
+                    Button("Done") {
                         let duration = TimeInterval(viewModel.customHours * 3600 + viewModel.customMinutes * 60)
                         viewModel.selectedDuration = duration
-                        viewModel.showingCustomDurationInput = false
+                        dismiss()
                     }
                     .disabled(viewModel.customHours == 0 && viewModel.customMinutes == 0)
                 }
