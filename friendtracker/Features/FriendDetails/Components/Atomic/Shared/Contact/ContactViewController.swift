@@ -2,216 +2,220 @@ import SwiftUI
 import ContactsUI
 import SwiftData
 
-struct ContactViewController: UIViewControllerRepresentable {
-    let contactIdentifier: String
-    @Binding var isPresented: Bool
-    @Environment(\.modelContext) private var modelContext
+/*
+// Coordinator class to handle UIKit interactions
+private class ContactViewCoordinator: NSObject {
+    var parent: ContactView
+    var isPresenting = false
     
-    func makeCoordinator() -> Coordinator {
-        print("DEBUG: Creating coordinator")
-        return Coordinator(parent: self)
+    init(parent: ContactView) {
+        self.parent = parent
+        super.init()
+        print("👁 Debug: Coordinator initialized")
     }
     
-    func makeUIViewController(context: Context) -> UINavigationController {
-        print("DEBUG: makeUIViewController called")
-        let navController = UINavigationController()
-        navController.modalPresentationStyle = .pageSheet
-        navController.isModalInPresentation = true
-        
-        if let sheet = navController.sheetPresentationController {
-            print("DEBUG: Configuring initial sheet presentation")
-            sheet.prefersGrabberVisible = true
-            sheet.detents = [.large()]
-            sheet.prefersScrollingExpandsWhenScrolledToEdge = true
-            sheet.preferredCornerRadius = 12
-        }
-        
-        // Add a loading view controller initially
-        let loadingVC = UIHostingController(rootView: 
-            ProgressView("Loading Contact...")
-                .progressViewStyle(.circular)
-        )
-        navController.setViewControllers([loadingVC], animated: false)
-        
-        // Load contact after ensuring view is ready
-        Task { @MainActor in
-            // Small delay to ensure view hierarchy is ready
-            try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
-            if context.coordinator.isLoadingContact == false {
-                loadContact(into: navController, context: context)
-            }
-        }
-        
-        return navController
+    @objc func dismissContact() {
+        print("👁 Debug: Dismissing contact")
+        isPresenting = false
+        let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene
+        let window = windowScene?.windows.first
+        let rootVC = window?.rootViewController
+        rootVC?.dismiss(animated: true)
+        parent.isPresented = false
     }
     
-    private func loadContact(into navController: UINavigationController, context: Context) {
-        // Prevent multiple simultaneous loads
-        guard !context.coordinator.isLoadingContact else {
-            print("DEBUG: Already loading contact, skipping")
+    func presentContact(_ contact: CNContact) {
+        guard !isPresenting else {
+            print("👁 Debug: Already presenting, skipping")
             return
         }
         
-        context.coordinator.isLoadingContact = true
+        print("👁 Debug: Attempting to present contact")
+        isPresenting = true
         
-        Task {
-            do {
-                print("DEBUG: Requesting contacts access")
-                let granted = await ContactsManager.shared.requestAccess()
-                guard granted else {
-                    print("DEBUG: Contacts access denied")
-                    await MainActor.run {
-                        context.coordinator.isLoadingContact = false
-                        context.coordinator.showAlert(
-                            title: "Contacts Access Required",
-                            message: "Please enable contacts access in Settings to view contact details."
-                        ) {
-                            self.isPresented = false
-                        }
-                    }
-                    return
-                }
-                
-                print("DEBUG: Fetching contact for identifier: \(contactIdentifier)")
-                let contact = try await ContactsManager.shared.getContactViewController(for: contactIdentifier)
-                
-                await MainActor.run {
-                    guard isPresented else {
-                        context.coordinator.isLoadingContact = false
-                        return
-                    }
-                    
-                    print("DEBUG: Setting up CNContactViewController")
-                    let contactVC = CNContactViewController(for: contact)
-                    contactVC.allowsEditing = true
-                    contactVC.allowsActions = true
-                    contactVC.delegate = context.coordinator
-                    
-                    context.coordinator.contactIdentifier = contactIdentifier
-                    
-                    // Only set view controllers if we're still meant to be presented
-                    if isPresented {
-                        print("DEBUG: Setting view controllers")
-                        // Use animated: false to prevent potential race conditions
-                        navController.setViewControllers([contactVC], animated: false)
-                    }
-                    
-                    context.coordinator.isLoadingContact = false
-                }
-            } catch {
-                print("DEBUG: Error loading contact: \(error.localizedDescription)")
-                await MainActor.run {
-                    context.coordinator.isLoadingContact = false
-                    context.coordinator.showAlert(
-                        title: "Error Loading Contact",
-                        message: error.localizedDescription
-                    ) {
-                        self.isPresented = false
-                    }
-                }
-            }
-        }
-    }
-    
-    func updateUIViewController(_ uiViewController: UINavigationController, context: Context) {
-        print("DEBUG: updateUIViewController called, isPresented: \(isPresented)")
+        let contactVC = CNContactViewController(for: contact)
+        contactVC.delegate = self
+        contactVC.allowsEditing = true
+        contactVC.allowsActions = true
         
-        if !isPresented && uiViewController.presentedViewController != nil {
-            print("DEBUG: Dismissing view controller due to isPresented = false")
-            context.coordinator.cleanupPresentation()
+        let navigationController = UINavigationController(rootViewController: contactVC)
+        navigationController.modalPresentationStyle = .fullScreen
+        
+        contactVC.navigationItem.leftBarButtonItem = UIBarButtonItem(
+            barButtonSystemItem: .done,
+            target: self,
+            action: #selector(dismissContact)
+        )
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+            guard let self = self, self.isPresenting else { return }
             
-            Task { @MainActor in
-                uiViewController.dismiss(animated: true)
-            }
-        }
-    }
-    
-    static func dismantleUIViewController(_ uiViewController: UINavigationController, coordinator: Coordinator) {
-        print("DEBUG: Dismantling view controller")
-        coordinator.cleanupPresentation()
-    }
-    
-    class Coordinator: NSObject, CNContactViewControllerDelegate {
-        let parent: ContactViewController
-        var contactIdentifier: String?
-        var isLoadingContact = false
-        
-        init(parent: ContactViewController) {
-            print("DEBUG: Initializing coordinator")
-            self.parent = parent
-            super.init()
-        }
-        
-        func cleanupPresentation() {
-            print("DEBUG: Cleaning up presentation, clearing contactIdentifier")
-            contactIdentifier = nil
-            isLoadingContact = false
-        }
-        
-        func showAlert(title: String, message: String, completion: (() -> Void)? = nil) {
-            Task { @MainActor in
-                if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-                   let viewController = windowScene.windows.first?.rootViewController {
-                    let alert = UIAlertController(
-                        title: title,
-                        message: message,
-                        preferredStyle: .alert
-                    )
-                    alert.addAction(UIAlertAction(title: "OK", style: .default) { _ in
-                        completion?()
-                    })
-                    viewController.present(alert, animated: true)
-                } else {
-                    completion?()
+            if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+               let window = windowScene.windows.first,
+               let rootVC = window.rootViewController {
+                print("👁 Debug: Found root view controller, presenting")
+                rootVC.present(navigationController, animated: true) {
+                    print("👁 Debug: Contact view presented")
                 }
+            } else {
+                print("👁 Debug: Failed to find root view controller")
+                self.isPresenting = false
             }
-        }
-        
-        // MARK: - CNContactViewControllerDelegate
-        
-        func contactViewController(_ viewController: CNContactViewController, didCompleteWith contact: CNContact?) {
-            print("DEBUG: Contact view controller did complete, contact: \(contact != nil)")
-            Task { @MainActor in
-                if let identifier = contactIdentifier,
-                   let friend = try? parent.modelContext.fetch(FetchDescriptor<Friend>(
-                    predicate: #Predicate<Friend> { friend in
-                        friend.contactIdentifier == identifier
-                    }
-                   )).first {
-                    if await ContactsManager.shared.handleContactChange(for: friend) {
-                        print("DEBUG: Successfully synced contact info for \(friend.name)")
-                    } else {
-                        print("DEBUG: Failed to sync contact info for \(friend.name)")
-                        showAlert(
-                            title: "Sync Error",
-                            message: "Failed to sync contact information. Please try again."
-                        )
-                    }
-                }
-                
-                print("DEBUG: Setting isPresented to false and cleaning up")
-                parent.isPresented = false
-                cleanupPresentation()
-            }
-        }
-        
-        func contactViewController(_ viewController: CNContactViewController, shouldPerformDefaultActionFor property: CNContactProperty) -> Bool {
-            print("DEBUG: Should perform default action for property: \(property.key)")
-            return true
-        }
-        
-        func contactViewController(_ viewController: CNContactViewController, shouldShowLinkedContacts contact: CNContact) -> Bool {
-            print("DEBUG: Should show linked contacts")
-            return true
         }
     }
 }
 
+extension ContactViewCoordinator: CNContactViewControllerDelegate {
+    func contactViewController(_ viewController: CNContactViewController, didCompleteWith contact: CNContact?) {
+        print("👁 Debug: Contact view controller did complete")
+        dismissContact()
+    }
+}
+*/
+
+struct ContactView: View {
+    // Static presentation tracking
+    private static var isCurrentlyPresenting = false
+    
+    let contactIdentifier: String
+    let position: String
+    @Binding var isPresented: Bool
+    @Environment(\.modelContext) private var modelContext
+    @StateObject private var contactsManager = ContactsManager.shared
+    @State private var contact: CNContact?
+    @State private var error: String?
+    @State private var isLoading = true
+    @State private var hasLoadedContact = false
+    @State private var delegate: ContactViewDelegate? // Store strong reference to delegate
+    
+    var body: some View {
+        Group {
+            if isLoading {
+                ProgressView("Loading contact...")
+            } else if let error = error {
+                Text(error)
+                    .foregroundColor(.red)
+            } else if let contact = contact {
+                Color.clear
+            }
+        }
+        .task {
+            print("👁 [Position: \(position)] ContactView task started")
+            guard !ContactView.isCurrentlyPresenting else {
+                print("👁 [Position: \(position)] Another presentation is in progress, dismissing")
+                isPresented = false
+                return
+            }
+            guard !hasLoadedContact else {
+                print("👁 [Position: \(position)] Contact already loaded, skipping")
+                return
+            }
+            await loadAndPresentContact()
+        }
+        .onDisappear {
+            print("👁 [Position: \(position)] ContactView disappeared")
+            ContactView.isCurrentlyPresenting = false
+            delegate = nil // Clean up delegate reference
+        }
+    }
+    
+    private func loadAndPresentContact() async {
+        guard !hasLoadedContact else {
+            print("👁 [Position: \(position)] Prevented duplicate contact load")
+            return
+        }
+        hasLoadedContact = true
+        ContactView.isCurrentlyPresenting = true
+        print("👁 [Position: \(position)] Starting contact load")
+        
+        do {
+            let granted = await contactsManager.requestAccess()
+            print("👁 [Position: \(position)] Access granted: \(granted)")
+            if granted {
+                contact = try await contactsManager.getContactViewController(for: contactIdentifier)
+                print("👁 [Position: \(position)] Contact loaded successfully")
+                await presentContact(contact!)
+            } else {
+                error = "Contact access not granted"
+                isPresented = false
+                ContactView.isCurrentlyPresenting = false
+            }
+        } catch {
+            print("👁 [Position: \(position)] Error loading contact: \(error)")
+            self.error = error.localizedDescription
+            isPresented = false
+            ContactView.isCurrentlyPresenting = false
+        }
+        isLoading = false
+    }
+    
+    private func presentContact(_ contact: CNContact) async {
+        print("👁 [Position: \(position)] Attempting to present contact")
+        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+              let window = windowScene.windows.first,
+              let rootVC = window.rootViewController else {
+            print("👁 [Position: \(position)] Failed to find root view controller")
+            error = "Could not present contact"
+            isPresented = false
+            ContactView.isCurrentlyPresenting = false
+            return
+        }
+        
+        let contactVC = CNContactViewController(for: contact)
+        contactVC.allowsEditing = true
+        contactVC.allowsActions = true
+        
+        // Create and store delegate
+        delegate = ContactViewDelegate(onDismiss: {
+            print("👁 [Position: \(position)] Contact view controller dismissed")
+            isPresented = false
+            ContactView.isCurrentlyPresenting = false
+        })
+        contactVC.delegate = delegate
+        
+        let navigationController = UINavigationController(rootViewController: contactVC)
+        navigationController.modalPresentationStyle = .fullScreen
+        
+        contactVC.navigationItem.leftBarButtonItem = UIBarButtonItem(
+            barButtonSystemItem: .done,
+            target: delegate,
+            action: #selector(ContactViewDelegate.dismissContact)
+        )
+        
+        print("👁 [Position: \(position)] About to present contact view controller")
+        await MainActor.run {
+            rootVC.dismiss(animated: false) {
+                rootVC.present(navigationController, animated: true) {
+                    print("👁 [Position: \(position)] Contact view controller presented")
+                }
+            }
+        }
+    }
+}
+
+class ContactViewDelegate: NSObject, CNContactViewControllerDelegate {
+    let onDismiss: () -> Void
+    
+    init(onDismiss: @escaping () -> Void) {
+        self.onDismiss = onDismiss
+        super.init()
+    }
+    
+    @objc func dismissContact() {
+        onDismiss()
+    }
+    
+    func contactViewController(_ viewController: CNContactViewController, didCompleteWith contact: CNContact?) {
+        onDismiss()
+    }
+}
+
 #Preview {
-    Text("Contact View Controller Preview")
+    Text("Contact View Preview")
         .sheet(isPresented: .constant(true)) {
-            ContactViewController(
+            ContactView(
                 contactIdentifier: "example-id",
+                position: "preview",
                 isPresented: .constant(true)
             )
         }

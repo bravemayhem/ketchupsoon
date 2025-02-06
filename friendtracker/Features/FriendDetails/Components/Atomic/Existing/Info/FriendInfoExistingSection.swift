@@ -3,10 +3,10 @@
 import SwiftUI
 import SwiftData
 
+
 struct FriendInfoExistingSection: View {
     let friend: Friend
     @Bindable var cityService: CitySearchService
-    @State private var showingContactView = false
     @State private var editableName: String
     @State private var editablePhone: String
     @State private var editableEmail: String
@@ -109,14 +109,26 @@ struct FriendInfoExistingSection: View {
             CitySearchField(service: cityService)
         }
         .listRowBackground(AppColors.secondarySystemBackground)
-        .sheet(item: $activeSheet) { sheet in
+        .sheet(item: $activeSheet, onDismiss: {
+            print("👁 Sheet dismissed")
+            activeSheet = nil
+        }) { sheet in
             switch sheet {
             case .contact:
                 if let identifier = friend.contactIdentifier {
-                    ContactViewController(contactIdentifier: identifier, isPresented: .constant(true))
-                        .onDisappear {
-                            activeSheet = nil
-                        }
+                    ZStack {
+                        Color.clear.presentationBackground(.ultraThinMaterial)
+                        ContactView(
+                            contactIdentifier: identifier,
+                            position: "existing_info",
+                            isPresented: Binding(
+                                get: { activeSheet == .contact },
+                                set: { if !$0 { activeSheet = nil } }
+                            )
+                        )
+                    }
+                    .interactiveDismissDisabled()
+                    .presentationDragIndicator(.hidden)
                 }
             case .addEmail:
                 NavigationStack {

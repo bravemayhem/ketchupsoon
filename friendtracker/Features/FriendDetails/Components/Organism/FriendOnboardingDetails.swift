@@ -91,7 +91,12 @@ struct FriendOnboardingDetailsSection: View {
         .listRowBackground(AppColors.secondarySystemBackground)
         .sheet(isPresented: $showingContactView) {
             if let identifier = contact?.identifier {
-                ContactViewController(contactIdentifier: identifier, isPresented: $showingContactView)
+                ContactView(
+                    contactIdentifier: identifier,
+                    position: "onboarding",
+                    isPresented: $showingContactView
+                )
+                .interactiveDismissDisabled()
             }
         }
     }
