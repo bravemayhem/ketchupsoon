@@ -89,16 +89,6 @@ struct FriendOnboardingDetailsSection: View {
             CitySearchField(service: cityService)
         }
         .listRowBackground(AppColors.secondarySystemBackground)
-        .sheet(isPresented: $showingContactView) {
-            if let identifier = contact?.identifier {
-                ContactView(
-                    contactIdentifier: identifier,
-                    position: "onboarding",
-                    isPresented: $showingContactView
-                )
-                .interactiveDismissDisabled()
-            }
-        }
     }
 }
 

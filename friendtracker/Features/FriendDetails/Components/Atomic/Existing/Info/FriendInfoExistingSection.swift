@@ -16,14 +16,13 @@ struct FriendInfoExistingSection: View {
     @State private var errorMessage: String?
     @State private var showingError = false
     @State private var activeSheet: ActiveSheet?
+    @State private var showingContactView = false
     
     private enum ActiveSheet: Identifiable {
-        case contact
         case addEmail
         
         var id: Int {
             switch self {
-            case .contact: return 1
             case .addEmail: return 2
             }
         }
@@ -42,7 +41,7 @@ struct FriendInfoExistingSection: View {
             // Name
             if friend.contactIdentifier != nil {
                 Button {
-                    activeSheet = .contact
+                    showingContactView = true
                 } label: {
                     HStack {
                         Text("Name")
@@ -69,7 +68,7 @@ struct FriendInfoExistingSection: View {
             // Phone
             if friend.contactIdentifier != nil {
                 Button {
-                    activeSheet = .contact
+                    showingContactView = true
                 } label: {
                     HStack {
                         Text("Phone")
@@ -100,7 +99,63 @@ struct FriendInfoExistingSection: View {
             
             // Email
             if friend.contactIdentifier != nil {
-                emailMenuView
+                Menu {
+                    // Primary email
+                    if let primaryEmail = friend.email {
+                        Button {
+                            // No action needed, it's already primary
+                        } label: {
+                            HStack {
+                                Text(primaryEmail)
+                                Spacer()
+                                Image(systemName: "checkmark")
+                            }
+                        }
+                    }
+                    
+                    // Additional emails
+                    ForEach(friend.additionalEmails, id: \.self) { email in
+                        Button {
+                            Task {
+                                await setPrimaryEmail(email)
+                            }
+                        } label: {
+                            Text(email)
+                        }
+                    }
+                    
+                    Divider()
+                    
+                    Button {
+                        activeSheet = .addEmail
+                    } label: {
+                        Label("Add New Email", systemImage: "plus")
+                    }
+                } label: {
+                    HStack {
+                        Text("Email")
+                            .foregroundColor(AppColors.label)
+                        Spacer()
+                        if let primaryEmail = friend.email {
+                            HStack(spacing: 4) {
+                                Text(primaryEmail)
+                                    .foregroundColor(AppColors.accent)
+                                if isUpdatingContact {
+                                    ProgressView()
+                                        .scaleEffect(0.5)
+                                        .tint(AppColors.accent)
+                                }
+                            }
+                        } else {
+                            Text("Not set")
+                                .foregroundColor(AppColors.tertiaryLabel)
+                        }
+                        Image(systemName: "chevron.up.chevron.down")
+                            .foregroundColor(AppColors.secondaryLabel)
+                            .font(.caption)
+                    }
+                }
+                .disabled(isUpdatingContact)
             } else {
                 manualEmailView
             }
@@ -109,24 +164,8 @@ struct FriendInfoExistingSection: View {
             CitySearchField(service: cityService)
         }
         .listRowBackground(AppColors.secondarySystemBackground)
-        .sheet(item: $activeSheet, onDismiss: {
-            print("👁 Sheet dismissed")
-            activeSheet = nil
-        }) { sheet in
+        .sheet(item: $activeSheet) { sheet in
             switch sheet {
-            case .contact:
-                if let identifier = friend.contactIdentifier {
-                    ContactView(
-                        contactIdentifier: identifier,
-                        position: "existing_info",
-                        isPresented: Binding(
-                            get: { activeSheet == .contact },
-                            set: { if !$0 { activeSheet = nil } }
-                        )
-                    )
-                    .background(Color.clear)
-                    .interactiveDismissDisabled()
-                }
             case .addEmail:
                 NavigationStack {
                     Form {
@@ -168,81 +207,6 @@ struct FriendInfoExistingSection: View {
         } message: {
             Text(errorMessage ?? "An unknown error occurred")
         }
-    }
-    
-    private var emailMenuView: some View {
-        Menu {
-            // Primary email
-            if let primaryEmail = friend.email {
-                Button {
-                    // No action needed, it's already primary
-                } label: {
-                    HStack {
-                        Text(primaryEmail)
-                        Spacer()
-                        Image(systemName: "checkmark")
-                    }
-                }
-            }
-            
-            // Additional emails
-            ForEach(friend.additionalEmails, id: \.self) { email in
-                Button {
-                    Task {
-                        await setPrimaryEmail(email)
-                    }
-                } label: {
-                    Text(email)
-                }
-            }
-            
-            Divider()
-            
-            // Add new email option
-            Button {
-                activeSheet = .addEmail
-            } label: {
-                Label("Add New Email", systemImage: "plus")
-            }
-        } label: {
-            HStack {
-                Text("Email")
-                    .foregroundColor(AppColors.label)
-                Spacer()
-                if let primaryEmail = friend.email {
-                    HStack(spacing: 4) {
-                        Text(primaryEmail)
-                            .foregroundColor(AppColors.accent)
-                        if isUpdatingContact {
-                            ProgressView()
-                                .scaleEffect(0.5)
-                                .tint(AppColors.accent)
-                        }
-                    }
-                } else {
-                    Text("Not set")
-                        .foregroundColor(AppColors.tertiaryLabel)
-                }
-                Image(systemName: "chevron.up.chevron.down")
-                    .foregroundColor(AppColors.secondaryLabel)
-                    .font(.caption)
-            }
-        }
-        .task {
-            // Sync contact info when menu is opened
-            if friend.contactIdentifier != nil {
-                await MainActor.run { isUpdatingContact = true }
-                let success = await ContactsManager.shared.syncContactInfo(for: friend)
-                if !success {
-                    await MainActor.run {
-                        errorMessage = "Failed to sync contact information"
-                        showingError = true
-                    }
-                }
-                await MainActor.run { isUpdatingContact = false }
-            }
-        }
-        .disabled(isUpdatingContact)
     }
     
     private var manualEmailView: some View {
