@@ -14,6 +14,79 @@
 
 import SwiftUI
 import SwiftData
+import OSLog
+import UIKit
+
+// Add debug logging for UIViewController presentations using method swizzling
+extension UIViewController {
+    static let swizzleViewDidLoad: Void = {
+        let originalSelector = #selector(UIViewController.viewDidLoad)
+        let swizzledSelector = #selector(UIViewController.swizzled_viewDidLoad)
+        
+        guard let originalMethod = class_getInstanceMethod(UIViewController.self, originalSelector),
+              let swizzledMethod = class_getInstanceMethod(UIViewController.self, swizzledSelector) else { return }
+        
+        method_exchangeImplementations(originalMethod, swizzledMethod)
+    }()
+    
+    @objc private func swizzled_viewDidLoad() {
+        swizzled_viewDidLoad()
+        print("👀 UIViewController Debug - viewDidLoad: \(type(of: self))")
+    }
+    
+    static let swizzleViewWillAppear: Void = {
+        let originalSelector = #selector(UIViewController.viewWillAppear(_:))
+        let swizzledSelector = #selector(UIViewController.swizzled_viewWillAppear(_:))
+        
+        guard let originalMethod = class_getInstanceMethod(UIViewController.self, originalSelector),
+              let swizzledMethod = class_getInstanceMethod(UIViewController.self, swizzledSelector) else { return }
+        
+        method_exchangeImplementations(originalMethod, swizzledMethod)
+    }()
+    
+    @objc private func swizzled_viewWillAppear(_ animated: Bool) {
+        swizzled_viewWillAppear(animated)
+        print("👀 UIViewController Debug - viewWillAppear: \(type(of: self))")
+    }
+    
+    static let swizzleViewDidAppear: Void = {
+        let originalSelector = #selector(UIViewController.viewDidAppear(_:))
+        let swizzledSelector = #selector(UIViewController.swizzled_viewDidAppear(_:))
+        
+        guard let originalMethod = class_getInstanceMethod(UIViewController.self, originalSelector),
+              let swizzledMethod = class_getInstanceMethod(UIViewController.self, swizzledSelector) else { return }
+        
+        method_exchangeImplementations(originalMethod, swizzledMethod)
+    }()
+    
+    @objc private func swizzled_viewDidAppear(_ animated: Bool) {
+        swizzled_viewDidAppear(animated)
+        print("👀 UIViewController Debug - viewDidAppear: \(type(of: self))")
+    }
+    
+    static let swizzlePresent: Void = {
+        let originalSelector = #selector(UIViewController.present(_:animated:completion:))
+        let swizzledSelector = #selector(UIViewController.swizzled_present(_:animated:completion:))
+        
+        guard let originalMethod = class_getInstanceMethod(UIViewController.self, originalSelector),
+              let swizzledMethod = class_getInstanceMethod(UIViewController.self, swizzledSelector) else { return }
+        
+        method_exchangeImplementations(originalMethod, swizzledMethod)
+    }()
+    
+    @objc private func swizzled_present(_ viewControllerToPresent: UIViewController, animated flag: Bool, completion: (() -> Void)? = nil) {
+        print("👀 UIViewController Debug - presenting: \(type(of: viewControllerToPresent)) from: \(type(of: self))")
+        swizzled_present(viewControllerToPresent, animated: flag, completion: completion)
+    }
+}
+
+// Initialize swizzling
+private let initializeSwizzling: Void = {
+    UIViewController.swizzleViewDidLoad
+    UIViewController.swizzleViewWillAppear
+    UIViewController.swizzleViewDidAppear
+    UIViewController.swizzlePresent
+}()
 
 @main
 struct friendtrackerApp: App {
@@ -23,6 +96,9 @@ struct friendtrackerApp: App {
     @Environment(\.scenePhase) private var scenePhase
     
     init() {
+        // Ensure swizzling is initialized
+        _ = initializeSwizzling
+        
         PerformanceMonitor.shared.startMeasuring("AppLaunch")
         // Register the email array transformer
         EmailArrayValueTransformer.register()
