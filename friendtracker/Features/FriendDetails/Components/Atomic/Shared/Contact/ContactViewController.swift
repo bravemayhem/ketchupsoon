@@ -91,11 +91,15 @@ struct ContactView: View {
     var body: some View {
         Group {
             if isLoading {
-                ProgressView("Loading contact...")
+                ZStack {
+                    Color.clear
+                    ProgressView("Loading contact...")
+                        .foregroundColor(.secondary)
+                }
             } else if let error = error {
                 Text(error)
                     .foregroundColor(.red)
-            } else if let contact = contact {
+            } else if contact != nil {
                 Color.clear
             }
         }
@@ -202,11 +206,27 @@ class ContactViewDelegate: NSObject, CNContactViewControllerDelegate {
     }
     
     @objc func dismissContact() {
-        onDismiss()
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+           let window = windowScene.windows.first,
+           let rootVC = window.rootViewController {
+            rootVC.dismiss(animated: true) {
+                self.onDismiss()
+            }
+        } else {
+            onDismiss()
+        }
     }
     
     func contactViewController(_ viewController: CNContactViewController, didCompleteWith contact: CNContact?) {
-        onDismiss()
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+           let window = windowScene.windows.first,
+           let rootVC = window.rootViewController {
+            rootVC.dismiss(animated: true) {
+                self.onDismiss()
+            }
+        } else {
+            onDismiss()
+        }
     }
 }
 

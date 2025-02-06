@@ -116,19 +116,16 @@ struct FriendInfoExistingSection: View {
             switch sheet {
             case .contact:
                 if let identifier = friend.contactIdentifier {
-                    ZStack {
-                        Color.clear.presentationBackground(.ultraThinMaterial)
-                        ContactView(
-                            contactIdentifier: identifier,
-                            position: "existing_info",
-                            isPresented: Binding(
-                                get: { activeSheet == .contact },
-                                set: { if !$0 { activeSheet = nil } }
-                            )
+                    ContactView(
+                        contactIdentifier: identifier,
+                        position: "existing_info",
+                        isPresented: Binding(
+                            get: { activeSheet == .contact },
+                            set: { if !$0 { activeSheet = nil } }
                         )
-                    }
+                    )
+                    .background(Color.clear)
                     .interactiveDismissDisabled()
-                    .presentationDragIndicator(.hidden)
                 }
             case .addEmail:
                 NavigationStack {
