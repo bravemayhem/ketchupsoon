@@ -36,21 +36,29 @@ struct friendtrackerApp: App {
                 Tag.self
             ])
             
-            // Create configuration
-            let modelConfiguration = ModelConfiguration(
-                schema: schema,
-                isStoredInMemoryOnly: false,
-                allowsSave: true
-            )
-            
-            // Create container
-            container = try ModelContainer(
-                for: schema,
-                configurations: [modelConfiguration]
-            )
-            
-            // Initialize predefined tags if needed
-            if !ProcessInfo.processInfo.isPreview {
+            if ProcessInfo.processInfo.isPreview {
+                // Use in-memory configuration for previews
+                let previewConfig = ModelConfiguration(
+                    schema: schema,
+                    isStoredInMemoryOnly: true
+                )
+                container = try ModelContainer(
+                    for: schema,
+                    configurations: [previewConfig]
+                )
+            } else {
+                // Use persistent configuration for actual app
+                let modelConfiguration = ModelConfiguration(
+                    schema: schema,
+                    isStoredInMemoryOnly: false,
+                    allowsSave: true
+                )
+                container = try ModelContainer(
+                    for: schema,
+                    configurations: [modelConfiguration]
+                )
+                
+                // Initialize predefined tags
                 initializePredefinedTags()
             }
             
