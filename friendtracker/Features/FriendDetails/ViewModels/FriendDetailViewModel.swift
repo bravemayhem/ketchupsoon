@@ -76,6 +76,7 @@ enum FriendDetail {
         var showingMessageSheet = false
         var showingTagsManager = false
         var showingFrequencyPicker = false
+        var showingContactSheet = false
         var lastSeenDate: Date {
             get { friend.lastSeen ?? Date() }
             set { friend.updateLastSeen(to: newValue) }
