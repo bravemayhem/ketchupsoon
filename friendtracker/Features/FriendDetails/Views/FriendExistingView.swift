@@ -36,6 +36,11 @@ struct FriendExistingView: View {
                         friend: viewModel.friend,
                         cityService: cityService
                     )
+                    .onTapGesture {
+                        if viewModel.friend.contactIdentifier != nil {
+                            viewModel.showingContactSheet = true
+                        }
+                    }
                     
                     FriendKetchupSection(
                         friend: viewModel.friend,
@@ -98,6 +103,15 @@ struct FriendExistingView: View {
         .sheet(isPresented: $viewModel.showingMessageSheet) {
             if let phoneNumber = viewModel.friend.phoneNumber {
                 MessageComposeView(recipient: phoneNumber)
+            }
+        }
+        .sheet(isPresented: $viewModel.showingContactSheet) {
+            if let contactIdentifier = viewModel.friend.contactIdentifier {
+                ContactDisplayView(
+                    contactIdentifier: contactIdentifier,
+                    position: "friend_existing",
+                    isPresented: $viewModel.showingContactSheet
+                )
             }
         }
         .onChange(of: cityService.selectedCity) { _, newCity in

@@ -1,77 +1,8 @@
+/*
 import SwiftUI
 import ContactsUI
 import SwiftData
 
-/*
-// Coordinator class to handle UIKit interactions
-private class ContactViewCoordinator: NSObject {
-    var parent: ContactView
-    var isPresenting = false
-    
-    init(parent: ContactView) {
-        self.parent = parent
-        super.init()
-        print("👁 Debug: Coordinator initialized")
-    }
-    
-    @objc func dismissContact() {
-        print("👁 Debug: Dismissing contact")
-        isPresenting = false
-        let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene
-        let window = windowScene?.windows.first
-        let rootVC = window?.rootViewController
-        rootVC?.dismiss(animated: true)
-        parent.isPresented = false
-    }
-    
-    func presentContact(_ contact: CNContact) {
-        guard !isPresenting else {
-            print("👁 Debug: Already presenting, skipping")
-            return
-        }
-        
-        print("👁 Debug: Attempting to present contact")
-        isPresenting = true
-        
-        let contactVC = CNContactViewController(for: contact)
-        contactVC.delegate = self
-        contactVC.allowsEditing = true
-        contactVC.allowsActions = true
-        
-        let navigationController = UINavigationController(rootViewController: contactVC)
-        navigationController.modalPresentationStyle = .fullScreen
-        
-        contactVC.navigationItem.leftBarButtonItem = UIBarButtonItem(
-            barButtonSystemItem: .done,
-            target: self,
-            action: #selector(dismissContact)
-        )
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
-            guard let self = self, self.isPresenting else { return }
-            
-            if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-               let window = windowScene.windows.first,
-               let rootVC = window.rootViewController {
-                print("👁 Debug: Found root view controller, presenting")
-                rootVC.present(navigationController, animated: true) {
-                    print("👁 Debug: Contact view presented")
-                }
-            } else {
-                print("👁 Debug: Failed to find root view controller")
-                self.isPresenting = false
-            }
-        }
-    }
-}
-
-extension ContactViewCoordinator: CNContactViewControllerDelegate {
-    func contactViewController(_ viewController: CNContactViewController, didCompleteWith contact: CNContact?) {
-        print("👁 Debug: Contact view controller did complete")
-        dismissContact()
-    }
-}
-*/
 
 struct ContactView: View {
     // Static presentation tracking
@@ -241,3 +172,6 @@ class ContactViewDelegate: NSObject, CNContactViewControllerDelegate {
         }
         .modelContainer(for: [Friend.self])
 } 
+
+
+*/

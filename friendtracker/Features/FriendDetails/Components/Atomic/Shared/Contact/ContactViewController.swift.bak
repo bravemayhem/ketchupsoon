@@ -15,7 +15,7 @@ struct ContactViewController: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> UINavigationController {
         print("DEBUG: makeUIViewController called")
         let navController = UINavigationController()
-        navController.modalPresentationStyle = .pageSheet
+        navController.modalPresentationStyle = .formSheet
         navController.isModalInPresentation = true
         
         if let sheet = navController.sheetPresentationController {
@@ -33,10 +33,8 @@ struct ContactViewController: UIViewControllerRepresentable {
         )
         navController.setViewControllers([loadingVC], animated: false)
         
-        // Load contact after ensuring view is ready
+        // Load contact immediately
         Task { @MainActor in
-            // Small delay to ensure view hierarchy is ready
-            try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
             if context.coordinator.loadContactTask == nil {
                 loadContact(into: navController, context: context)
             }
@@ -85,9 +83,10 @@ struct ContactViewController: UIViewControllerRepresentable {
                         contactVC.allowsEditing = true
                         contactVC.allowsActions = true
                         contactVC.delegate = context.coordinator
+                        contactVC.contactStore = ContactsManager.shared.contactStore
                         
                         context.coordinator.contactIdentifier = contactIdentifier
-                        navController.setViewControllers([contactVC], animated: false)
+                        navController.setViewControllers([contactVC], animated: true)
                     }
                 }
             } catch let error as CNError where error.code == .communicationError {

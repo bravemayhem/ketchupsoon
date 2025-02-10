@@ -116,7 +116,7 @@ struct FriendInfoExistingSection: View {
             switch sheet {
             case .contact:
                 if let identifier = friend.contactIdentifier {
-                    ContactView(
+                    ContactDisplayView(
                         contactIdentifier: identifier,
                         position: "existing_info",
                         isPresented: Binding(
@@ -125,7 +125,6 @@ struct FriendInfoExistingSection: View {
                         )
                     )
                     .background(Color.clear)
-                    .interactiveDismissDisabled()
                 }
             case .addEmail:
                 NavigationStack {

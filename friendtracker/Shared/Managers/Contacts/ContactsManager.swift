@@ -13,6 +13,9 @@ class ContactsManager: ObservableObject {
     
     private let store = CNContactStore()
     
+    // Public accessor for the store
+    var contactStore: CNContactStore { store }
+    
     // Centralized key descriptors
     static let baseKeys: [CNKeyDescriptor] = [
         CNContactGivenNameKey as CNKeyDescriptor,
