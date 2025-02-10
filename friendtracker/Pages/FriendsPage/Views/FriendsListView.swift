@@ -85,11 +85,28 @@ struct FriendsListView: View {
     @ViewBuilder
     private var emptyStateView: some View {
         if viewModel.searchText.isEmpty && viewModel.selectedTags.isEmpty {
-            ContentUnavailableView("No Friends Added", systemImage: "person.2.badge.plus")
-                .foregroundColor(AppColors.label)
+            VStack(spacing: 8) {
+                Spacer()
+                Image(systemName: "person.2.badge.plus")
+                    .font(.custom("Cabin-Regular", size: 40))
+                    .foregroundColor(Color.gray)
+                Text("No Friends Added")
+                    .font(.custom("Cabin-Regular", size: 25))
+                    .foregroundColor(Color.gray)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
         } else {
-            ContentUnavailableView("No Matches Found", systemImage: "magnifyingglass")
-                .foregroundColor(AppColors.label)
+            VStack(spacing: 8) {
+                Spacer()
+                Image(systemName: "magnifyingglass")
+                    .font(.custom("Cabin-Regular", size: 40))
+                    .foregroundColor(Color.gray)
+                Text("No Matches Found")
+                    .font(.custom("Cabin-Regular", size: 25))
+                    .foregroundColor(Color.gray)
+            }
         }
     }
 }

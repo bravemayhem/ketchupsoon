@@ -15,10 +15,18 @@ struct WishlistView: View {
     var body: some View {
         List {
             if wishlistFriends.isEmpty {
-                ContentUnavailableView("Wishlist Empty", systemImage: "star")
-                    .foregroundColor(AppColors.label)
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
+                VStack(spacing: 8) {
+                    Spacer()
+                    Image(systemName: "star")
+                        .font(.custom("Cabin-Regular", size: 40))
+                        .foregroundColor(Color.gray)
+                    Text("Wishlist Empty")
+                        .font(.custom("Cabin-Regular", size: 25))
+                        .foregroundColor(Color.gray)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
             } else {
                 ForEach(wishlistFriends) { friend in
                     BetterNavigationLink {
@@ -142,4 +150,8 @@ struct FriendsWishlistPreviewContainer: View {
 
 #Preview("With Friends") {
     FriendsWishlistPreviewContainer(state: .withFriends)
+}
+
+#Preview("Without Friends") {
+    FriendsWishlistPreviewContainer(state: .empty)
 }

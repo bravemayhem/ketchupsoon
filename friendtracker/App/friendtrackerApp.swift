@@ -140,7 +140,7 @@ struct friendtrackerApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
-                .preferredColorScheme(colorSchemeManager.colorScheme)
+                .preferredColorScheme(colorSchemeManager.currentAppearanceMode == .system ? nil : colorSchemeManager.colorScheme)
                 .onChange(of: scenePhase) { _, newPhase in
                     if newPhase == .active {
                         // Refresh calendar events when app becomes active

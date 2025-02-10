@@ -36,7 +36,7 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		F486A1DB2D13AC2D0011CC59 /* Exceptions for "friendtracker" folder in "friendtracker" target */ = {
+		F44345CF2D5AAC8C00D52D7A /* Exceptions for "friendtracker" folder in "friendtracker" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
@@ -49,7 +49,7 @@
 		F4070A2A2D0A183C00B11C0B /* friendtracker */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				F486A1DB2D13AC2D0011CC59 /* Exceptions for "friendtracker" folder in "friendtracker" target */,
+				F44345CF2D5AAC8C00D52D7A /* Exceptions for "friendtracker" folder in "friendtracker" target */,
 			);
 			path = friendtracker;
 			sourceTree = "<group>";

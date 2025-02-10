@@ -38,8 +38,13 @@ struct SettingsView: View {
                         Label("Calendar Integration", systemImage: "calendar")
                     }
                     
-                    Toggle(isOn: $colorSchemeManager.isDarkMode) {
-                        Label("Dark Mode", systemImage: "moon.fill")
+                    Picker(selection: $colorSchemeManager.currentAppearanceMode) {
+                        ForEach(AppearanceMode.allCases, id: \.self) { mode in
+                            Text(mode.displayName)
+                                .tag(mode)
+                        }
+                    } label: {
+                        Label("Appearance", systemImage: "circle.lefthalf.filled")
                     }
                 }
                 
