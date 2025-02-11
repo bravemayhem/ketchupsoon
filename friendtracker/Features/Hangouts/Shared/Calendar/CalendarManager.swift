@@ -207,7 +207,12 @@ class CalendarManager: ObservableObject {
         case eventNotFound
     }
     
-    func createHangoutEvent(activity: String, location: String, date: Date, duration: TimeInterval, emailRecipients: [String] = [], attendeeNames: [String] = []) async throws -> String {
+    struct CalendarEventResult {
+        let eventId: String
+        let htmlLink: String?
+    }
+    
+    func createHangoutEvent(activity: String, location: String, date: Date, duration: TimeInterval, emailRecipients: [String] = [], attendeeNames: [String] = []) async throws -> CalendarEventResult {
         // For Google Calendar
         if selectedCalendarType == .google && isGoogleAuthorized {
             guard let service = googleService else { throw CalendarError.unauthorized }
@@ -256,7 +261,10 @@ class CalendarManager: ObservableObject {
                         }
                     }
                 }
-                return response.identifier ?? UUID().uuidString
+                return CalendarEventResult(
+                    eventId: response.identifier ?? UUID().uuidString,
+                    htmlLink: response.htmlLink
+                )
             } catch {
                 print("Error creating Google Calendar event: \(error)")
                 throw CalendarError.eventCreationFailed
@@ -283,7 +291,10 @@ class CalendarManager: ObservableObject {
         
         do {
             try eventStore.save(event, span: .thisEvent)
-            return event.eventIdentifier
+            return CalendarEventResult(
+                eventId: event.eventIdentifier,
+                htmlLink: nil
+            )
         } catch {
             throw CalendarError.eventCreationFailed
         }

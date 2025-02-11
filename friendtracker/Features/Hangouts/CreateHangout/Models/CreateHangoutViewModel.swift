@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import MessageUI
 
 struct ManualAttendee: Identifiable, Equatable {
     let id = UUID()
@@ -150,6 +151,12 @@ class CreateHangoutViewModel: ObservableObject {
         objectWillChange.send()
     }
     
+    @Published var showingMessageSheet = false
+    @Published var messageRecipient: String?
+    @Published var messageBody: String?
+    
+    private var pendingEventLink: String?
+    
     init(modelContext: ModelContext, initialDate: Date? = nil, initialLocation: String? = nil, initialTitle: String? = nil, initialSelectedFriends: [Friend]? = nil) {
         self.modelContext = modelContext
         self.calendarManager = CalendarManager.shared
@@ -168,7 +175,7 @@ class CreateHangoutViewModel: ObservableObject {
         // Create a single calendar event with all friends as attendees
         let allAttendeeNames = selectedFriends.map(\.name) + manualAttendees.map(\.name)
         
-        _ = try await calendarManager.createHangoutEvent(
+        let result = try await calendarManager.createHangoutEvent(
             activity: hangoutTitle,
             location: selectedLocation,
             date: selectedDate,
@@ -187,6 +194,37 @@ class CreateHangoutViewModel: ObservableObject {
             duration: selectedDuration ?? 7200
         )
         modelContext.insert(hangout)
+        
+        // If we have a Google Calendar event link, send it via text to friends without email
+        if let eventLink = result.htmlLink {
+            pendingEventLink = eventLink
+            let friendsWithoutEmail = selectedFriends.filter { $0.email?.isEmpty ?? true }
+            
+            for friend in friendsWithoutEmail {
+                if let phoneNumber = friend.phoneNumber {
+                    messageRecipient = phoneNumber
+                    messageBody = """
+                        Hey! I've scheduled a hangout for \(hangoutTitle)
+                        When: \(formatDate(selectedDate))
+                        Where: \(selectedLocation)
+                        
+                        Here's the calendar link: \(eventLink)
+                        """
+                    showingMessageSheet = true
+                    // Wait for the message sheet to be dismissed before continuing
+                    while showingMessageSheet {
+                        try await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
+                    }
+                }
+            }
+        }
+    }
+    
+    private func formatDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .full
+        formatter.timeStyle = .short
+        return formatter.string(from: date)
     }
     
     func scheduleHangout() async {

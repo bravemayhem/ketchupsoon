@@ -40,7 +40,7 @@ struct CreateHangoutView: View {
                 
                 ScheduleButtonSection(viewModel: viewModel)
             }
-            .navigationTitle("Create Hangout")
+            .navigationTitle("Schedule Hangout")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -55,17 +55,15 @@ struct CreateHangoutView: View {
             .sheet(isPresented: $viewModel.showingCustomDurationInput) {
                 CustomDurationInputView(viewModel: viewModel)
             }
-        }
-        .alert("Remove from Wishlist?", isPresented: $viewModel.showingWishlistPrompt) {
-            Button("Keep on Wishlist") {
-                dismiss()
+            .sheet(isPresented: $viewModel.showingWishlistPrompt) {
+                WishlistPromptView(viewModel: viewModel)
             }
-            Button("Remove from Wishlist") {
-                viewModel.removeFromWishlist()
-                dismiss()
+            .sheet(isPresented: $viewModel.showingMessageSheet) {
+                if let recipient = viewModel.messageRecipient,
+                   let body = viewModel.messageBody {
+                    SMSCalendarLinkView(recipient: recipient, message: body)
+                }
             }
-        } message: {
-            Text("You've scheduled time with \(viewModel.selectedFriends.map(\.name).joined(separator: ", ")). Would you like to remove them from your wishlist?")
         }
     }
 }
