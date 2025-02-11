@@ -24,7 +24,7 @@ struct HangoutCard: View {
                 VStack(alignment: .leading, spacing: 4) {
                     // Title and Status
                     HStack {
-                        Text(hangout.activity)
+                        Text(hangout.title)
                             .font(.headline)
                             .foregroundColor(AppColors.label)
                         Spacer()
@@ -103,7 +103,7 @@ struct HangoutCard: View {
     let friend2 = Friend(name: "Test Friend 2")
     let hangout = Hangout(
         date: Date().addingTimeInterval(86400),
-        activity: "Coffee",
+        title: "Coffee",
         location: "Starbucks",
         isScheduled: true,
         friends: [friend1, friend2]

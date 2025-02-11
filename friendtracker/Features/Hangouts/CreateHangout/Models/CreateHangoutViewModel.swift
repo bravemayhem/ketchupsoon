@@ -155,7 +155,13 @@ class CreateHangoutViewModel: ObservableObject {
     @Published var messageRecipient: String?
     @Published var messageBody: String?
     
+    @Published var webLink: String?
+    @Published var isCreatingEvent = false
+    
     private var pendingEventLink: String?
+    
+    @Published var isTestingConnection = false
+    @Published var connectionTestResult: String?
     
     init(modelContext: ModelContext, initialDate: Date? = nil, initialLocation: String? = nil, initialTitle: String? = nil, initialSelectedFriends: [Friend]? = nil) {
         self.modelContext = modelContext
@@ -171,52 +177,42 @@ class CreateHangoutViewModel: ObservableObject {
         self._selectedFriends = Published(initialValue: initialSelectedFriends ?? [])
     }
     
-    func createHangout() async throws {
-        // Create a single calendar event with all friends as attendees
-        let allAttendeeNames = selectedFriends.map(\.name) + manualAttendees.map(\.name)
+    func createHangout() async {
+        isCreatingEvent = true
+        defer { isCreatingEvent = false }
         
-        let result = try await calendarManager.createHangoutEvent(
-            activity: hangoutTitle,
-            location: selectedLocation,
-            date: selectedDate,
-            duration: selectedDuration ?? 7200,
-            emailRecipients: emailRecipients,
-            attendeeNames: allAttendeeNames
-        )
-        
-        // Create a single Hangout record with all friends
-        let hangout = Hangout(
-            date: selectedDate,
-            activity: hangoutTitle,
-            location: selectedLocation,
-            isScheduled: true,
-            friends: selectedFriends,
-            duration: selectedDuration ?? 7200
-        )
-        modelContext.insert(hangout)
-        
-        // If we have a Google Calendar event link, send it via text to friends without email
-        if let eventLink = result.htmlLink {
-            pendingEventLink = eventLink
-            let friendsWithoutEmail = selectedFriends.filter { $0.email?.isEmpty ?? true }
+        do {
+            // Create local hangout
+            let hangout = Hangout(
+                date: selectedDate,
+                title: hangoutTitle,
+                location: selectedLocation,
+                isScheduled: true,
+                friends: selectedFriends,
+                duration: selectedDuration ?? 3600 // Default to 1 hour if no duration selected
+            )
             
-            for friend in friendsWithoutEmail {
-                if let phoneNumber = friend.phoneNumber {
-                    messageRecipient = phoneNumber
-                    messageBody = """
-                        Hey! I've scheduled a hangout for \(hangoutTitle)
-                        When: \(formatDate(selectedDate))
-                        Where: \(selectedLocation)
-                        
-                        Here's the calendar link: \(eventLink)
-                        """
-                    showingMessageSheet = true
-                    // Wait for the message sheet to be dismissed before continuing
-                    while showingMessageSheet {
-                        try await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
-                    }
-                }
+            // Save to local database
+            modelContext.insert(hangout)
+            try modelContext.save()
+            
+            // Save to Supabase and get web link
+            if let eventId = try await SupabaseManager.shared.createEvent(hangout) {
+                webLink = SupabaseManager.shared.getWebLink(for: eventId)
+                
+                // Show message sheet with web link
+                // Use the first friend's phone number or email for messaging
+                messageRecipient = selectedFriends.first?.phoneNumber ?? manualAttendees.first?.email
+                messageBody = """
+                Join me for \(hangoutTitle)!
+                When: \(formatDate(selectedDate))
+                Where: \(selectedLocation)
+                RSVP and add to calendar: \(webLink ?? "")
+                """
+                showingMessageSheet = true
             }
+        } catch {
+            errorMessage = "Failed to create event: \(error.localizedDescription)"
         }
     }
     
@@ -252,7 +248,7 @@ class CreateHangoutViewModel: ObservableObject {
             try await createHangout()
             
             // Save the model context
-            try modelContext.save()
+            modelContext.save()
             
             isLoading = false
             
@@ -281,5 +277,19 @@ class CreateHangoutViewModel: ObservableObject {
         } else {
             return "\(hours)h \(minutes)m"
         }
+    }
+    
+    func testSupabaseConnection() async {
+        isTestingConnection = true
+        connectionTestResult = nil
+        
+        do {
+            _ = try await SupabaseManager.shared.testConnection()
+            connectionTestResult = "✅ Successfully connected to Supabase!"
+        } catch {
+            connectionTestResult = "❌ Connection failed: \(error.localizedDescription)"
+        }
+        
+        isTestingConnection = false
     }
 } 

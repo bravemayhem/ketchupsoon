@@ -6,7 +6,7 @@ final class Hangout: Identifiable {
     @Attribute(.unique) var id: UUID
     var date: Date
     var endDate: Date
-    var activity: String
+    var title: String
     var location: String
     var isScheduled: Bool
     var isCompleted: Bool
@@ -14,11 +14,11 @@ final class Hangout: Identifiable {
     var originalHangoutId: UUID?  // Track if this is a rescheduled hangout
     @Relationship(deleteRule: .cascade) var friends: [Friend]
     
-    init(date: Date, activity: String, location: String, isScheduled: Bool, friends: [Friend], duration: TimeInterval = 3600) {
+    init(date: Date, title: String, location: String, isScheduled: Bool, friends: [Friend], duration: TimeInterval = 3600) {
         self.id = UUID()
         self.date = date
         self.endDate = date.addingTimeInterval(duration)
-        self.activity = activity
+        self.title = title
         self.location = location
         self.isScheduled = isScheduled
         self.isCompleted = false
@@ -31,7 +31,7 @@ final class Hangout: Identifiable {
     func createRescheduled(newDate: Date, duration: TimeInterval = 3600) -> Hangout {
         let rescheduled = Hangout(
             date: newDate,
-            activity: self.activity,
+            title: self.title,
             location: self.location,
             isScheduled: true,
             friends: self.friends,
@@ -78,7 +78,7 @@ final class Hangout: Identifiable {
         DTEND:\(endDate)
         DTSTAMP:\(dateFormatter.string(from: Date()))
         ORGANIZER;CN=FriendTracker:mailto:no-reply@friendtracker.app
-        SUMMARY:\(activity)
+        SUMMARY:\(title)
         DESCRIPTION:\(description)
         """
         

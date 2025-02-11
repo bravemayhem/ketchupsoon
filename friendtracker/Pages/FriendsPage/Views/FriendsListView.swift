@@ -178,7 +178,7 @@ struct FriendsListPreviewContainer: View {
             let futureDate = Calendar.current.date(byAdding: .day, value: 3, to: Date())!
             let hangout = Hangout(
                 date: futureDate,
-                activity: "Coffee",
+                title: "Coffee",
                 location: "Blue Bottle",
                 isScheduled: true,
                 friends: [friends[0]]

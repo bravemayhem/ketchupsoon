@@ -25,14 +25,14 @@ struct HangoutListView: View {
     let hangouts = [
         Hangout(
             date: Date().addingTimeInterval(86400),
-            activity: "Coffee",
+            title: "Coffee",
             location: "Starbucks",
             isScheduled: true,
             friends: [friend]
         ),
         Hangout(
             date: Date().addingTimeInterval(172800),
-            activity: "Lunch",
+            title: "Lunch",
             location: "Restaurant",
             isScheduled: true,
             friends: [friend]

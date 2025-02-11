@@ -1,257 +1,184 @@
-import React, { useState } from 'react'
-import { GetServerSideProps } from 'next'
-import { supabase } from '@/lib/supabase/client'
-import { format } from 'date-fns'
+import { useRouter } from 'next/router';
+import { useState, useEffect } from 'react';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+
+// Types
+interface Attendee {
+  id: string;
+  name: string;
+  email: string;
+  rsvp_status: 'yes' | 'no' | 'maybe' | 'pending';
+}
 
 interface Event {
-  id: string
-  title: string
-  date: string
-  location: string
-  description: string
-  duration: number
-  created_by: string
+  id: string;
+  title: string;
+  date: string;
+  location: string;
+  description: string;
+  duration: number;
+  created_at: string;
+  creator_id: string;
+  is_private: boolean;
+  attendees: Attendee[];
 }
 
-interface Attendee {
-  id: string
-  name: string
-  email: string
-  rsvp_status: 'yes' | 'no' | 'maybe'
-}
+export default function HangoutPage() {
+  const router = useRouter();
+  const { id } = router.query;
+  const [event, setEvent] = useState<Event | null>(null);
+  const [loading, setLoading] = useState(true);
+  const supabase = createClientComponentClient();
 
-interface Props {
-  event: Event | null
-  attendees: Attendee[]
-  error?: string
-}
+  useEffect(() => {
+    async function fetchEvent() {
+      if (!id) return;
 
-export default function HangoutPage({ event, attendees, error }: Props) {
-  const [rsvpForm, setRsvpForm] = useState({
-    name: '',
-    email: '',
-    status: 'yes' as 'yes' | 'no' | 'maybe'
-  })
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [submitError, setSubmitError] = useState('')
-  const [submitSuccess, setSubmitSuccess] = useState(false)
+      const { data, error } = await supabase
+        .from('events')
+        .select(`
+          *,
+          event_attendees (*)
+        `)
+        .eq('id', id)
+        .single();
 
-  if (error) {
+      if (error) {
+        console.error('Error fetching event:', error);
+        return;
+      }
+
+      setEvent(data);
+      setLoading(false);
+    }
+
+    fetchEvent();
+  }, [id, supabase]);
+
+  if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-red-600">Error</h1>
-          <p className="mt-2">{error}</p>
-        </div>
+      <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#FF7E45]"></div>
       </div>
-    )
+    );
   }
 
   if (!event) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold">Event Not Found</h1>
-          <p className="mt-2">This event may have been deleted or does not exist.</p>
+          <h1 className="text-2xl font-bold text-gray-800 mb-2">Event Not Found</h1>
+          <p className="text-gray-600">This event may have been deleted or is private.</p>
         </div>
       </div>
-    )
+    );
   }
 
-  const handleRSVP = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsSubmitting(true)
-    setSubmitError('')
-    setSubmitSuccess(false)
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+  };
 
-    try {
-      const { error } = await supabase
-        .from('event_attendees')
-        .insert([
-          {
-            event_id: event.id,
-            name: rsvpForm.name,
-            email: rsvpForm.email,
-            rsvp_status: rsvpForm.status
-          }
-        ])
+  const addToGoogleCalendar = () => {
+    const startDate = new Date(event.date);
+    const endDate = new Date(startDate.getTime() + event.duration * 60000);
+    
+    const url = new URL('https://calendar.google.com/calendar/render');
+    url.searchParams.append('action', 'TEMPLATE');
+    url.searchParams.append('text', event.title);
+    url.searchParams.append('dates', `${startDate.toISOString().replace(/[-:]/g, '').split('.')[0]}Z/${endDate.toISOString().replace(/[-:]/g, '').split('.')[0]}Z`);
+    url.searchParams.append('location', event.location);
+    url.searchParams.append('details', event.description || '');
+    
+    window.open(url.toString(), '_blank');
+  };
 
-      if (error) throw error
-
-      setSubmitSuccess(true)
-      setRsvpForm({ name: '', email: '', status: 'yes' })
-    } catch (error) {
-      setSubmitError('Failed to submit RSVP. Please try again.')
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
+  const addToAppleCalendar = () => {
+    const startDate = new Date(event.date);
+    const endDate = new Date(startDate.getTime() + event.duration * 60000);
+    
+    const url = new URL('webcal://calendar.google.com/calendar/ical');
+    url.searchParams.append('action', 'TEMPLATE');
+    url.searchParams.append('text', event.title);
+    url.searchParams.append('dates', `${startDate.toISOString().replace(/[-:]/g, '').split('.')[0]}Z/${endDate.toISOString().replace(/[-:]/g, '').split('.')[0]}Z`);
+    url.searchParams.append('location', event.location);
+    url.searchParams.append('details', event.description || '');
+    
+    window.location.href = url.toString();
+  };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <main className="max-w-3xl mx-auto py-12 px-4">
-        <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-          <div className="px-6 py-8">
-            <h1 className="text-3xl font-bold text-gray-900">{event.title}</h1>
-            
-            <div className="mt-6 space-y-4">
-              <div>
-                <h2 className="text-sm font-medium text-gray-500">When</h2>
-                <p className="mt-1 text-lg text-gray-900">
-                  {format(new Date(event.date), 'EEEE, MMMM d, yyyy h:mm a')}
-                  {event.duration && ` (${event.duration} minutes)`}
-                </p>
-              </div>
-
-              <div>
-                <h2 className="text-sm font-medium text-gray-500">Where</h2>
-                <p className="mt-1 text-lg text-gray-900">{event.location}</p>
-              </div>
-
-              {event.description && (
-                <div>
-                  <h2 className="text-sm font-medium text-gray-500">Details</h2>
-                  <p className="mt-1 text-lg text-gray-900">{event.description}</p>
-                </div>
-              )}
-            </div>
-
-            <div className="mt-8">
-              <h2 className="text-lg font-semibold text-gray-900">RSVP</h2>
-              {submitSuccess ? (
-                <div className="mt-4 p-4 bg-green-50 rounded-md">
-                  <p className="text-green-700">Thanks for your RSVP! We've recorded your response.</p>
-                </div>
-              ) : (
-                <form onSubmit={handleRSVP} className="mt-4 space-y-4">
-                  <div>
-                    <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-                      Name
-                    </label>
-                    <input
-                      type="text"
-                      id="name"
-                      required
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                      value={rsvpForm.name}
-                      onChange={(e) => setRsvpForm({ ...rsvpForm, name: e.target.value })}
-                    />
-                  </div>
-
-                  <div>
-                    <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                      Email
-                    </label>
-                    <input
-                      type="email"
-                      id="email"
-                      required
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                      value={rsvpForm.email}
-                      onChange={(e) => setRsvpForm({ ...rsvpForm, email: e.target.value })}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Will you attend?
-                    </label>
-                    <div className="mt-2 space-x-4">
-                      {['yes', 'no', 'maybe'].map((status) => (
-                        <label key={status} className="inline-flex items-center">
-                          <input
-                            type="radio"
-                            className="form-radio text-indigo-600"
-                            name="status"
-                            value={status}
-                            checked={rsvpForm.status === status}
-                            onChange={(e) => setRsvpForm({ ...rsvpForm, status: e.target.value as 'yes' | 'no' | 'maybe' })}
-                          />
-                          <span className="ml-2 capitalize">{status}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-
-                  {submitError && (
-                    <div className="text-red-600 text-sm">{submitError}</div>
-                  )}
-
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
-                  >
-                    {isSubmitting ? 'Submitting...' : 'Submit RSVP'}
-                  </button>
-                </form>
-              )}
-            </div>
-
-            {attendees.length > 0 && (
-              <div className="mt-8">
-                <h2 className="text-lg font-semibold text-gray-900">Who's Coming</h2>
-                <div className="mt-4 space-y-2">
-                  {attendees.map((attendee) => (
-                    <div key={attendee.id} className="flex items-center justify-between py-2">
-                      <div>
-                        <span className="text-gray-900 font-medium">{attendee.name}</span>
-                        <span className="ml-2 text-sm text-gray-500">{attendee.email}</span>
-                      </div>
-                      <span className={`text-sm capitalize px-2 py-1 rounded-full ${
-                        attendee.rsvp_status === 'yes' 
-                          ? 'bg-green-100 text-green-800'
-                          : attendee.rsvp_status === 'no'
-                          ? 'bg-red-100 text-red-800'
-                          : 'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {attendee.rsvp_status}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+    <div className="min-h-screen bg-gradient-to-b from-white to-gray-50">
+      <div className="max-w-2xl mx-auto p-6">
+        {/* Event Header */}
+        <div className="bg-white rounded-2xl shadow-sm p-6 mb-6">
+          <h1 className="text-3xl font-bold text-gray-800 mb-4">{event.title}</h1>
+          <div className="flex items-center text-gray-600 mb-4">
+            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            <span>{formatDate(event.date)}</span>
+          </div>
+          <div className="flex items-center text-gray-600">
+            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            <span>{event.location}</span>
           </div>
         </div>
-      </main>
+
+        {/* Calendar Buttons */}
+        <div className="bg-white rounded-2xl shadow-sm p-6 mb-6">
+          <h2 className="text-xl font-semibold text-gray-800 mb-4">Add to Calendar</h2>
+          <div className="flex flex-col space-y-3">
+            <button
+              onClick={addToGoogleCalendar}
+              className="flex items-center justify-center px-4 py-3 bg-[#FF7E45] text-white rounded-xl hover:bg-[#FF5126] transition-colors"
+            >
+              Add to Google Calendar
+            </button>
+            <button
+              onClick={addToAppleCalendar}
+              className="flex items-center justify-center px-4 py-3 border-2 border-[#FF7E45] text-[#FF7E45] rounded-xl hover:bg-[#FFF5F0] transition-colors"
+            >
+              Add to Apple Calendar
+            </button>
+          </div>
+        </div>
+
+        {/* Attendees */}
+        <div className="bg-white rounded-2xl shadow-sm p-6">
+          <h2 className="text-xl font-semibold text-gray-800 mb-4">Who's Coming?</h2>
+          <div className="space-y-4">
+            {event.attendees?.map((attendee) => (
+              <div key={attendee.id} className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <div className="w-10 h-10 rounded-full bg-[#FF7E45] flex items-center justify-center text-white font-medium">
+                    {attendee.name.charAt(0).toUpperCase()}
+                  </div>
+                  <span className="ml-3 text-gray-800">{attendee.name}</span>
+                </div>
+                <span className={`px-3 py-1 rounded-full text-sm ${
+                  attendee.rsvp_status === 'yes' ? 'bg-green-100 text-green-800' :
+                  attendee.rsvp_status === 'no' ? 'bg-red-100 text-red-800' :
+                  attendee.rsvp_status === 'maybe' ? 'bg-yellow-100 text-yellow-800' :
+                  'bg-gray-100 text-gray-800'
+                }`}>
+                  {attendee.rsvp_status.charAt(0).toUpperCase() + attendee.rsvp_status.slice(1)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
     </div>
-  )
-}
-
-export const getServerSideProps: GetServerSideProps = async ({ params }) => {
-  try {
-    // Fetch event details
-    const { data: event, error: eventError } = await supabase
-      .from('events')
-      .select('*')
-      .eq('id', params?.id)
-      .single()
-
-    if (eventError) throw eventError
-
-    // Fetch attendees
-    const { data: attendees, error: attendeesError } = await supabase
-      .from('event_attendees')
-      .select('*')
-      .eq('event_id', params?.id)
-
-    if (attendeesError) throw attendeesError
-
-    return {
-      props: {
-        event,
-        attendees: attendees || []
-      }
-    }
-  } catch (error) {
-    console.error('Error fetching event:', error)
-    return {
-      props: {
-        event: null,
-        attendees: [],
-        error: 'Failed to load event'
-      }
-    }
-  }
+  );
 } 

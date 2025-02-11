@@ -11,6 +11,12 @@
 			</array>
 		</dict>
 	</array>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>FriendTracker needs full calendar access to create and manage hangout events in your calendar.</string>
+	<key>SUPABASE_ANON_KEY</key>
+	<string>eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpc2F1b2Fham5mdm50dnhueHBoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzkyMzM3MDEsImV4cCI6MjA1NDgwOTcwMX0.jnQwDhUjL5ix_S3-EojbDaUeHEHUAYfVKEyWBAqDSzM</string>
+	<key>SUPABASE_URL</key>
+	<string>https://disauoaajnfvntvxnxph.supabase.co</string>
 	<key>UIAppFonts</key>
 	<array>
 		<string>Cabin-Bold.ttf</string>
@@ -18,12 +24,6 @@
 		<string>Cabin-Medium.ttf</string>
 		<string>Cabin-SemiBold.ttf</string>
 	</array>
-	<key>NSContactsUsageDescription</key>
-	<string>FriendTracker needs access to your contacts to help you manage and stay in touch with your friends.</string>
-	<key>NSCalendarsUsageDescription</key>
-	<string>FriendTracker needs access to your calendar to sync your hangouts and help you stay connected with friends.</string>
-	<key>NSCalendarsFullAccessUsageDescription</key>
-	<string>FriendTracker needs full calendar access to create and manage hangout events in your calendar.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>

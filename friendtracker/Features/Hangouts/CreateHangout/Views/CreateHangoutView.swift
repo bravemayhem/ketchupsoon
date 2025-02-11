@@ -24,6 +24,32 @@ struct CreateHangoutView: View {
     var body: some View {
         NavigationStack {
             Form {
+                // Test Connection Section
+                Section("Supabase Connection") {
+                    Button(action: {
+                        Task {
+                            await viewModel.testSupabaseConnection()
+                        }
+                    }) {
+                        HStack {
+                            Image(systemName: "network")
+                                .foregroundColor(.blue)
+                            Text("Test Connection")
+                            Spacer()
+                            if viewModel.isTestingConnection {
+                                ProgressView()
+                                    .progressViewStyle(CircularProgressViewStyle())
+                            }
+                        }
+                    }
+                    
+                    if let result = viewModel.connectionTestResult {
+                        Text(result)
+                            .font(.footnote)
+                            .foregroundColor(result.contains("✅") ? .green : .red)
+                    }
+                }
+                
                 FriendsSection(viewModel: viewModel, showingFriendPicker: $showingFriendPicker)
                 
                 AdditionalManualAttendeesSection(viewModel: viewModel)
