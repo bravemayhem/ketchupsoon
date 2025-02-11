@@ -7,6 +7,7 @@ struct HangoutCard: View {
     let hangout: Hangout
     @State private var selectedFriend: Friend?
     @State private var showingCompletionPrompt = false
+    @State private var showingEventDetails = false
     
     var statusColor: Color {
         if hangout.isCompleted {
@@ -45,6 +46,19 @@ struct HangoutCard: View {
                                         Capsule()
                                             .fill(AppColors.accent)
                                     )
+                            }
+                        }
+                    }
+                    
+                    // Event Link
+                    if let eventLink = hangout.eventLink {
+                        Link(destination: URL(string: eventLink)!) {
+                            HStack(spacing: 4) {
+                                Image(systemName: "link")
+                                    .font(AppTheme.captionFont)
+                                    .foregroundColor(AppColors.secondaryLabel)
+                                Text("View Event Details")
+                                    .cardSecondaryText()
                             }
                         }
                     }
@@ -89,6 +103,11 @@ struct HangoutCard: View {
                         Text(hangout.formattedDate).cardSecondaryText()
                     }
                 }
+            }
+        }
+        .onTapGesture {
+            if let eventLink = hangout.eventLink {
+                UIApplication.shared.open(URL(string: eventLink)!)
             }
         }
         .friendSheetPresenter(selectedFriend: $selectedFriend)

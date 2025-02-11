@@ -50,40 +50,51 @@ event_attendees {
   rsvp_status: string
   created_at: timestamp
 }
+
+invites {
+  id: uuid (primary key)
+  event_id: uuid (foreign key)
+  token: string (unique)
+  expires_at: timestamp
+  created_at: timestamp
+}
 ```
 
 ## API Endpoints Required
 
 ### iOS App Endpoints
-- [ ] POST /api/events - Create new event
+- [x] POST /api/events - Create new event
 - [ ] PUT /api/events/:id - Update event
 - [ ] DELETE /api/events/:id - Delete event
-- [ ] POST /api/events/:id/attendees - Add attendees
+- [x] POST /api/events/:id/attendees - Add attendees
+- [x] POST /api/events/:id/invites - Create invite token
 
 ### Web Endpoints
-- [ ] GET /api/events/:id - Get event details
+- [x] GET /api/events/:id - Get event details with token
 - [ ] GET /api/events/:id/ics - Get ICS file
 - [ ] POST /api/events/:id/rsvp - Update RSVP status
 
 ## Web Features
-- [ ] Event detail page (/hangout/[id])
+- [x] Event detail page (/hangout/[id])
 - [ ] Add to calendar buttons
   - [ ] Google Calendar
   - [ ] Apple Calendar
   - [ ] Outlook
   - [ ] Download ICS
 - [ ] RSVP functionality
-- [ ] Mobile-responsive design
+- [x] Mobile-responsive design
 - [ ] Share buttons
 
 ## iOS App Changes Required
-- [ ] Update CalendarManager to create web events
-- [ ] Modify event creation flow to include web link
-- [ ] Update sharing messages to include web link
-- [ ] Add event sync functionality
+- [x] Update CalendarManager to create web events
+- [x] Modify event creation flow to include web link
+- [x] Update sharing messages to include web link
+- [x] Add event sync functionality
+- [x] Store event link and token in Hangout model
+- [x] Update HangoutCard to display and handle event links
 
 ## Security Considerations
-- [ ] Event access tokens
+- [x] Event access tokens
 - [ ] Rate limiting
 - [ ] Data encryption
 - [ ] Privacy controls
@@ -97,13 +108,13 @@ event_attendees {
 - [ ] Load testing
 
 ## Launch Checklist
-- [ ] Set up development environment
-- [ ] Create basic Next.js project
-- [ ] Set up Supabase database
+- [x] Set up development environment
+- [x] Create basic Next.js project
+- [x] Set up Supabase database
 - [ ] Configure domain with Vercel
-- [ ] Implement basic API endpoints
-- [ ] Create web UI
-- [ ] Update iOS app
+- [x] Implement basic API endpoints
+- [x] Create web UI
+- [x] Update iOS app
 - [ ] Testing
 - [ ] Security audit
 - [ ] Production deployment
@@ -128,30 +139,43 @@ event_attendees {
   - Set up Next.js project with TypeScript
   - Configured Tailwind CSS and PostCSS
   - Installed necessary dependencies
-- [x] Database Implementation (50%)
+- [x] Database Implementation (100%)
   - Created initial events table
   - Set up event_attendees table
+  - Added invites table
   - Added necessary columns and constraints
-- [ ] API Development (0%)
-- [ ] Web UI Development (0%)
-- [ ] iOS Integration (0%)
-- [ ] Testing (0%)
-- [ ] Security Review (0%)
-- [ ] Documentation (10%)
+- [x] API Development (70%)
+  - Implemented event creation
+  - Implemented attendee creation
+  - Implemented invite token system
+- [x] Web UI Development (50%)
+  - Created event detail page
+  - Implemented token-based access
+- [x] iOS Integration (90%)
+  - Updated Hangout model
+  - Implemented SupabaseManager
+  - Updated CreateHangoutViewModel
+  - Updated HangoutCard
+- [ ] Testing (20%)
+- [ ] Security Review (30%)
+- [ ] Documentation (40%)
 
 ## Recent Updates
 ### 2024-03-XX
-1. Set up Next.js project with TypeScript support
-2. Configured Tailwind CSS and resolved dependency issues
-3. Created and modified database schema for events and attendees
-4. Added necessary columns for tracking event creation and updates
+1. Implemented token-based access system for events
+2. Updated iOS app to store and handle event links
+3. Simplified event access by making HangoutCard tappable
+4. Removed explicit "View Event Details" link for cleaner UI
+5. Added event link and token storage to Hangout model
+6. Updated SupabaseManager to handle invite token creation
+7. Modified CreateHangoutViewModel to save event links with hangouts
 
 ## Next Steps
-1. Implement basic API endpoints for event creation and retrieval
-2. Create the event detail page layout (/hangout/[id])
-3. Set up Supabase authentication
-4. Begin work on the RSVP functionality
-5. Create calendar integration endpoints
+1. Complete RSVP functionality
+2. Implement calendar integration endpoints
+3. Add rate limiting to API endpoints
+4. Set up production environment
+5. Begin comprehensive testing
 
 ## Notes
 - Keep initial implementation focused and simple
