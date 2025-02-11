@@ -25,35 +25,122 @@ interface Event {
 
 export default function HangoutPage() {
   const router = useRouter();
-  const { id } = router.query;
+  const { id, token } = router.query;
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [verificationError, setVerificationError] = useState<string | null>(null);
+  const [isVerified, setIsVerified] = useState(false);
   const supabase = createClientComponentClient();
 
   useEffect(() => {
     async function fetchEvent() {
-      if (!id) return;
+      if (!id || !token || !isVerified) return;
 
-      const { data, error } = await supabase
-        .from('events')
-        .select(`
-          *,
-          event_attendees (*)
-        `)
-        .eq('id', id)
-        .single();
+      try {
+        const { data, error } = await supabase
+          .from('events')
+          .select(`
+            *,
+            event_attendees (*)
+          `)
+          .eq('id', id)
+          .single();
 
-      if (error) {
-        console.error('Error fetching event:', error);
-        return;
+        if (error) {
+          console.error('Error fetching event:', error);
+          return;
+        }
+
+        setEvent(data);
+      } finally {
+        setLoading(false);
       }
-
-      setEvent(data);
-      setLoading(false);
     }
 
     fetchEvent();
-  }, [id, supabase]);
+  }, [id, token, isVerified, supabase]);
+
+  const handleVerifyPhone = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsVerifying(true);
+    setVerificationError(null);
+
+    try {
+      const { data, error } = await supabase
+        .rpc('verify_invite_phone', {
+          p_token: token,
+          p_phone: phoneNumber,
+          p_ip: '127.0.0.1' // In production, you'd want to get this from the server
+        });
+
+      if (error) throw error;
+
+      if (data) {
+        setIsVerified(true);
+      } else {
+        setVerificationError('Invalid phone number or token. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error verifying phone:', error);
+      setVerificationError('An error occurred during verification. Please try again.');
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  if (!token) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-800 mb-2">Invalid Invite Link</h1>
+          <p className="text-gray-600">This invite link appears to be invalid.</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isVerified) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 flex items-center justify-center">
+        <div className="max-w-md w-full mx-4">
+          <div className="bg-white rounded-2xl shadow-sm p-6">
+            <h1 className="text-2xl font-bold text-gray-800 mb-4">Verify Your Phone</h1>
+            <p className="text-gray-600 mb-6">
+              Please enter your phone number to view the event details.
+            </p>
+            <form onSubmit={handleVerifyPhone}>
+              <div className="mb-4">
+                <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
+                  Phone Number
+                </label>
+                <input
+                  type="tel"
+                  id="phone"
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  placeholder="+1 (555) 555-5555"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#FF7E45] focus:border-transparent outline-none"
+                  required
+                />
+              </div>
+              {verificationError && (
+                <div className="mb-4 text-red-600 text-sm">{verificationError}</div>
+              )}
+              <button
+                type="submit"
+                disabled={isVerifying}
+                className="w-full px-4 py-3 bg-[#FF7E45] text-white rounded-xl hover:bg-[#FF5126] transition-colors disabled:opacity-50"
+              >
+                {isVerifying ? 'Verifying...' : 'Verify Phone Number'}
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (

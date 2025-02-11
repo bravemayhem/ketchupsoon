@@ -53,10 +53,31 @@ struct friendtrackerApp: App {
                     isStoredInMemoryOnly: false,
                     allowsSave: true
                 )
-                container = try ModelContainer(
-                    for: schema,
-                    configurations: [modelConfiguration]
-                )
+                
+                do {
+                    // First try to create the container normally
+                    container = try ModelContainer(
+                        for: schema,
+                        configurations: [modelConfiguration]
+                    )
+                } catch {
+                    print("Failed to load store, attempting to delete and recreate: \(error)")
+                    
+                    // Get the store URL from the Application Support directory
+                    let storeURL = URL.applicationSupportDirectory.appendingPathComponent("default.store")
+                    
+                    // Delete the store file and any associated files
+                    try? FileManager.default.removeItem(at: storeURL)
+                    try? FileManager.default.removeItem(at: storeURL.appendingPathExtension("sqlite3"))
+                    try? FileManager.default.removeItem(at: storeURL.appendingPathExtension("sqlite3-shm"))
+                    try? FileManager.default.removeItem(at: storeURL.appendingPathExtension("sqlite3-wal"))
+                    
+                    // Try to create the container again with a fresh store
+                    container = try ModelContainer(
+                        for: schema,
+                        configurations: [modelConfiguration]
+                    )
+                }
                 
                 // Initialize predefined tags
                 initializePredefinedTags()

@@ -163,55 +163,106 @@ class CreateHangoutViewModel: ObservableObject {
     @Published var isTestingConnection = false
     @Published var connectionTestResult: String?
     
-    init(modelContext: ModelContext, initialDate: Date? = nil, initialLocation: String? = nil, initialTitle: String? = nil, initialSelectedFriends: [Friend]? = nil) {
+    init(modelContext: ModelContext,
+         initialDate: Date? = nil,
+         initialLocation: String? = nil,
+         initialTitle: String? = nil,
+         initialSelectedFriends: [Friend]? = nil) {
         self.modelContext = modelContext
+        self.selectedDate = initialDate ?? Date()
+        self.selectedLocation = initialLocation ?? ""
+        self.hangoutTitle = initialTitle ?? ""
+        self.selectedFriends = initialSelectedFriends ?? []
         self.calendarManager = CalendarManager.shared
-        
-        let defaultType = UserDefaults.standard.string(forKey: "defaultCalendarType") ?? Friend.CalendarType.apple.rawValue
-        let calendarType = Friend.CalendarType(rawValue: defaultType) ?? .apple
-        self._selectedCalendarType = Published(initialValue: calendarType == .apple ? .apple : .google)
-        
-        self._selectedDate = Published(initialValue: initialDate ?? Date())
-        self._selectedLocation = Published(initialValue: initialLocation ?? "")
-        self._hangoutTitle = Published(initialValue: initialTitle?.replacingOccurrences(of: " with .*$", with: "", options: .regularExpression) ?? "")
-        self._selectedFriends = Published(initialValue: initialSelectedFriends ?? [])
+        self.selectedCalendarType = .apple
     }
-    
+
+    private func saveHangout(_ hangout: Hangout) throws {
+        modelContext.insert(hangout)
+        try modelContext.save()
+    }
+
     func createHangout() async {
+        print("🚀 Starting hangout creation...")
         isCreatingEvent = true
         defer { isCreatingEvent = false }
         
         do {
-            // Create local hangout
+            // Validate required fields
+            guard !hangoutTitle.isEmpty else {
+                print("❌ Error: Empty title")
+                errorMessage = "Please enter a title for the hangout"
+                return
+            }
+            
+            guard !selectedFriends.isEmpty else {
+                print("❌ Error: No friends selected")
+                errorMessage = "Please select at least one friend"
+                return
+            }
+            
+            print("✅ Validation passed")
+            print("📝 Title: \(hangoutTitle)")
+            print("👥 Selected friends: \(selectedFriends.map { $0.name }.joined(separator: ", "))")
+            print("📅 Date: \(selectedDate)")
+            print("📍 Location: \(selectedLocation)")
+            print("⏱ Duration: \(selectedDuration?.description ?? "default (1 hour)")")
+            
+            // Test Supabase connection first
+            do {
+                print("🔄 Testing Supabase connection...")
+                _ = try await SupabaseManager.shared.testConnection()
+                print("✅ Supabase connection successful")
+            } catch {
+                print("❌ Supabase connection failed: \(error)")
+                errorMessage = "Unable to connect to server: \(error.localizedDescription)"
+                return
+            }
+            
+            print("📦 Creating local hangout...")
             let hangout = Hangout(
                 date: selectedDate,
                 title: hangoutTitle,
                 location: selectedLocation,
                 isScheduled: true,
                 friends: selectedFriends,
-                duration: selectedDuration ?? 3600 // Default to 1 hour if no duration selected
+                duration: selectedDuration ?? 3600
             )
             
             // Save to local database
-            modelContext.insert(hangout)
-            try modelContext.save()
+            print("💾 Saving to local database...")
+            try saveHangout(hangout)
+            print("✅ Saved to local database")
             
             // Save to Supabase and get web link
-            if let eventId = try await SupabaseManager.shared.createEvent(hangout) {
-                webLink = SupabaseManager.shared.getWebLink(for: eventId)
+            print("☁️ Saving to Supabase...")
+            if let result = try await SupabaseManager.shared.createEvent(hangout) {
+                print("✅ Saved to Supabase with ID: \(result.eventId)")
+                webLink = SupabaseManager.shared.getWebLink(for: result.eventId, withToken: result.token)
+                print("🔗 Generated web link: \(webLink ?? "nil")")
                 
-                // Show message sheet with web link
-                // Use the first friend's phone number or email for messaging
+                // Store the event link and token with the hangout
+                hangout.eventLink = webLink
+                hangout.eventToken = result.token
+                // Save the event link for the creator
+                let creatorLink = webLink
+                
+                // Show message sheet with web link for attendees
                 messageRecipient = selectedFriends.first?.phoneNumber ?? manualAttendees.first?.email
                 messageBody = """
                 Join me for \(hangoutTitle)!
                 When: \(formatDate(selectedDate))
-                Where: \(selectedLocation)
-                RSVP and add to calendar: \(webLink ?? "")
+                \(selectedLocation.isEmpty ? "" : "Where: \(selectedLocation)\n")View event details and RSVP: \(webLink ?? "")
                 """
                 showingMessageSheet = true
+                print("📱 Showing message sheet")
+                
+                // Show confirmation with creator's link
+                print("🔗 Creator's event link: \(creatorLink ?? "")")
+                print("ℹ️ Save this link to view your event later")
             }
         } catch {
+            print("❌ Error in createHangout: \(error)")
             errorMessage = "Failed to create event: \(error.localizedDescription)"
         }
     }
@@ -245,10 +296,10 @@ class CreateHangoutViewModel: ObservableObject {
             }
             
             calendarManager.selectedCalendarType = selectedCalendarType
-            try await createHangout()
+            await createHangout()
             
             // Save the model context
-            modelContext.save()
+            try modelContext.save()
             
             isLoading = false
             

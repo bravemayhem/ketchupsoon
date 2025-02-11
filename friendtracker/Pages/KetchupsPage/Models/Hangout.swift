@@ -12,6 +12,8 @@ final class Hangout: Identifiable {
     var isCompleted: Bool
     var needsReschedule: Bool
     var originalHangoutId: UUID?  // Track if this is a rescheduled hangout
+    var eventLink: String?  // Store the web link for the event
+    var eventToken: String?  // Store the token for the event
     @Relationship(deleteRule: .cascade) var friends: [Friend]
     
     init(date: Date, title: String, location: String, isScheduled: Bool, friends: [Friend], duration: TimeInterval = 3600) {
@@ -24,6 +26,8 @@ final class Hangout: Identifiable {
         self.isCompleted = false
         self.needsReschedule = false
         self.originalHangoutId = nil
+        self.eventLink = nil
+        self.eventToken = nil
         self.friends = friends
     }
     
