@@ -9,8 +9,10 @@ struct CreateHangoutView: View {
     @State private var showingFriendPicker = false
     
     init(initialDate: Date? = nil, initialLocation: String? = nil, initialTitle: String? = nil, initialSelectedFriends: [Friend]? = nil) {
+        // Use a StateObject wrapper to initialize the viewModel with the default values
+        // The actual modelContext will be injected from the environment
         _viewModel = StateObject(wrappedValue: CreateHangoutViewModel(
-            modelContext: ModelContext(try! ModelContainer(for: Friend.self, configurations: ModelConfiguration(isStoredInMemoryOnly: false))),
+            modelContext: ModelContext(try! ModelContainer(for: Friend.self, Hangout.self, Tag.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true))),
             initialDate: initialDate,
             initialLocation: initialLocation,
             initialTitle: initialTitle,
@@ -90,11 +92,16 @@ struct CreateHangoutView: View {
                     SMSCalendarLinkView(recipient: recipient, message: body)
                 }
             }
+            .task {
+                // Update the viewModel to use the environment's modelContext
+                viewModel.updateModelContext(modelContext)
+            }
         }
     }
 }
 
 #Preview {
+    let container = try! ModelContainer(for: Friend.self, Hangout.self, Tag.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
     CreateHangoutView(initialDate: Date())
-        .modelContainer(for: [Friend.self, Hangout.self], inMemory: true)
+        .modelContainer(container)
 }

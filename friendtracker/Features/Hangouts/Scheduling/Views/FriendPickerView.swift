@@ -166,13 +166,21 @@ struct FriendPickerView: View {
             }
             
         case .contact(let contact):
+            // Ensure contact has a phone number
+            guard let phoneNumber = contact.phoneNumbers.first?.value.stringValue,
+                  !phoneNumber.isEmpty else {
+                // In a real app, you'd want to show an error message to the user
+                print("Cannot add contact without phone number")
+                return
+            }
+            
             // Create a new friend from the contact with all required properties
             let newFriend = Friend(
                 name: "\(contact.givenName) \(contact.familyName)".trimmingCharacters(in: .whitespaces),
                 location: contact.postalAddresses.first?.value.city,
                 contactIdentifier: contact.identifier,
                 needsToConnectFlag: false,
-                phoneNumber: contact.phoneNumbers.first?.value.stringValue,
+                phoneNumber: phoneNumber.standardizedPhoneNumber(),
                 email: contact.emailAddresses.first?.value as String?,
                 additionalEmails: Array(contact.emailAddresses.dropFirst().map { $0.value as String }),
                 photoData: contact.imageData,

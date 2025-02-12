@@ -6,15 +6,14 @@ struct SettingsView: View {
     @Environment(\.modelContext) private var modelContext
     @StateObject private var colorSchemeManager = ColorSchemeManager.shared
     @State private var showingClearDataAlert = false
-    @State private var showingComingSoonAlert = false
     @State private var showingDeleteStoreAlert = false
     
     var body: some View {
         NavigationStack {
             Form {
                 Section("Profile") {
-                    Button {
-                        showingComingSoonAlert = true
+                    NavigationLink {
+                        ProfileSettingsView()
                     } label: {
                         Label {
                             Text("Profile Settings")
@@ -81,11 +80,6 @@ struct SettingsView: View {
             } message: {
                 Text("This will delete all friends and hangouts. This action cannot be undone.")
             }
-            .alert("Coming soon!", isPresented: $showingComingSoonAlert) {
-                Button("OK", role: .cancel) { }
-            } message: {
-                Text("Profile settings are coming in a future update.")
-            }
             .alert("Delete Data Store", isPresented: $showingDeleteStoreAlert) {
                 Button("Cancel", role: .cancel) { }
                 Button("Delete", role: .destructive) {
@@ -94,54 +88,34 @@ struct SettingsView: View {
                     }
                 }
             } message: {
-                Text("This will delete the persistent data store including all associated files. You will need to restart the app for changes to take effect. This action cannot be undone.")
+                Text("This will delete the entire data store. This action cannot be undone.")
             }
         }
     }
     
-    @MainActor
     private func clearAllData() async {
-        // Delete all hangouts
-        let hangoutDescriptor = FetchDescriptor<Hangout>()
-        if let hangouts = try? modelContext.fetch(hangoutDescriptor) {
-            for hangout in hangouts {
-                modelContext.delete(hangout)
-            }
-        }
-        
-        // Delete all friends
-        let friendDescriptor = FetchDescriptor<Friend>()
-        if let friends = try? modelContext.fetch(friendDescriptor) {
+        let descriptor = FetchDescriptor<Friend>()
+        if let friends = try? modelContext.fetch(descriptor) {
             for friend in friends {
                 modelContext.delete(friend)
             }
         }
-        
-        // Delete all tags
-        let tagDescriptor = FetchDescriptor<Tag>()
-        if let tags = try? modelContext.fetch(tagDescriptor) {
-            for tag in tags {
-                modelContext.delete(tag)
-            }
-        }
-        
-        dismiss()
+        try? modelContext.save()
     }
     
-    @MainActor
     private func deleteDataStore() async {
-        let fileManager = FileManager.default
-        let storeURL = URL.applicationSupportDirectory.appendingPathComponent("default.store")
-        try? fileManager.removeItem(at: storeURL)
-        try? fileManager.removeItem(at: storeURL.appendingPathExtension("sqlite3"))
-        try? fileManager.removeItem(at: storeURL.appendingPathExtension("sqlite3-shm"))
-        try? fileManager.removeItem(at: storeURL.appendingPathExtension("sqlite3-wal"))
-        
-        dismiss()
+        let descriptor = FetchDescriptor<Friend>()
+        if let friends = try? modelContext.fetch(descriptor) {
+            for friend in friends {
+                modelContext.delete(friend)
+            }
+        }
+        try? modelContext.save()
+        UserSettings.shared.clearAll()
     }
 }
 
 #Preview {
     SettingsView()
-        .modelContainer(for: [Friend.self, Hangout.self, Tag.self], inMemory: true)
+        .modelContainer(for: [Friend.self, Hangout.self], inMemory: true)
 } 

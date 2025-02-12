@@ -17,7 +17,11 @@ final class Friend: Identifiable {
     var lastSeen: Date?
     var location: String?
     var contactIdentifier: String?
-    var phoneNumber: String?
+    private var _phoneNumber: String?
+    var phoneNumber: String? {
+        get { _phoneNumber }
+        set { _phoneNumber = newValue?.standardizedPhoneNumber() }
+    }
     var email: String?  // Primary email
     var photoData: Data?
     var catchUpFrequency: CatchUpFrequency?
@@ -87,7 +91,7 @@ final class Friend: Identifiable {
         self.lastSeen = lastSeen
         self.location = location
         self.contactIdentifier = contactIdentifier
-        self.phoneNumber = phoneNumber
+        self._phoneNumber = phoneNumber?.standardizedPhoneNumber()
         self.email = email
         self.photoData = photoData
         self.catchUpFrequency = catchUpFrequency

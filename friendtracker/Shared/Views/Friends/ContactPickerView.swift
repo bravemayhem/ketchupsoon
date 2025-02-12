@@ -243,7 +243,7 @@ struct ContactPickerView: View {
                 name: "\(contact.givenName) \(contact.familyName)",
                 location: city,
                 contactIdentifier: contact.identifier,
-                phoneNumber: contact.phoneNumbers.first?.value.stringValue,
+                phoneNumber: contact.phoneNumbers.first?.value.stringValue.standardizedPhoneNumber(),
                 email: contact.emailAddresses.first?.value as String?,
                 photoData: contact.thumbnailImageData
             )

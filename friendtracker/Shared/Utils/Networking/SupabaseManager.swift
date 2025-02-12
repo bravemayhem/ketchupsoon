@@ -49,8 +49,43 @@ struct AttendeeResponse: Codable {
 struct InviteData: Codable {
     let token: String
     let event_id: String
-    let phone_number: String
     let expires_at: String
+}
+
+// Add phone number formatting utilities
+extension String {
+    // Standardize phone number by removing all non-digit characters
+    func standardizedPhoneNumber() -> String {
+        return self.replacingOccurrences(of: "[^0-9]", with: "", options: .regularExpression)
+    }
+}
+
+// Add new structures for phone number verification
+struct PhoneNumberParts {
+    let areaCode: String
+    let middle: String
+    let last: String
+    
+    var formatted: String {
+        "(\(areaCode)) \(middle)-\(last)"
+    }
+    
+    var standardized: String {
+        areaCode + middle + last
+    }
+    
+    static func parse(_ phoneNumber: String) -> PhoneNumberParts? {
+        let digits = phoneNumber.standardizedPhoneNumber()
+        guard digits.count >= 10 else { return nil }
+        
+        // Take last 10 digits if more are provided
+        let last10 = String(digits.suffix(10))
+        return PhoneNumberParts(
+            areaCode: String(last10.prefix(3)),
+            middle: String(last10[last10.index(last10.startIndex, offsetBy: 3)..<last10.index(last10.startIndex, offsetBy: 6)]),
+            last: String(last10.suffix(4))
+        )
+    }
 }
 
 class SupabaseManager {
@@ -76,21 +111,57 @@ class SupabaseManager {
     func createEvent(_ hangout: Hangout) async throws -> (eventId: String, token: String)? {
         print("🚀 Starting hangout creation...")
         
+        // Capture friend data on main thread before async operation
+        let friendsData = await MainActor.run {
+            hangout.friends.map { friend in
+                (
+                    name: friend.name,
+                    phoneNumber: friend.phoneNumber,
+                    email: friend.email ?? ""
+                )
+            }
+        }
+        
+        // Add debug logging for friends and their phone numbers
+        print("📱 Checking phone numbers for all friends:")
+        for friendData in friendsData {
+            print("  - \(friendData.name): phoneNumber = \(String(describing: friendData.phoneNumber))")
+        }
+        
         // Validate required fields
         guard !hangout.title.isEmpty else {
             print("❌ Error: Empty title")
             throw NSError(domain: "SupabaseManager", code: 400, userInfo: [NSLocalizedDescriptionKey: "Title is required"])
         }
         
-        guard !hangout.friends.isEmpty else {
-            print("❌ Error: No attendees")
-            throw NSError(domain: "SupabaseManager", code: 400, userInfo: [NSLocalizedDescriptionKey: "At least one attendee is required"])
+        // Validate that all friends have phone numbers
+        let friendsWithoutPhones = friendsData.filter { $0.phoneNumber == nil || $0.phoneNumber!.isEmpty }
+        if !friendsWithoutPhones.isEmpty {
+            print("❌ Error: Found \(friendsWithoutPhones.count) friends without phone numbers:")
+            for friend in friendsWithoutPhones {
+                print("  - \(friend.name): phoneNumber = \(String(describing: friend.phoneNumber))")
+            }
+            throw NSError(domain: "SupabaseManager", code: 400, userInfo: [
+                NSLocalizedDescriptionKey: "All friends must have phone numbers. Missing for: \(friendsWithoutPhones.map { $0.name }.joined(separator: ", "))"
+            ])
         }
         
-        // Validate that at least one friend has a phone number
-        guard let firstFriendWithPhone = hangout.friends.first(where: { $0.phoneNumber != nil }) else {
-            print("❌ Error: No friends with phone numbers")
-            throw NSError(domain: "SupabaseManager", code: 400, userInfo: [NSLocalizedDescriptionKey: "At least one friend must have a phone number"])
+        // Get the organizer's phone number from UserSettings
+        let organizer = Friend(
+            name: UserSettings.shared.name ?? "Organizer",
+            phoneNumber: UserSettings.shared.phoneNumber,
+            email: UserSettings.shared.email
+        )
+        
+        // Check if either the organizer or any friends have a phone number
+        let hasPhoneNumber = UserSettings.shared.hasPhoneNumber ||
+                            friendsData.contains(where: { $0.phoneNumber != nil && !$0.phoneNumber!.isEmpty })
+        
+        guard hasPhoneNumber else {
+            print("❌ Error: No valid phone numbers found")
+            throw NSError(domain: "SupabaseManager", code: 400, userInfo: [
+                NSLocalizedDescriptionKey: "Either you or at least one friend must have a phone number"
+            ])
         }
         
         let duration = Int(hangout.endDate.timeIntervalSince(hangout.date))
@@ -167,22 +238,41 @@ class SupabaseManager {
                 
                 print("✅ Created event with ID: \(eventId)")
                 
-                // Create a single invite token for the event that will work for everyone
-                let inviteToken = try await createInvite(eventId: eventId, phoneNumber: firstFriendWithPhone.phoneNumber!)
-                print("🎟 Created invite token for event")
+                // Add organizer first if they have a phone number
+                if let organizerPhone = organizer.phoneNumber, !organizerPhone.isEmpty {
+                    let organizerData = SupabaseAttendeeData(
+                        event_id: eventId,
+                        name: organizer.name,
+                        email: organizer.email ?? "",
+                        phone_number: organizerPhone.standardizedPhoneNumber(),
+                        rsvp_status: "accepted"  // Organizer is automatically accepted
+                    )
+                    
+                    print("👤 Adding organizer")
+                    let organizerResponse = try await client
+                        .from("event_attendees")
+                        .insert(organizerData)
+                        .select()
+                        .execute()
+                    
+                    print("📥 Organizer response status: \(organizerResponse.status)")
+                }
                 
-                // Create attendees
+                // Then add all friends
                 print("👥 Creating attendees:")
-                for friend in hangout.friends {
+                for friendData in friendsData {
+                    // Standardize phone number if present
+                    let standardizedPhone = friendData.phoneNumber?.standardizedPhoneNumber()
+                    
                     let attendeeData = SupabaseAttendeeData(
                         event_id: eventId,
-                        name: friend.name,
-                        email: friend.email ?? "",
-                        phone_number: friend.phoneNumber ?? "",
+                        name: friendData.name,
+                        email: friendData.email,
+                        phone_number: standardizedPhone ?? "",
                         rsvp_status: "pending"
                     )
                     
-                    print("👤 Adding attendee: \(friend.name)")
+                    print("👤 Adding attendee: \(friendData.name)")
                     let attendeeResponse = try await client
                         .from("event_attendees")
                         .insert(attendeeData)
@@ -192,7 +282,12 @@ class SupabaseManager {
                     print("📥 Attendee response status: \(attendeeResponse.status)")
                 }
                 
-                return (eventId: eventId, token: inviteToken)
+                // Create a single invite token for the event
+                print("🎟 Creating invite token for event...")
+                let token = try await createInvite(eventId: eventId)
+                print("✅ Created invite token")
+                
+                return (eventId: eventId, token: token)
             } catch {
                 print("❌ Error decoding response: \(error)")
                 if let responseString = String(data: response.data, encoding: .utf8) {
@@ -223,6 +318,15 @@ class SupabaseManager {
     
     // Update event in Supabase
     func updateEvent(_ event: Hangout) async throws {
+        // Validate that all friends have phone numbers
+        let friendsWithoutPhones = event.friends.filter { $0.phoneNumber == nil || $0.phoneNumber!.isEmpty }
+        if !friendsWithoutPhones.isEmpty {
+            print("❌ Error: Some friends are missing phone numbers")
+            throw NSError(domain: "SupabaseManager", code: 400, userInfo: [
+                NSLocalizedDescriptionKey: "All friends must have phone numbers. Missing for: \(friendsWithoutPhones.map { $0.name }.joined(separator: ", "))"
+            ])
+        }
+        
         let duration = Int(event.endDate.timeIntervalSince(event.date))
         let eventData = SupabaseEventData(
             title: event.title,
@@ -262,11 +366,13 @@ class SupabaseManager {
         
         // Re-add all attendees
         for friend in event.friends {
+            let standardizedPhone = friend.phoneNumber?.standardizedPhoneNumber()
+            
             let attendeeData = SupabaseAttendeeData(
                 event_id: event.id.uuidString,
                 name: friend.name,
                 email: friend.email ?? "",
-                phone_number: friend.phoneNumber ?? "",
+                phone_number: standardizedPhone ?? "",
                 rsvp_status: "pending"
             )
             
@@ -319,21 +425,35 @@ class SupabaseManager {
     }
     
     // Create an invite for an event attendee
-    func createInvite(eventId: String, phoneNumber: String) async throws -> String {
-        let token = generateToken()
-        let expiresAt = Calendar.current.date(byAdding: .day, value: 7, to: Date())!
+    func createInvite(eventId: String) async throws -> String {
+        let token = UUID().uuidString
+        let expiryDate = Calendar.current.date(byAdding: .day, value: 30, to: Date()) ?? Date()
         
-        let inviteData = InviteData(
-            token: token,
-            event_id: eventId,
-            phone_number: phoneNumber,
-            expires_at: expiresAt.ISO8601Format()
-        )
+        // Get the organizer's phone number from UserSettings
+        guard let phoneNumber = UserSettings.shared.phoneNumber?.standardizedPhoneNumber(),
+              !phoneNumber.isEmpty else {
+            throw NSError(domain: "SupabaseManager", code: 400, userInfo: [
+                NSLocalizedDescriptionKey: "Organizer phone number is required to create an invite"
+            ])
+        }
         
-        try await client
+        let inviteData = [
+            "event_id": eventId,
+            "token": token,
+            "phone_number": phoneNumber,
+            "expires_at": ISO8601DateFormatter().string(from: expiryDate)
+        ]
+        
+        let response = try await client
             .from("invites")
             .insert(inviteData)
             .execute()
+        
+        guard response.status == 201 else {
+            throw NSError(domain: "SupabaseManager", code: 500, userInfo: [
+                NSLocalizedDescriptionKey: "Failed to create invite"
+            ])
+        }
         
         return token
     }
@@ -350,5 +470,20 @@ class SupabaseManager {
             .execute()
         
         return try decoder.decode(EventResponse.self, from: response.data)
+    }
+    
+    // Verify phone number for event access
+    func verifyPhoneNumber(token: String, areaCode: String, middle: String, last: String, ipAddress: String) async throws -> Bool {
+        let response = try await client
+            .rpc("verify_invite_phone", params: [
+                "p_token": token,
+                "p_area_code": areaCode,
+                "p_middle": middle,
+                "p_last": last,
+                "p_ip": ipAddress
+            ])
+            .execute()
+        
+        return try decoder.decode(Bool.self, from: response.data)
     }
 } 

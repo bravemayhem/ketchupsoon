@@ -44,7 +44,7 @@ class CreateHangoutViewModel: ObservableObject {
     @Published private var customEmailAddresses: [Friend.ID: String] = [:]
     
     let calendarManager: CalendarManager
-    private let modelContext: ModelContext
+    private var modelContext: ModelContext
     
     var isScheduleButtonDisabled: Bool {
         hangoutTitle.isEmpty || selectedFriends.isEmpty
@@ -349,5 +349,10 @@ class CreateHangoutViewModel: ObservableObject {
         }
         
         isTestingConnection = false
+    }
+    
+    // Update the model context
+    func updateModelContext(_ newContext: ModelContext) {
+        modelContext = newContext
     }
 } 

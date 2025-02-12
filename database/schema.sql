@@ -34,10 +34,9 @@ CREATE TABLE invites (
     event_id UUID REFERENCES events(id) ON DELETE CASCADE,
     token TEXT UNIQUE NOT NULL,
     phone_number TEXT NOT NULL,
-    is_valid BOOLEAN DEFAULT true,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
-    verified_at TIMESTAMP WITH TIME ZONE
+    UNIQUE(event_id)  -- Only one invite per event
 );
 
 -- Create verification_attempts table to prevent brute force
@@ -55,7 +54,7 @@ CREATE INDEX idx_events_date ON events(date);
 CREATE INDEX idx_event_attendees_event_id ON event_attendees(event_id);
 CREATE INDEX idx_events_creator_id ON events(creator_id);
 CREATE INDEX idx_event_attendees_phone_number ON event_attendees(phone_number);
-CREATE INDEX idx_invites_phone_number ON invites(phone_number);
+CREATE INDEX idx_invites_token ON invites(token);
 
 -- Create updated_at trigger function
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -137,10 +136,24 @@ CREATE POLICY "Enable insert for all on verification attempts"
 ON verification_attempts FOR INSERT
 WITH CHECK (true);
 
+-- Function to standardize phone numbers (remove all non-digits)
+CREATE OR REPLACE FUNCTION standardize_phone(phone TEXT)
+RETURNS TEXT
+LANGUAGE plpgsql
+IMMUTABLE
+AS $$
+BEGIN
+    -- Remove all non-digit characters and return just the numbers
+    RETURN regexp_replace(phone, '\D', '', 'g');
+END;
+$$;
+
 -- Function to verify phone number for invite
 CREATE OR REPLACE FUNCTION verify_invite_phone(
     p_token TEXT,
-    p_phone TEXT,
+    p_area_code TEXT,
+    p_middle TEXT,
+    p_last TEXT,
     p_ip TEXT
 )
 RETURNS BOOLEAN
@@ -148,9 +161,13 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
 DECLARE
-    v_invite_exists BOOLEAN;
+    v_phone_exists BOOLEAN;
     v_attempt_count INT;
+    v_formatted_phone TEXT;
 BEGIN
+    -- Combine and standardize the phone number parts
+    v_formatted_phone := standardize_phone(p_area_code || p_middle || p_last);
+    
     -- Check recent failed attempts from this IP
     SELECT COUNT(*)
     INTO v_attempt_count
@@ -164,16 +181,16 @@ BEGIN
         RETURN false;
     END IF;
 
-    -- Check if invite exists and matches phone
+    -- Check if phone number exists as an attendee for this event
+    -- Compare standardized phone numbers
     SELECT EXISTS (
         SELECT 1
-        FROM invites
-        WHERE token = p_token
-        AND phone_number = p_phone
-        AND is_valid = true
-        AND expires_at > NOW()
-        AND verified_at IS NULL
-    ) INTO v_invite_exists;
+        FROM event_attendees ea
+        JOIN invites i ON i.event_id = ea.event_id
+        WHERE i.token = p_token
+        AND standardize_phone(ea.phone_number) = v_formatted_phone
+        AND i.expires_at > NOW()
+    ) INTO v_phone_exists;
 
     -- Record the attempt
     INSERT INTO verification_attempts (
@@ -183,18 +200,30 @@ BEGIN
         success
     ) VALUES (
         p_token,
-        p_phone,
+        v_formatted_phone,
         p_ip,
-        v_invite_exists
+        v_phone_exists
     );
 
-    -- If valid, mark as verified
-    IF v_invite_exists THEN
-        UPDATE invites
-        SET verified_at = NOW()
-        WHERE token = p_token;
-    END IF;
-
-    RETURN v_invite_exists;
+    RETURN v_phone_exists;
 END;
-$$; 
+$$;
+
+-- Add trigger to standardize phone numbers on insert/update
+CREATE OR REPLACE FUNCTION standardize_phone_on_save()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    -- Only standardize if phone number is not null
+    IF NEW.phone_number IS NOT NULL THEN
+        NEW.phone_number := standardize_phone(NEW.phone_number);
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER standardize_attendee_phone
+    BEFORE INSERT OR UPDATE ON event_attendees
+    FOR EACH ROW
+    EXECUTE FUNCTION standardize_phone_on_save(); 
