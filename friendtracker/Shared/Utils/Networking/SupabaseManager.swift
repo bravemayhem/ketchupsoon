@@ -49,6 +49,7 @@ struct AttendeeResponse: Codable {
 struct InviteData: Codable {
     let token: String
     let event_id: String
+    let phone_number: String
     let expires_at: String
 }
 
@@ -84,6 +85,12 @@ class SupabaseManager {
         guard !hangout.friends.isEmpty else {
             print("❌ Error: No attendees")
             throw NSError(domain: "SupabaseManager", code: 400, userInfo: [NSLocalizedDescriptionKey: "At least one attendee is required"])
+        }
+        
+        // Validate that at least one friend has a phone number
+        guard let firstFriendWithPhone = hangout.friends.first(where: { $0.phoneNumber != nil }) else {
+            print("❌ Error: No friends with phone numbers")
+            throw NSError(domain: "SupabaseManager", code: 400, userInfo: [NSLocalizedDescriptionKey: "At least one friend must have a phone number"])
         }
         
         let duration = Int(hangout.endDate.timeIntervalSince(hangout.date))
@@ -161,7 +168,7 @@ class SupabaseManager {
                 print("✅ Created event with ID: \(eventId)")
                 
                 // Create a single invite token for the event that will work for everyone
-                let inviteToken = try await createInvite(eventId: eventId)
+                let inviteToken = try await createInvite(eventId: eventId, phoneNumber: firstFriendWithPhone.phoneNumber!)
                 print("🎟 Created invite token for event")
                 
                 // Create attendees
@@ -312,13 +319,14 @@ class SupabaseManager {
     }
     
     // Create an invite for an event attendee
-    func createInvite(eventId: String) async throws -> String {
+    func createInvite(eventId: String, phoneNumber: String) async throws -> String {
         let token = generateToken()
         let expiresAt = Calendar.current.date(byAdding: .day, value: 7, to: Date())!
         
         let inviteData = InviteData(
             token: token,
             event_id: eventId,
+            phone_number: phoneNumber,
             expires_at: expiresAt.ISO8601Format()
         )
         
