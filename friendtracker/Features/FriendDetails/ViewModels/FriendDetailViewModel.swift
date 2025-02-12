@@ -170,7 +170,6 @@ enum FriendDetail {
         }
         
         func createFriend(in modelContext: ModelContext) throws -> Friend {
-            // Check for duplicates before creating
             try checkForDuplicates(in: modelContext)
             
             let friend = Friend(
@@ -182,7 +181,9 @@ enum FriendDetail {
                 phoneNumber: isFromContacts ? input?.phoneNumber : (phoneNumber.isEmpty ? nil : phoneNumber),
                 email: isFromContacts ? input?.email : (email.isEmpty ? nil : email),
                 photoData: input?.imageData,
-                catchUpFrequency: hasCatchUpFrequency ? selectedFrequency : nil
+                catchUpFrequency: hasCatchUpFrequency ? selectedFrequency : nil,
+                calendarIntegrationEnabled: false,
+                calendarVisibilityPreference: .none
             )
             friend.tags = Array(selectedTags)
             modelContext.insert(friend)

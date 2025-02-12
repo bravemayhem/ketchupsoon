@@ -15,6 +15,17 @@ final class Hangout: Identifiable {
     var eventLink: String?  // Store the web link for the event
     var eventToken: String?  // Store the token for the event
     @Relationship(deleteRule: .cascade) var friends: [Friend]
+    @Attribute(.transformable(by: ManualAttendeeArrayValueTransformer.self)) private var _manualAttendees: Data?
+    
+    var manualAttendees: [ManualAttendee] {
+        get {
+            guard let data = _manualAttendees else { return [] }
+            return (try? JSONDecoder().decode([ManualAttendee].self, from: data)) ?? []
+        }
+        set {
+            _manualAttendees = try? JSONEncoder().encode(newValue)
+        }
+    }
     
     init(date: Date, title: String, location: String, isScheduled: Bool, friends: [Friend], duration: TimeInterval = 3600) {
         self.id = UUID()
@@ -29,6 +40,7 @@ final class Hangout: Identifiable {
         self.eventLink = nil
         self.eventToken = nil
         self.friends = friends
+        self._manualAttendees = nil
     }
     
     // Create a new hangout as a reschedule of this one
@@ -42,6 +54,7 @@ final class Hangout: Identifiable {
             duration: duration
         )
         rescheduled.originalHangoutId = self.id
+        rescheduled.manualAttendees = self.manualAttendees
         return rescheduled
     }
     
@@ -110,5 +123,47 @@ final class Hangout: Identifiable {
         
         // Use the data URL format that iOS recognizes for calendar events
         return URL(string: "data:text/calendar;charset=utf8,\(encodedContent)")
+    }
+}
+
+final class ManualAttendeeArrayValueTransformer: ValueTransformer {
+    static let name = NSValueTransformerName("ManualAttendeeArrayValueTransformer")
+    
+    override class func transformedValueClass() -> AnyClass {
+        NSData.self
+    }
+    
+    override func transformedValue(_ value: Any?) -> Any? {
+        // Handle both array and data input for backward compatibility
+        if let data = value as? Data {
+            return data
+        }
+        if let attendees = value as? [ManualAttendee] {
+            return try? JSONEncoder().encode(attendees)
+        }
+        return nil
+    }
+    
+    override func reverseTransformedValue(_ value: Any?) -> Any? {
+        guard let data = value as? Data else { return nil }
+        // Try to decode as array first
+        if let attendees = try? JSONDecoder().decode([ManualAttendee].self, from: data) {
+            return attendees
+        }
+        // If that fails, return the raw data (for backward compatibility)
+        return data
+    }
+    
+    override class func allowsReverseTransformation() -> Bool {
+        return true
+    }
+    
+    static func register() {
+        if !ValueTransformer.valueTransformerNames().contains(name) {
+            ValueTransformer.setValueTransformer(
+                ManualAttendeeArrayValueTransformer(),
+                forName: name
+            )
+        }
     }
 }

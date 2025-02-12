@@ -105,7 +105,12 @@ struct EmailDropdownMenu: View {
                     ToolbarItem(placement: .confirmationAction) {
                         Button("Save") {
                             if viewModel.isValidEmail(newEmailInput) {
-                                friend.additionalEmails.append(newEmailInput)
+                                // Create a new array and append the new email
+                                let currentEmails = Array(friend.additionalEmails)
+                                var updatedEmails = currentEmails
+                                updatedEmails.append(newEmailInput)
+                                friend.additionalEmails = updatedEmails
+                                
                                 viewModel.setSelectedEmail(newEmailInput, for: friend)
                                 showingAddEmailSheet = false
                                 isExpanded = false

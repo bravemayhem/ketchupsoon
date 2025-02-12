@@ -5,15 +5,9 @@
 //  Created by Amineh Beltran on 12/11/24.
 //
 
-//
-//  friendtrackerApp.swift
-//  friendtracker
-//
-//  Created by Amineh Beltran on 12/11/24.
-//
-
 import SwiftUI
 import SwiftData
+import Foundation
 
 @main
 struct friendtrackerApp: App {
@@ -23,19 +17,26 @@ struct friendtrackerApp: App {
     @Environment(\.scenePhase) private var scenePhase
     
     init() {
-        PerformanceMonitor.shared.startMeasuring("AppLaunch")
-        // Register the email array transformer
+        // Register value transformers first
         EmailArrayValueTransformer.register()
+        ManualAttendeeArrayValueTransformer.register()
+        
+        PerformanceMonitor.shared.startMeasuring("AppLaunch")
+        
+        // Verify transformer registration
+        let registeredTransformers = ValueTransformer.valueTransformerNames()
+        print("✓ Registered transformers: \(registeredTransformers)")
         
         // Initialize ModelContainer
         do {
-            // Define the schema
+            print("🏗 Creating schema...")
             let schema = Schema([
                 Friend.self,
                 Hangout.self,
                 Tag.self
             ])
             
+            print("📦 Creating ModelContainer...")
             if ProcessInfo.processInfo.isPreview {
                 // Use in-memory configuration for previews
                 let previewConfig = ModelConfiguration(
@@ -46,6 +47,7 @@ struct friendtrackerApp: App {
                     for: schema,
                     configurations: [previewConfig]
                 )
+                print("✅ Created preview ModelContainer")
             } else {
                 // Use persistent configuration for actual app
                 let modelConfiguration = ModelConfiguration(
@@ -55,13 +57,14 @@ struct friendtrackerApp: App {
                 )
                 
                 do {
-                    // First try to create the container normally
+                    print("📦 Attempting to create ModelContainer...")
                     container = try ModelContainer(
                         for: schema,
                         configurations: [modelConfiguration]
                     )
+                    print("✅ Created ModelContainer successfully")
                 } catch {
-                    print("Failed to load store, attempting to delete and recreate: \(error)")
+                    print("❌ Failed to load store, attempting to delete and recreate: \(error)")
                     
                     // Get the store URL from the Application Support directory
                     let storeURL = URL.applicationSupportDirectory.appendingPathComponent("default.store")
@@ -72,19 +75,20 @@ struct friendtrackerApp: App {
                     try? FileManager.default.removeItem(at: storeURL.appendingPathExtension("sqlite3-shm"))
                     try? FileManager.default.removeItem(at: storeURL.appendingPathExtension("sqlite3-wal"))
                     
-                    // Try to create the container again with a fresh store
+                    print("🔄 Attempting to create fresh ModelContainer...")
                     container = try ModelContainer(
                         for: schema,
                         configurations: [modelConfiguration]
                     )
+                    print("✅ Created fresh ModelContainer successfully")
                 }
                 
                 // Initialize predefined tags
+                print("🏷 Initializing predefined tags...")
                 initializePredefinedTags()
             }
-            
-            debugLog("Model container initialized successfully")
         } catch {
+            print("❌ Fatal error initializing ModelContainer: \(error)")
             fatalError("Could not initialize ModelContainer: \(error)")
         }
         

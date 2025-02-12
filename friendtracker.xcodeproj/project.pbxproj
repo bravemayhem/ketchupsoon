@@ -45,6 +45,7 @@
 		F44345CF2D5AAC8C00D52D7A /* Exceptions for "friendtracker" folder in "friendtracker" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				Config.xcconfig,
 				Info.plist,
 			);
 			target = F4070A272D0A183C00B11C0B /* friendtracker */;
@@ -221,7 +222,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 1610;
-				LastUpgradeCheck = 1610;
+				LastUpgradeCheck = 1620;
 				TargetAttributes = {
 					F4070A272D0A183C00B11C0B = {
 						CreatedOnToolsVersion = 16.1;

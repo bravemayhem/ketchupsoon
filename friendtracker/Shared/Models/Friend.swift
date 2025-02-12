@@ -5,49 +5,85 @@ import Contacts
 
 @Model
 final class Friend: Identifiable {
+    // Required properties
     @Attribute(.unique) var id: UUID
     var name: String
+    var needsToConnectFlag: Bool
+    var calendarIntegrationEnabled: Bool
+    var calendarVisibilityPreference: CalendarVisibilityPreference
+    var createdAt: Date
+    
+    // Optional properties
     var lastSeen: Date?
     var location: String?
     var contactIdentifier: String?
-    var needsToConnectFlag: Bool
     var phoneNumber: String?
     var email: String?  // Primary email
-    @Attribute(.transformable(by: EmailArrayValueTransformer.self))
-    private var _additionalEmails: Data?
     var photoData: Data?
     var catchUpFrequency: CatchUpFrequency?
-    var calendarIntegrationEnabled: Bool
-    @Attribute(.externalStorage) var calendarVisibilityPreference: CalendarVisibilityPreference
-    var createdAt: Date
+    
+    /// Additional email addresses for manually added friends.
+    /// For friends linked to system contacts (contactIdentifier != nil),
+    /// this property is not used - instead, emails are managed through
+    /// the Contacts framework.
+    @Attribute(.transformable(by: EmailArrayValueTransformer.self))
+    var additionalEmails: [String]
+    
+    // Relationships
     @Relationship(deleteRule: .cascade) var hangouts: [Hangout]
     @Relationship(deleteRule: .nullify) var tags: [Tag]
-    // Cache for frequently accessed computed properties
+    
+    // Cache properties
     @Transient private var _lastSeenTextCache: (Date, String)?
-    // Lazy loading for hangouts
     @Transient private var _scheduledHangoutsCache: [Hangout]?
     
-    var additionalEmails: [String] {
-        get {
-            guard let data = _additionalEmails else { return [] }
-            return (try? JSONDecoder().decode([String].self, from: data)) ?? []
+    /// Returns all email addresses for this friend.
+    /// For contact-linked friends, this will trigger a contact sync.
+    /// For manual friends, this returns the primary email and additional emails.
+    var allEmails: [String] {
+        // If this is a contact-linked friend, we don't use the local storage
+        if contactIdentifier != nil {
+            // Return an empty array if we can't access contacts
+            // The UI layer should handle contact sync and updates
+            return []
         }
-        set {
-            _additionalEmails = try? JSONEncoder().encode(newValue)
-        }
+        
+        // For manual friends, combine primary and additional emails
+        return [email].compactMap { $0 } + additionalEmails
     }
     
-    init(name: String,
+    var initials: String {
+        name.components(separatedBy: " ")
+            .compactMap { $0.first }
+            .prefix(2)
+            .map(String.init)
+            .joined()
+    }
+    
+    init(id: UUID = UUID(),
+         name: String,
          lastSeen: Date? = nil,
          location: String? = nil,
          contactIdentifier: String? = nil,
          needsToConnectFlag: Bool = false,
          phoneNumber: String? = nil,
          email: String? = nil,
+         additionalEmails: [String] = [],
          photoData: Data? = nil,
-         catchUpFrequency: CatchUpFrequency? = nil) {
-        self.id = UUID()
+         catchUpFrequency: CatchUpFrequency? = nil,
+         calendarIntegrationEnabled: Bool = false,
+         calendarVisibilityPreference: CalendarVisibilityPreference = .none,
+         createdAt: Date = Date()) {
+        
+        // Initialize required properties
+        self.id = id
         self.name = name
+        self.needsToConnectFlag = needsToConnectFlag
+        self.calendarIntegrationEnabled = calendarIntegrationEnabled
+        self.calendarVisibilityPreference = calendarVisibilityPreference
+        self.createdAt = createdAt
+        
+        // Initialize optional properties
         self.lastSeen = lastSeen
         self.location = location
         self.contactIdentifier = contactIdentifier
@@ -55,13 +91,13 @@ final class Friend: Identifiable {
         self.email = email
         self.photoData = photoData
         self.catchUpFrequency = catchUpFrequency
-        self.needsToConnectFlag = needsToConnectFlag
-        self.calendarIntegrationEnabled = false
-        self.calendarVisibilityPreference = .none
-        self.createdAt = Date()
-        self._additionalEmails = nil
+        
+        // Initialize arrays with empty defaults
+        self.additionalEmails = additionalEmails
         self.hangouts = []
         self.tags = []
+        
+        // Initialize caches
         self._lastSeenTextCache = nil
         self._scheduledHangoutsCache = nil
     }
@@ -165,3 +201,5 @@ extension Friend {
         _scheduledHangoutsCache = nil
     }
 }
+
+

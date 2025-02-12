@@ -2,10 +2,16 @@ import SwiftUI
 import SwiftData
 import MessageUI
 
-struct ManualAttendee: Identifiable, Equatable {
-    let id = UUID()
+struct ManualAttendee: Identifiable, Equatable, Codable {
+    var id = UUID()
     var name: String
     var email: String
+    
+    init(id: UUID = UUID(), name: String, email: String) {
+        self.id = id
+        self.name = name
+        self.email = email
+    }
 }
 
 @MainActor
@@ -162,6 +168,7 @@ class CreateHangoutViewModel: ObservableObject {
     
     @Published var isTestingConnection = false
     @Published var connectionTestResult: String?
+    
     
     init(modelContext: ModelContext,
          initialDate: Date? = nil,

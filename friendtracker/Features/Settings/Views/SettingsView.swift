@@ -7,6 +7,7 @@ struct SettingsView: View {
     @StateObject private var colorSchemeManager = ColorSchemeManager.shared
     @State private var showingClearDataAlert = false
     @State private var showingComingSoonAlert = false
+    @State private var showingDeleteStoreAlert = false
     
     var body: some View {
         NavigationStack {
@@ -54,6 +55,11 @@ struct SettingsView: View {
                     } label: {
                         Label("Clear All Data", systemImage: "trash")
                     }
+                    Button(role: .destructive) {
+                        showingDeleteStoreAlert = true
+                    } label: {
+                        Label("Delete Data Store", systemImage: "trash.slash")
+                    }
                 }
             }
             .navigationTitle("Settings")
@@ -79,6 +85,16 @@ struct SettingsView: View {
                 Button("OK", role: .cancel) { }
             } message: {
                 Text("Profile settings are coming in a future update.")
+            }
+            .alert("Delete Data Store", isPresented: $showingDeleteStoreAlert) {
+                Button("Cancel", role: .cancel) { }
+                Button("Delete", role: .destructive) {
+                    Task { @MainActor in
+                        await deleteDataStore()
+                    }
+                }
+            } message: {
+                Text("This will delete the persistent data store including all associated files. You will need to restart the app for changes to take effect. This action cannot be undone.")
             }
         }
     }
@@ -108,6 +124,18 @@ struct SettingsView: View {
                 modelContext.delete(tag)
             }
         }
+        
+        dismiss()
+    }
+    
+    @MainActor
+    private func deleteDataStore() async {
+        let fileManager = FileManager.default
+        let storeURL = URL.applicationSupportDirectory.appendingPathComponent("default.store")
+        try? fileManager.removeItem(at: storeURL)
+        try? fileManager.removeItem(at: storeURL.appendingPathExtension("sqlite3"))
+        try? fileManager.removeItem(at: storeURL.appendingPathExtension("sqlite3-shm"))
+        try? fileManager.removeItem(at: storeURL.appendingPathExtension("sqlite3-wal"))
         
         dismiss()
     }

@@ -9,6 +9,7 @@ struct HangoutCard: View {
     @State private var showingCompletionPrompt = false
     @State private var showingEventDetails = false
     
+    
     var statusColor: Color {
         if hangout.isCompleted {
             return .green
@@ -106,13 +107,16 @@ struct HangoutCard: View {
             }
         }
         .onTapGesture {
-            if let eventLink = hangout.eventLink {
-                UIApplication.shared.open(URL(string: eventLink)!)
-            }
+            showingEventDetails = true
         }
         .friendSheetPresenter(selectedFriend: $selectedFriend)
         .sheet(isPresented: $showingCompletionPrompt) {
             HangoutCompletionView(hangout: hangout)
+        }
+        .sheet(isPresented: $showingEventDetails) {
+            NavigationStack {
+                HangoutDetailView(hangout: hangout)
+            }
         }
     }
 }

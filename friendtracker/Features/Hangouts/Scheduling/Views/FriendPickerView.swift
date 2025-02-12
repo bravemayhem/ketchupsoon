@@ -166,13 +166,19 @@ struct FriendPickerView: View {
             }
             
         case .contact(let contact):
-            // Create a new friend from the contact
+            // Create a new friend from the contact with all required properties
             let newFriend = Friend(
                 name: "\(contact.givenName) \(contact.familyName)".trimmingCharacters(in: .whitespaces),
+                location: contact.postalAddresses.first?.value.city,
                 contactIdentifier: contact.identifier,
+                needsToConnectFlag: false,
                 phoneNumber: contact.phoneNumbers.first?.value.stringValue,
                 email: contact.emailAddresses.first?.value as String?,
-                photoData: contact.imageData
+                additionalEmails: Array(contact.emailAddresses.dropFirst().map { $0.value as String }),
+                photoData: contact.imageData,
+                calendarIntegrationEnabled: false,
+                calendarVisibilityPreference: .none,
+                createdAt: Date()
             )
             
             modelContext.insert(newFriend)
