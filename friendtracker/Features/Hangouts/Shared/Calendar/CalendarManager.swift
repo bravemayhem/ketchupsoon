@@ -2,6 +2,8 @@ import EventKit
 import SwiftUI
 import GoogleSignIn
 import GoogleAPIClientForREST_Calendar
+import FirebaseAuth
+import FirebaseCore
 
 @MainActor
 class CalendarManager: ObservableObject {
@@ -9,6 +11,7 @@ class CalendarManager: ObservableObject {
     
     private let eventStore = EKEventStore()
     private var googleService: GTLRCalendarService?
+    private let auth = Auth.auth()
     
     @Published var isAuthorized = false
     @Published var isGoogleAuthorized = false
@@ -55,20 +58,31 @@ class CalendarManager: ObservableObject {
     
     private func setupGoogleCalendar() async {
         googleService = GTLRCalendarService()
+        
         // Configure Google Sign-In
         GIDSignIn.sharedInstance.configuration = GIDConfiguration(clientID: "144315286048-7jasampp9nttpd09rd3d31iui3j9stif.apps.googleusercontent.com")
         
-        // Restore previous sign-in
-        do {
-            let currentUser = try await GIDSignIn.sharedInstance.restorePreviousSignIn()
-            isGoogleAuthorized = true
-            googleService?.authorizer = currentUser.fetcherAuthorizer
-            googleUserEmail = currentUser.profile?.email
-            await loadConnectedCalendars()
-        } catch {
-            print("Error restoring Google sign-in: \(error)")
-            isGoogleAuthorized = false
-            googleUserEmail = nil
+        // Check if user is already signed in
+        if let currentUser = auth.currentUser {
+            do {
+                // Try to restore previous Google Sign-In
+                if let signInResult = try? await GIDSignIn.sharedInstance.restorePreviousSignIn() {
+                    isGoogleAuthorized = true
+                    googleUserEmail = currentUser.email
+                    
+                    // Configure Google Calendar service with the restored session
+                    googleService?.authorizer = signInResult.fetcherAuthorizer
+                    
+                    await loadConnectedCalendars()
+                } else {
+                    isGoogleAuthorized = false
+                    googleUserEmail = nil
+                }
+            } catch {
+                print("Error restoring Google Sign-In: \(error)")
+                isGoogleAuthorized = false
+                googleUserEmail = nil
+            }
         }
     }
     
@@ -115,6 +129,9 @@ class CalendarManager: ObservableObject {
               let rootViewController = window.rootViewController else { return }
         
         do {
+            let signInConfig = GIDConfiguration(clientID: "144315286048-7jasampp9nttpd09rd3d31iui3j9stif.apps.googleusercontent.com")
+            
+            // Sign in with Google
             let result = try await GIDSignIn.sharedInstance.signIn(
                 withPresenting: rootViewController,
                 hint: nil,
@@ -125,9 +142,26 @@ class CalendarManager: ObservableObject {
                 ]
             )
             
+            // Get Google ID token and access token
+            guard let idToken = result.user.idToken?.tokenString else {
+                throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Missing ID token"])
+            }
+            
+            // Create Firebase credential
+            let credential = GoogleAuthProvider.credential(
+                withIDToken: idToken,
+                accessToken: result.user.accessToken.tokenString
+            )
+            
+            // Sign in to Firebase with credential
+            let authResult = try await auth.signIn(with: credential)
+            
             isGoogleAuthorized = true
+            googleUserEmail = authResult.user.email
+            
+            // Configure Google Calendar service
             googleService?.authorizer = result.user.fetcherAuthorizer
-            googleUserEmail = result.user.profile?.email
+            
             await loadConnectedCalendars()
         } catch {
             print("Error signing in with Google: \(error)")
@@ -138,11 +172,30 @@ class CalendarManager: ObservableObject {
     }
     
     func signOutGoogle() async {
-        GIDSignIn.sharedInstance.signOut()
-        isGoogleAuthorized = false
-        googleService?.authorizer = nil
-        googleUserEmail = nil
-        await loadConnectedCalendars()
+        do {
+            try auth.signOut()
+            isGoogleAuthorized = false
+            googleService?.authorizer = nil
+            googleUserEmail = nil
+            await loadConnectedCalendars()
+        } catch {
+            print("Error signing out: \(error)")
+        }
+    }
+    
+    // Update token before each Google Calendar operation
+    private func refreshGoogleAuthorization() async throws {
+        guard let currentUser = auth.currentUser else {
+            throw CalendarError.unauthorized
+        }
+        
+        // Get fresh ID token
+        let token = try await currentUser.getIDToken()
+        
+        // Update Google Calendar service authorization
+        if let signInResult = try? await GIDSignIn.sharedInstance.restorePreviousSignIn() {
+            googleService?.authorizer = signInResult.fetcherAuthorizer
+        }
     }
     
     private func loadConnectedCalendars() async {
@@ -216,6 +269,9 @@ class CalendarManager: ObservableObject {
         // For Google Calendar
         if selectedCalendarType == .google && isGoogleAuthorized {
             guard let service = googleService else { throw CalendarError.unauthorized }
+            
+            // Refresh token before operation
+            try await refreshGoogleAuthorization()
             
             let event = GTLRCalendar_Event()
             event.summary = activity
