@@ -54,37 +54,106 @@ struct InviteData: Codable {
 
 // Add phone number formatting utilities
 extension String {
-    // Standardize phone number by removing all non-digit characters
+    // Standardize phone number by removing all non-digit characters and adding US country code if needed
     func standardizedPhoneNumber() -> String {
-        return self.replacingOccurrences(of: "[^0-9]", with: "", options: .regularExpression)
+        let digitsOnly = self.replacingOccurrences(of: "[^0-9]", with: "", options: .regularExpression)
+        
+        // If it's a 10-digit US number, add the country code
+        if digitsOnly.count == 10 {
+            return "1" + digitsOnly
+        }
+        // If it's already 11 digits and starts with 1, assume it's a US number
+        else if digitsOnly.count == 11 && digitsOnly.hasPrefix("1") {
+            return digitsOnly
+        }
+        // Otherwise return as is (for international numbers)
+        return digitsOnly
     }
 }
 
 // Add new structures for phone number verification
 struct PhoneNumberParts {
+    let countryCode: String
     let areaCode: String
     let middle: String
     let last: String
     
     var formatted: String {
-        "(\(areaCode)) \(middle)-\(last)"
+        if countryCode == "1" {
+            return "(\(areaCode)) \(middle)-\(last)"  // US format
+        } else {
+            return "+\(countryCode) \(areaCode) \(middle) \(last)"  // International format
+        }
     }
     
     var standardized: String {
-        areaCode + middle + last
+        countryCode + areaCode + middle + last
     }
     
     static func parse(_ phoneNumber: String) -> PhoneNumberParts? {
-        let digits = phoneNumber.standardizedPhoneNumber()
-        guard digits.count >= 10 else { return nil }
+        // Clean the phone number to only include digits and plus sign
+        let cleaned = phoneNumber.replacingOccurrences(of: "[^0-9+]", with: "", options: .regularExpression)
+        print("📱 Parsing phone number: \(cleaned)")
         
-        // Take last 10 digits if more are provided
-        let last10 = String(digits.suffix(10))
-        return PhoneNumberParts(
-            areaCode: String(last10.prefix(3)),
-            middle: String(last10[last10.index(last10.startIndex, offsetBy: 3)..<last10.index(last10.startIndex, offsetBy: 6)]),
-            last: String(last10.suffix(4))
-        )
+        // Extract country code and national number
+        var countryCode = "1" // Default to US
+        var nationalNumber = cleaned
+        
+        if cleaned.starts(with: "+") {
+            // Handle international format with plus
+            let parts = cleaned.dropFirst().split(maxSplits: 1) { !$0.isNumber }
+            if let code = parts.first {
+                countryCode = String(code)
+                nationalNumber = parts.count > 1 ? String(parts[1]) : ""
+            }
+        } else {
+            // Handle various US number formats
+            let digitsOnly = cleaned.replacingOccurrences(of: "[^0-9]", with: "")
+            
+            if digitsOnly.count == 10 {
+                // Standard US 10-digit number
+                nationalNumber = digitsOnly
+            } else if digitsOnly.count == 11 && digitsOnly.hasPrefix("1") {
+                // US number with country code
+                nationalNumber = String(digitsOnly.dropFirst())
+            } else {
+                // Invalid format
+                print("❌ Invalid phone number format: \(digitsOnly.count) digits")
+                return nil
+            }
+        }
+        
+        print("📱 Parsed: countryCode=\(countryCode), nationalNumber=\(nationalNumber)")
+        
+        // Ensure we have exactly 10 digits for the national number (for US numbers)
+        if countryCode == "1" && nationalNumber.count != 10 {
+            print("❌ Invalid US number: national number should be 10 digits")
+            return nil
+        }
+        
+        // For US numbers, split into area code, middle, and last
+        if countryCode == "1" {
+            guard nationalNumber.count >= 10 else { return nil }
+            return PhoneNumberParts(
+                countryCode: countryCode,
+                areaCode: String(nationalNumber.prefix(3)),
+                middle: String(nationalNumber[nationalNumber.index(nationalNumber.startIndex, offsetBy: 3)..<nationalNumber.index(nationalNumber.startIndex, offsetBy: 6)]),
+                last: String(nationalNumber.suffix(4))
+            )
+        } else {
+            // For international numbers, use a different splitting strategy
+            // This is a simplified version - you might want to handle different country formats differently
+            let remaining = nationalNumber
+            let areaCode = String(remaining.prefix(3))
+            let middle = String(remaining[remaining.index(remaining.startIndex, offsetBy: 3)..<remaining.index(remaining.startIndex, offsetBy: 6)])
+            let last = String(remaining.suffix(4))
+            return PhoneNumberParts(
+                countryCode: countryCode,
+                areaCode: areaCode,
+                middle: middle,
+                last: last
+            )
+        }
     }
 }
 
@@ -473,13 +542,20 @@ class SupabaseManager {
     }
     
     // Verify phone number for event access
-    func verifyPhoneNumber(token: String, areaCode: String, middle: String, last: String, ipAddress: String) async throws -> Bool {
+    func verifyPhoneNumber(token: String, phoneNumber: String, ipAddress: String) async throws -> Bool {
+        guard let parts = PhoneNumberParts.parse(phoneNumber) else {
+            throw NSError(domain: "SupabaseManager", code: 400, userInfo: [
+                NSLocalizedDescriptionKey: "Invalid phone number format"
+            ])
+        }
+        
         let response = try await client
             .rpc("verify_invite_phone", params: [
                 "p_token": token,
-                "p_area_code": areaCode,
-                "p_middle": middle,
-                "p_last": last,
+                "p_country_code": parts.countryCode,
+                "p_area_code": parts.areaCode,
+                "p_middle": parts.middle,
+                "p_last": parts.last,
                 "p_ip": ipAddress
             ])
             .execute()
