@@ -16,6 +16,9 @@
 		F44D7B992D1D24E0008C00CC /* ViewInspector in Frameworks */ = {isa = PBXBuildFile; productRef = F44D7B982D1D24E0008C00CC /* ViewInspector */; };
 		F486A1D52D139CE00011CC59 /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = F486A1D42D139CE00011CC59 /* GoogleSignInSwift */; };
 		F486A1D82D139D710011CC59 /* GoogleAPIClientForREST_Calendar in Frameworks */ = {isa = PBXBuildFile; productRef = F486A1D72D139D710011CC59 /* GoogleAPIClientForREST_Calendar */; };
+		F4F741092D5D921B00217CB6 /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = F4F741082D5D921B00217CB6 /* FirebaseAnalytics */; };
+		F4F7410B2D5D921B00217CB6 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = F4F7410A2D5D921B00217CB6 /* FirebaseAuth */; };
+		F4F7410D2D5D921B00217CB6 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = F4F7410C2D5D921B00217CB6 /* FirebaseFirestore */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -50,6 +53,20 @@
 			);
 			target = F4070A272D0A183C00B11C0B /* friendtracker */;
 		};
+		F4F741142D5DA55000217CB6 /* Exceptions for "friendtracker" folder in "friendtrackerTests" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				"GoogleService-Info.plist",
+			);
+			target = F4070A372D0A184000B11C0B /* friendtrackerTests */;
+		};
+		F4F741152D5DA55000217CB6 /* Exceptions for "friendtracker" folder in "friendtrackerUITests" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				"GoogleService-Info.plist",
+			);
+			target = F4070A412D0A184000B11C0B /* friendtrackerUITests */;
+		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -57,6 +74,8 @@
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				F44345CF2D5AAC8C00D52D7A /* Exceptions for "friendtracker" folder in "friendtracker" target */,
+				F4F741142D5DA55000217CB6 /* Exceptions for "friendtracker" folder in "friendtrackerTests" target */,
+				F4F741152D5DA55000217CB6 /* Exceptions for "friendtracker" folder in "friendtrackerUITests" target */,
 			);
 			path = friendtracker;
 			sourceTree = "<group>";
@@ -84,6 +103,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				F486A1D52D139CE00011CC59 /* GoogleSignInSwift in Frameworks */,
+				F4F7410B2D5D921B00217CB6 /* FirebaseAuth in Frameworks */,
 				F486A1D82D139D710011CC59 /* GoogleAPIClientForREST_Calendar in Frameworks */,
 				F44347412D5AE4BA00D52D7A /* Storage in Frameworks */,
 				F443473B2D5AE4BA00D52D7A /* Functions in Frameworks */,
@@ -91,6 +111,8 @@
 				F443473F2D5AE4BA00D52D7A /* Realtime in Frameworks */,
 				F44347392D5AE4BA00D52D7A /* Auth in Frameworks */,
 				F443473D2D5AE4BA00D52D7A /* PostgREST in Frameworks */,
+				F4F7410D2D5D921B00217CB6 /* FirebaseFirestore in Frameworks */,
+				F4F741092D5D921B00217CB6 /* FirebaseAnalytics in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -162,6 +184,9 @@
 				F443473E2D5AE4BA00D52D7A /* Realtime */,
 				F44347402D5AE4BA00D52D7A /* Storage */,
 				F443474B2D5AEBE100D52D7A /* Supabase */,
+				F4F741082D5D921B00217CB6 /* FirebaseAnalytics */,
+				F4F7410A2D5D921B00217CB6 /* FirebaseAuth */,
+				F4F7410C2D5D921B00217CB6 /* FirebaseFirestore */,
 			);
 			productName = friendtracker;
 			productReference = F4070A282D0A183C00B11C0B /* friendtracker.app */;
@@ -251,6 +276,7 @@
 				F486A1D62D139D710011CC59 /* XCRemoteSwiftPackageReference "google-api-objectivec-client-for-rest" */,
 				F44D7B972D1D24E0008C00CC /* XCRemoteSwiftPackageReference "ViewInspector" */,
 				F44347372D5AE4BA00D52D7A /* XCRemoteSwiftPackageReference "supabase-swift" */,
+				F4F741072D5D921B00217CB6 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = F4070A292D0A183C00B11C0B /* Products */;
@@ -453,7 +479,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"friendtracker/Preview Content\"";
-				DEVELOPMENT_TEAM = 29BFDAU9TF;
+				DEVELOPMENT_TEAM = 7R3ARUF74Q;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = friendtracker/Info.plist;
@@ -471,7 +497,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "Brooklyn-Beltran.friendtracker";
+				PRODUCT_BUNDLE_IDENTIFIER = bravenite.friendtracker;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -487,7 +513,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"friendtracker/Preview Content\"";
-				DEVELOPMENT_TEAM = 29BFDAU9TF;
+				DEVELOPMENT_TEAM = 7R3ARUF74Q;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = friendtracker/Info.plist;
@@ -505,7 +531,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "Brooklyn-Beltran.friendtracker";
+				PRODUCT_BUNDLE_IDENTIFIER = bravenite.friendtracker;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -659,6 +685,14 @@
 				minimumVersion = 4.0.0;
 			};
 		};
+		F4F741072D5D921B00217CB6 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 11.8.1;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -706,6 +740,21 @@
 			isa = XCSwiftPackageProductDependency;
 			package = F486A1D62D139D710011CC59 /* XCRemoteSwiftPackageReference "google-api-objectivec-client-for-rest" */;
 			productName = GoogleAPIClientForREST_Calendar;
+		};
+		F4F741082D5D921B00217CB6 /* FirebaseAnalytics */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F4F741072D5D921B00217CB6 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAnalytics;
+		};
+		F4F7410A2D5D921B00217CB6 /* FirebaseAuth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F4F741072D5D921B00217CB6 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAuth;
+		};
+		F4F7410C2D5D921B00217CB6 /* FirebaseFirestore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F4F741072D5D921B00217CB6 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFirestore;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

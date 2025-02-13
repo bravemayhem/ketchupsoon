@@ -20,7 +20,8 @@ CREATE TABLE events (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     creator_id UUID NOT NULL,
-    is_private BOOLEAN DEFAULT FALSE
+    is_private BOOLEAN DEFAULT FALSE,
+    google_calendar_id TEXT -- Store the Google Calendar event ID
 );
 
 -- Create event_attendees table
