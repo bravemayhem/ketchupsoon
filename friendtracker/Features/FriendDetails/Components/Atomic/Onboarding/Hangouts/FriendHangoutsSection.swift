@@ -9,7 +9,7 @@ struct FriendHangoutsSection: View {
             Section("Upcoming Hangouts") {
                 ForEach(hangouts) { hangout in
                     VStack(alignment: .leading, spacing: AppTheme.spacingTiny) {
-                        Text(hangout.activity)
+                        Text(hangout.title)
                             .font(AppTheme.headlineFont)
                             .foregroundColor(AppColors.label)
                         Text(hangout.location)
@@ -45,14 +45,14 @@ struct FriendHangoutsSection: View {
         let hangouts = [
             Hangout(
                 date: Calendar.current.date(byAdding: .day, value: 2, to: Date())!,
-                activity: "Coffee",
+                title: "Coffee",
                 location: "Starbucks",
                 isScheduled: true,
                 friends: [friend]
             ),
             Hangout(
                 date: Calendar.current.date(byAdding: .day, value: 7, to: Date())!,
-                activity: "Lunch",
+                title: "Lunch",
                 location: "Italian Restaurant",
                 isScheduled: true,
                 friends: [friend]

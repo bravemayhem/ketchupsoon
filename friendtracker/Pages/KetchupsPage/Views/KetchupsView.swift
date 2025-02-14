@@ -26,6 +26,16 @@ struct KetchupsView: View {
     @State private var showingAllPast = false
     @State private var showingAllCompleted = false
     
+    init() {
+        // Debug: Print available font names
+        for family in UIFont.familyNames.sorted() {
+            print("Family: \(family)")
+            for font in UIFont.fontNames(forFamilyName: family).sorted() {
+                print("- \(font)")
+            }
+        }
+    }
+    
     private var scheduledFriendIds: Set<UUID> {
         Set(upcomingHangouts.flatMap { hangout in
             hangout.friends.map(\.id)
@@ -158,8 +168,18 @@ struct KetchupsView: View {
                 }
                 
                 if upcomingHangouts.isEmpty && pastHangouts.isEmpty && completedHangouts.isEmpty && upcomingCheckIns.isEmpty {
-                    ContentUnavailableView("No Ketchups", systemImage: "calendar.badge.plus")
-                        .foregroundColor(AppColors.label)
+                    VStack(spacing: 8) {
+                        Spacer()
+                        Image(systemName: "calendar.badge.plus")
+                            .font(.custom("Cabin-Regular", size: 40))
+                            .foregroundColor(Color.gray)
+                        Text("No Ketchups")
+                            .font(.custom("Cabin-Regular", size: 25))
+                            .foregroundColor(Color.gray)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
                 }
             }
             .padding(.vertical)

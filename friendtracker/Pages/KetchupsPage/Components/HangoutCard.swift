@@ -7,6 +7,8 @@ struct HangoutCard: View {
     let hangout: Hangout
     @State private var selectedFriend: Friend?
     @State private var showingCompletionPrompt = false
+    @State private var showingEventDetails = false
+    
     
     var statusColor: Color {
         if hangout.isCompleted {
@@ -24,7 +26,7 @@ struct HangoutCard: View {
                 VStack(alignment: .leading, spacing: 4) {
                     // Title and Status
                     HStack {
-                        Text(hangout.activity)
+                        Text(hangout.title)
                             .font(.headline)
                             .foregroundColor(AppColors.label)
                         Spacer()
@@ -45,6 +47,19 @@ struct HangoutCard: View {
                                         Capsule()
                                             .fill(AppColors.accent)
                                     )
+                            }
+                        }
+                    }
+                    
+                    // Event Link
+                    if let eventLink = hangout.eventLink {
+                        Link(destination: URL(string: eventLink)!) {
+                            HStack(spacing: 4) {
+                                Image(systemName: "link")
+                                    .font(AppTheme.captionFont)
+                                    .foregroundColor(AppColors.secondaryLabel)
+                                Text("View Event Details")
+                                    .cardSecondaryText()
                             }
                         }
                     }
@@ -91,9 +106,17 @@ struct HangoutCard: View {
                 }
             }
         }
+        .onTapGesture {
+            showingEventDetails = true
+        }
         .friendSheetPresenter(selectedFriend: $selectedFriend)
         .sheet(isPresented: $showingCompletionPrompt) {
             HangoutCompletionView(hangout: hangout)
+        }
+        .sheet(isPresented: $showingEventDetails) {
+            NavigationStack {
+                HangoutDetailView(hangout: hangout)
+            }
         }
     }
 }
@@ -103,7 +126,7 @@ struct HangoutCard: View {
     let friend2 = Friend(name: "Test Friend 2")
     let hangout = Hangout(
         date: Date().addingTimeInterval(86400),
-        activity: "Coffee",
+        title: "Coffee",
         location: "Starbucks",
         isScheduled: true,
         friends: [friend1, friend2]

@@ -151,17 +151,26 @@ class ContactsManager: ObservableObject {
                 // Update friend's information on the main thread
                 await MainActor.run {
                     friend.name = "\(contact.givenName) \(contact.familyName)".trimmingCharacters(in: .whitespaces)
-                    friend.phoneNumber = contact.phoneNumbers.first?.value.stringValue
+                    // Standardize phone number before setting
+                    friend.phoneNumber = contact.phoneNumbers.first?.value.stringValue.standardizedPhoneNumber()
                     
                     // Handle email addresses
                     let emailAddresses = contact.emailAddresses.map { $0.value as String }
                     if !emailAddresses.isEmpty {
                         friend.email = emailAddresses[0]
                         friend.additionalEmails = emailAddresses.count > 1 ? Array(emailAddresses.dropFirst()) : []
+                    } else {
+                        friend.additionalEmails = []
                     }
                     
                     friend.location = contact.postalAddresses.first?.value.city
                     friend.photoData = contact.thumbnailImageData
+                    
+                    // Ensure all required properties are set
+                    friend.needsToConnectFlag = false
+                    friend.calendarIntegrationEnabled = false
+                    friend.calendarVisibilityPreference = .none
+                    friend.createdAt = Date()
                 }
                 
                 print("📱 ContactsManager: Successfully updated friend information")

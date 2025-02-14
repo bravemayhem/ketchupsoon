@@ -95,12 +95,12 @@ struct HangoutCompletionView: View {
     let friend = Friend(name: "Test Friend")
     let hangout = Hangout(
         date: Date(),
-        activity: "Coffee",
+        title: "Coffee",
         location: "Starbucks",
         isScheduled: true,
         friends: [friend]
     )
     
-    return HangoutCompletionView(hangout: hangout)
+    HangoutCompletionView(hangout: hangout)
         .modelContainer(container)
 }

@@ -9,8 +9,10 @@ struct CreateHangoutView: View {
     @State private var showingFriendPicker = false
     
     init(initialDate: Date? = nil, initialLocation: String? = nil, initialTitle: String? = nil, initialSelectedFriends: [Friend]? = nil) {
+        // Use a StateObject wrapper to initialize the viewModel with the default values
+        // The actual modelContext will be injected from the environment
         _viewModel = StateObject(wrappedValue: CreateHangoutViewModel(
-            modelContext: ModelContext(try! ModelContainer(for: Friend.self, configurations: ModelConfiguration(isStoredInMemoryOnly: false))),
+            modelContext: ModelContext(try! ModelContainer(for: Friend.self, Hangout.self, Tag.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true))),
             initialDate: initialDate,
             initialLocation: initialLocation,
             initialTitle: initialTitle,
@@ -24,6 +26,32 @@ struct CreateHangoutView: View {
     var body: some View {
         NavigationStack {
             Form {
+                // Test Connection Section
+                Section("Supabase Connection") {
+                    Button(action: {
+                        Task {
+                            await viewModel.testSupabaseConnection()
+                        }
+                    }) {
+                        HStack {
+                            Image(systemName: "network")
+                                .foregroundColor(.blue)
+                            Text("Test Connection")
+                            Spacer()
+                            if viewModel.isTestingConnection {
+                                ProgressView()
+                                    .progressViewStyle(CircularProgressViewStyle())
+                            }
+                        }
+                    }
+                    
+                    if let result = viewModel.connectionTestResult {
+                        Text(result)
+                            .font(.footnote)
+                            .foregroundColor(result.contains("✅") ? .green : .red)
+                    }
+                }
+                
                 FriendsSection(viewModel: viewModel, showingFriendPicker: $showingFriendPicker)
                 
                 AdditionalManualAttendeesSection(viewModel: viewModel)
@@ -40,7 +68,7 @@ struct CreateHangoutView: View {
                 
                 ScheduleButtonSection(viewModel: viewModel)
             }
-            .navigationTitle("Create Hangout")
+            .navigationTitle("Schedule Hangout")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -55,22 +83,25 @@ struct CreateHangoutView: View {
             .sheet(isPresented: $viewModel.showingCustomDurationInput) {
                 CustomDurationInputView(viewModel: viewModel)
             }
-        }
-        .alert("Remove from Wishlist?", isPresented: $viewModel.showingWishlistPrompt) {
-            Button("Keep on Wishlist") {
-                dismiss()
+            .sheet(isPresented: $viewModel.showingWishlistPrompt) {
+                WishlistPromptView(viewModel: viewModel)
             }
-            Button("Remove from Wishlist") {
-                viewModel.removeFromWishlist()
-                dismiss()
+            .sheet(isPresented: $viewModel.showingMessageSheet) {
+                if let recipient = viewModel.messageRecipient,
+                   let body = viewModel.messageBody {
+                    SMSCalendarLinkView(recipient: recipient, message: body)
+                }
             }
-        } message: {
-            Text("You've scheduled time with \(viewModel.selectedFriends.map(\.name).joined(separator: ", ")). Would you like to remove them from your wishlist?")
+            .task {
+                // Update the viewModel to use the environment's modelContext
+                viewModel.updateModelContext(modelContext)
+            }
         }
     }
 }
 
 #Preview {
+    let container = try! ModelContainer(for: Friend.self, Hangout.self, Tag.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
     CreateHangoutView(initialDate: Date())
-        .modelContainer(for: [Friend.self, Hangout.self], inMemory: true)
+        .modelContainer(container)
 }
