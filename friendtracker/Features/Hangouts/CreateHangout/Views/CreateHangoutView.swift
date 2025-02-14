@@ -26,6 +26,22 @@ struct CreateHangoutView: View {
     var body: some View {
         NavigationStack {
             Form {
+                Section("Hangout Title") {
+                    TextField("Enter title", text: $viewModel.hangoutTitle)
+                }
+                
+                FriendsSection(viewModel: viewModel, showingFriendPicker: $showingFriendPicker)
+                
+                AdditionalManualAttendeesSection(viewModel: viewModel)
+                
+                DateTimeSection(viewModel: viewModel)
+                
+                Section("Location") {
+                    TextField("Enter location", text: $viewModel.selectedLocation)
+                }
+                
+                ScheduleButtonSection(viewModel: viewModel)
+                
                 // Test Connection Section
                 Section("Supabase Connection") {
                     Button(action: {
@@ -51,22 +67,6 @@ struct CreateHangoutView: View {
                             .foregroundColor(result.contains("✅") ? .green : .red)
                     }
                 }
-                
-                FriendsSection(viewModel: viewModel, showingFriendPicker: $showingFriendPicker)
-                
-                AdditionalManualAttendeesSection(viewModel: viewModel)
-                
-                Section("Hangout Title") {
-                    TextField("Enter title", text: $viewModel.hangoutTitle)
-                }
-                
-                DateTimeSection(viewModel: viewModel)
-                
-                Section("Location") {
-                    TextField("Enter location", text: $viewModel.selectedLocation)
-                }
-                
-                ScheduleButtonSection(viewModel: viewModel)
             }
             .navigationTitle("Schedule Hangout")
             .navigationBarTitleDisplayMode(.inline)
