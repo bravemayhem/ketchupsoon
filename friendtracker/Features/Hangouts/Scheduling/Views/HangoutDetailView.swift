@@ -129,20 +129,16 @@ private struct ActionButtonsView: View {
                 .buttonStyle(.borderedProminent)
                 
                 if let eventLink = hangout.eventLink {
-                    Link(destination: URL(string: eventLink)!) {
-                        Label("View Event Details", systemImage: "link")
+                    ShareLink(
+                        item: URL(string: eventLink)!,
+                        subject: Text("Join me for \(hangout.title)"),
+                        message: Text("View event details and RSVP: \(eventLink)")
+                    ) {
+                        Label("Share", systemImage: "square.and.arrow.up")
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.bordered)
                 }
-                
-                Button {
-                    showingMessageSheet = true
-                } label: {
-                    Label("Share", systemImage: "square.and.arrow.up")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.bordered)
             }
         }
         .padding(.horizontal)
