@@ -176,7 +176,7 @@ struct friendtrackerApp: App {
     
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            SplashScreenView()
                 .preferredColorScheme(colorSchemeManager.currentAppearanceMode == .system ? nil : colorSchemeManager.colorScheme)
                 .onChange(of: scenePhase) { _, newPhase in
                     if newPhase == .active {

@@ -3,6 +3,7 @@ import SwiftData
 
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
+    @StateObject private var onboardingManager = OnboardingManager.shared
     @State private var selectedTab = 0
     @State private var showingContactPicker = false
     @State private var showingDebugAlert = false
@@ -51,6 +52,9 @@ struct ContentView: View {
         }
         .sheet(isPresented: $showingImportOptions) {
             ImportOptionsView(showingContactPicker: $showingContactPicker, showingImportOptions: $showingImportOptions)
+        }
+        .fullScreenCover(isPresented: $onboardingManager.isShowingOnboarding) {
+            OnboardingView()
         }
         .sheet(isPresented: $showingContactPicker) {
             ContactPickerView()

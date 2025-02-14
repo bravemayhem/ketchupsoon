@@ -5,7 +5,6 @@ struct ProfileSettingsView: View {
     @StateObject private var userSettings = UserSettings.shared
     @State private var name: String = ""
     @State private var phoneNumber: String = ""
-    @State private var email: String = ""
     
     var body: some View {
         Form {
@@ -34,20 +33,6 @@ struct ProfileSettingsView: View {
                             userSettings.updatePhoneNumber(newValue.isEmpty ? nil : newValue)
                         }
                 }
-                
-                HStack {
-                    Text("Email")
-                        .foregroundColor(AppColors.label)
-                    Spacer()
-                    TextField("Not set", text: $email)
-                        .multilineTextAlignment(.trailing)
-                        .textContentType(.emailAddress)
-                        .keyboardType(.emailAddress)
-                        .autocapitalization(.none)
-                        .onChange(of: email) { _, newValue in
-                            userSettings.updateEmail(newValue.isEmpty ? nil : newValue)
-                        }
-                }
             } header: {
                 Text("PROFILE INFORMATION")
             } footer: {
@@ -60,7 +45,6 @@ struct ProfileSettingsView: View {
             // Load existing values
             name = userSettings.name ?? ""
             phoneNumber = userSettings.phoneNumber ?? ""
-            email = userSettings.email ?? ""
         }
     }
 }
