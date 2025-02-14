@@ -56,9 +56,6 @@ struct WishlistView: View {
                     Text("Wishlist Empty")
                         .font(.custom("Cabin-Regular", size: 25))
                         .foregroundColor(Color.gray)
-                    Text("Add friends you want to catch up with")
-                        .font(.custom("Cabin-Regular", size: 16))
-                        .foregroundColor(Color.gray)
                     Spacer()
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)

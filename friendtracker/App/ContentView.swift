@@ -39,7 +39,7 @@ struct ContentView: View {
             
             NavigationTab(
                 title: "Friends",
-                subtitle: "Friends you've added to Ketchup Soon",
+                subtitle: "Keep track of the details that matter to you",
                 icon: "person.2",
                 subtitleAlwaysVisible: true,
                 showImportOptions: $showingImportOptions,
