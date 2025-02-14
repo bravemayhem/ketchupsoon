@@ -26,6 +26,7 @@ enum AppColors {
     static let success = Color(.systemGreen)
     static let warning = Color(.systemOrange)
     static let error = Color(.systemRed)
+    static let futureGreen = Color(hex: "4CD964")  // Stored for future use
     
     // Gradient Colors
     static let gradientLight = Color(hex: "FF7E45").opacity(0.8)  // Soft orange
@@ -47,20 +48,13 @@ enum AppColors {
         endPoint: .bottomTrailing
     )
     
-    // Avatar Background Colors - Softer, more modern palette
+    // Avatar Background Colors - Using only accent color for consistency
     static let avatarColors: [Color] = [
-        Color(hex: "FF7E45"),  // Soft orange (primary)
-        Color(hex: "5856D6"),  // Soft purple
-        Color(hex: "64D2FF"),  // Sky blue
-        Color(hex: "FF2D55"),  // Pink
-        Color(hex: "5856D6"),  // Purple
-        Color(hex: "FF9500"),  // Orange
-        Color(hex: "4CD964"),  // Green
+        accent  // Soft orange (primary)
     ]
     
     static func avatarColor(for name: String) -> Color {
-        let index = abs(name.hashValue) % avatarColors.count
-        return avatarColors[index]
+        return accent
     }
     
     // Frosted Glass Effect
