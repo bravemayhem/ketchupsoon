@@ -104,19 +104,6 @@ struct FriendPickerView: View {
             .searchable(text: $searchText, prompt: "Search people")
             .navigationTitle(selectionTitle)
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") {
-                        dismiss()
-                    }
-                    .disabled(selectedFriends.isEmpty)
-                }
-            }
             .task {
                 await loadContacts()
             }
