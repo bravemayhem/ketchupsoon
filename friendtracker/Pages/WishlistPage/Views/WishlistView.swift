@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import UniformTypeIdentifiers
 
 struct WishlistView: View {
     @Query(sort: [SortDescriptor(\Friend.lastSeen)]) private var friends: [Friend]
@@ -75,14 +76,9 @@ struct WishlistView: View {
                     .listRowSeparator(.hidden)
                     .listRowBackground(Color.clear)
                     .tint(.clear)
-                    .onDrag {
-                        // Create drag item with friend's ID as UUID string
-                        NSItemProvider(object: friend.id.uuidString as NSString)
-                    }
                     .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                         Button(role: .destructive) {
                             friend.needsToConnectFlag = false
-                            // Remove from order list when removed from wishlist
                             wishlistOrder.removeAll { $0 == friend.id }
                         } label: {
                             Label("Remove", systemImage: "trash")
@@ -90,10 +86,9 @@ struct WishlistView: View {
                     }
                 }
                 .onMove { source, destination in
-                    // Update wishlistOrder when items are moved
-                    var updatedOrder = wishlistFriends.map { $0.id }
-                    updatedOrder.move(fromOffsets: source, toOffset: destination)
-                    wishlistOrder = updatedOrder
+                    var updatedFriends = wishlistFriends
+                    updatedFriends.move(fromOffsets: source, toOffset: destination)
+                    wishlistOrder = updatedFriends.map { $0.id }
                 }
             }
         }
