@@ -133,6 +133,36 @@ struct OnboardingView: View {
             .padding(.horizontal)
             
             if calendarManager.isAuthorized || calendarManager.isGoogleAuthorized {
+                VStack(spacing: 12) {
+                    Text("Default Calendar")
+                        .font(.headline)
+                    
+                    Picker("Default Calendar", selection: Binding(
+                        get: {
+                            let defaultType = UserDefaults.standard.string(forKey: "defaultCalendarType") ?? "apple"
+                            return defaultType == "google" ? Friend.CalendarType.google : Friend.CalendarType.apple
+                        },
+                        set: { newValue in
+                            UserDefaults.standard.set(newValue.rawValue, forKey: "defaultCalendarType")
+                            calendarManager.selectedCalendarType = newValue == .google ? .google : .apple
+                        }
+                    )) {
+                        if calendarManager.isGoogleAuthorized {
+                            Text("Google Calendar").tag(Friend.CalendarType.google)
+                        }
+                        if calendarManager.isAuthorized {
+                            Text("Apple Calendar").tag(Friend.CalendarType.apple)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .padding(.horizontal)
+                    
+                    Text("This calendar will be used for sending hangout invites")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                .padding(.top)
+                
                 Text("✓ Calendar setup complete!")
                     .foregroundColor(.green)
                     .padding(.top)

@@ -181,7 +181,9 @@ class CreateHangoutViewModel: ObservableObject {
         self.hangoutTitle = initialTitle ?? ""
         self.selectedFriends = initialSelectedFriends ?? []
         self.calendarManager = CalendarManager.shared
-        self.selectedCalendarType = .apple
+        // Use the default calendar type from AppStorage
+        let defaultType = UserDefaults.standard.string(forKey: "defaultCalendarType") ?? "apple"
+        self.selectedCalendarType = defaultType == "google" ? .google : .apple
     }
 
     private func saveHangout(_ hangout: Hangout) throws {
@@ -241,6 +243,28 @@ class CreateHangoutViewModel: ObservableObject {
             try saveHangout(hangout)
             print("✅ Saved to local database")
             
+            // Create calendar event
+            print("📅 Creating calendar event...")
+            let attendeeNames = selectedFriends.map { $0.name }
+            let calendarResult = try await calendarManager.createHangoutEvent(
+                activity: hangoutTitle,
+                location: selectedLocation,
+                date: selectedDate,
+                duration: selectedDuration ?? 3600,
+                emailRecipients: emailRecipients,
+                attendeeNames: attendeeNames
+            )
+            print("✅ Calendar event created with ID: \(calendarResult.eventId)")
+            
+            // Store Google Calendar specific information
+            var googleEventLink: String? = nil
+            if calendarResult.isGoogleEvent {
+                googleEventLink = calendarResult.htmlLink
+                print("🔗 Google Calendar event link: \(googleEventLink ?? "nil")")
+                hangout.googleEventId = calendarResult.googleEventId
+                hangout.googleEventLink = googleEventLink
+            }
+            
             // Save to Supabase and get web link
             print("☁️ Saving to Supabase...")
             if let result = try await SupabaseManager.shared.createEvent(hangout) {
@@ -251,22 +275,34 @@ class CreateHangoutViewModel: ObservableObject {
                 // Store the event link and token with the hangout
                 hangout.eventLink = webLink
                 hangout.eventToken = result.token
-                // Save the event link for the creator
-                let creatorLink = webLink
+                
+                // If this is a Google Calendar event, update the message to include both links
+                let eventDetailsMessage = if calendarResult.isGoogleEvent {
+                    """
+                    Join me for \(hangoutTitle)!
+                    When: \(formatDate(selectedDate))
+                    \(selectedLocation.isEmpty ? "" : "Where: \(selectedLocation)\n")
+                    View event details and RSVP: \(webLink ?? "")
+                    Add to Google Calendar: \(googleEventLink ?? "")
+                    """
+                } else {
+                    """
+                    Join me for \(hangoutTitle)!
+                    When: \(formatDate(selectedDate))
+                    \(selectedLocation.isEmpty ? "" : "Where: \(selectedLocation)\n")
+                    View event details and RSVP: \(webLink ?? "")
+                    """
+                }
                 
                 // Show message sheet with web link for attendees
                 messageRecipient = selectedFriends.first?.phoneNumber ?? manualAttendees.first?.email
-                messageBody = """
-                Join me for \(hangoutTitle)!
-                When: \(formatDate(selectedDate))
-                \(selectedLocation.isEmpty ? "" : "Where: \(selectedLocation)\n")View event details and RSVP: \(webLink ?? "")
-                """
+                messageBody = eventDetailsMessage
                 showingMessageSheet = true
                 print("📱 Showing message sheet")
                 
-                // Show confirmation with creator's link
-                print("🔗 Creator's event link: \(creatorLink ?? "")")
-                print("ℹ️ Save this link to view your event later")
+                // Save the updated hangout with all links
+                try modelContext.save()
+                print("✅ Saved hangout with all event links")
             }
         } catch {
             print("❌ Error in createHangout: \(error)")
@@ -286,27 +322,39 @@ class CreateHangoutViewModel: ObservableObject {
         errorMessage = nil
         
         do {
+            print("🗓 Starting hangout scheduling...")
+            print("📅 Selected calendar type: \(calendarManager.selectedCalendarType)")
+            print("🔐 Calendar access state:")
+            print("   - Apple Calendar authorized: \(calendarManager.isAuthorized)")
+            print("   - Google Calendar authorized: \(calendarManager.isGoogleAuthorized)")
+            print("   - Has selected calendar access: \(calendarManager.hasSelectedCalendarAccess)")
+            
             // Ensure calendar access is granted
             await calendarManager.ensureInitialized()
+            print("✅ Calendar manager initialized")
             
-            // Check if we have calendar access
-            if selectedCalendarType == .apple && !calendarManager.isAuthorized {
-                errorMessage = "Apple Calendar access is required. Please grant access in Settings."
-                isLoading = false
-                return
-            }
-            
-            if selectedCalendarType == .google && !calendarManager.isGoogleAuthorized {
-                errorMessage = "Google Calendar access is required. Please sign in with Google."
-                isLoading = false
-                return
-            }
-            
+            // Set the calendar type first
             calendarManager.selectedCalendarType = selectedCalendarType
+            print("📅 Set selected calendar type to: \(selectedCalendarType)")
+            
+            // Check if we have access to the selected calendar type
+            if !calendarManager.hasSelectedCalendarAccess {
+                print("❌ No access to selected calendar type")
+                print("   - Selected type: \(calendarManager.selectedCalendarType)")
+                print("   - Apple access: \(calendarManager.isAuthorized)")
+                print("   - Google access: \(calendarManager.isGoogleAuthorized)")
+                errorMessage = "\(calendarManager.selectedCalendarType == .apple ? "Apple" : "Google") Calendar access is required. Please grant access in Settings."
+                isLoading = false
+                return
+            }
+            
+            print("✅ Calendar access verified")
+            print("📅 Creating hangout...")
             await createHangout()
             
             // Save the model context
             try modelContext.save()
+            print("✅ Model context saved")
             
             isLoading = false
             
@@ -315,7 +363,7 @@ class CreateHangoutViewModel: ObservableObject {
                 showingWishlistPrompt = true
             }
         } catch {
-            print("Error scheduling hangout: \(error)")
+            print("❌ Error scheduling hangout: \(error)")
             errorMessage = "Failed to schedule hangout: \(error.localizedDescription)"
             isLoading = false
         }

@@ -14,6 +14,8 @@ final class Hangout: Identifiable {
     var originalHangoutId: UUID?  // Track if this is a rescheduled hangout
     var eventLink: String?  // Store the web link for the event
     var eventToken: String?  // Store the token for the event
+    var googleEventId: String?  // Store the Google Calendar event ID
+    var googleEventLink: String?  // Store the Google Calendar event link
     @Relationship(deleteRule: .cascade) var friends: [Friend]
     @Attribute(.transformable(by: ManualAttendeeArrayValueTransformer.self)) private var _manualAttendees: Data?
     
@@ -39,6 +41,8 @@ final class Hangout: Identifiable {
         self.originalHangoutId = nil
         self.eventLink = nil
         self.eventToken = nil
+        self.googleEventId = nil
+        self.googleEventLink = nil
         self.friends = friends
         self._manualAttendees = nil
     }

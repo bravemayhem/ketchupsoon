@@ -9,7 +9,7 @@ import FirebaseCore
 class CalendarManager: ObservableObject {
     static let shared = CalendarManager()
     
-    private let eventStore = EKEventStore()
+    private var eventStore: EKEventStore?
     private var googleService: GTLRCalendarService?
     private let auth = Auth.auth()
     
@@ -27,25 +27,71 @@ class CalendarManager: ObservableObject {
         case google
     }
     
-    private init() {
-        Task {
-            await initialize()
+    var hasSelectedCalendarAccess: Bool {
+        print("🔐 Checking selected calendar access")
+        print("   - Selected type: \(selectedCalendarType)")
+        print("   - Apple authorized: \(isAuthorized)")
+        print("   - Google authorized: \(isGoogleAuthorized)")
+        
+        switch selectedCalendarType {
+        case .apple:
+            let hasAccess = isAuthorized
+            print("   - Has Apple access: \(hasAccess)")
+            return hasAccess
+        case .google:
+            let hasAccess = isGoogleAuthorized
+            print("   - Has Google access: \(hasAccess)")
+            return hasAccess
         }
     }
     
+    private init() {
+        // Initialize with the default calendar type from AppStorage
+        let defaultType = UserDefaults.standard.string(forKey: "defaultCalendarType") ?? "apple"
+        self.selectedCalendarType = defaultType == "google" ? .google : .apple
+        print("📅 CalendarManager created with default type: \(selectedCalendarType)")
+    }
+    
     private func initialize() async {
-        // Only setup Google Calendar initially, don't request access
-        await setupGoogleCalendar()
+        guard !isInitialized else {
+            print("🔄 Calendar manager already initialized")
+            return
+        }
+        
+        print("🚀 Initializing calendar manager")
+        print("   - Using default calendar type: \(selectedCalendarType)")
+        
+        // Initialize Apple Calendar only if needed
+        if selectedCalendarType == .apple {
+            print("📱 Setting up Apple Calendar")
+            eventStore = EKEventStore()
+        }
+        
+        // Initialize Google Calendar if needed
+        if selectedCalendarType == .google {
+            print("🌐 Setting up Google Calendar")
+            await setupGoogleCalendar()
+        }
+        
         isInitialized = true
+        print("✅ Calendar manager initialization complete")
+        print("   - Selected calendar type: \(selectedCalendarType)")
+        print("   - Apple authorized: \(isAuthorized)")
+        print("   - Google authorized: \(isGoogleAuthorized)")
     }
     
     func ensureInitialized() async {
+        print("🔄 Ensuring calendar manager is initialized")
         if !isInitialized {
+            print("   - Not initialized, starting initialization")
             await initialize()
+        } else {
+            print("   - Already initialized")
         }
     }
     
     private func setupGoogleCalendar() async {
+        print("🔄 Setting up Google Calendar...")
         googleService = GTLRCalendarService()
         
         // Configure Google Sign-In
@@ -53,6 +99,7 @@ class CalendarManager: ObservableObject {
         
         // Check if user is already signed in
         if let currentUser = auth.currentUser {
+            print("📱 Found existing Google user: \(currentUser.email ?? "unknown")")
             do {
                 // Try to restore previous Google Sign-In
                 let signInResult = try await GIDSignIn.sharedInstance.restorePreviousSignIn()
@@ -63,15 +110,31 @@ class CalendarManager: ObservableObject {
                 googleService?.authorizer = signInResult.fetcherAuthorizer
                 
                 await loadConnectedCalendars()
+                print("✅ Successfully restored Google Sign-In")
             } catch {
-                print("Error restoring Google Sign-In: \(error)")
+                print("❌ Error restoring Google Sign-In: \(error)")
                 isGoogleAuthorized = false
                 googleUserEmail = nil
             }
+        } else {
+            print("ℹ️ No existing Google user found")
         }
     }
     
     func requestAccess() async {
+        print("🔄 Requesting Apple Calendar access...")
+        
+        // Initialize Apple Calendar if not already done
+        if eventStore == nil {
+            print("📱 Creating EKEventStore for Apple Calendar")
+            eventStore = EKEventStore()
+        }
+        
+        guard let eventStore = eventStore else {
+            print("❌ EKEventStore not initialized")
+            return
+        }
+        
         // Request Apple Calendar access
         if #available(iOS 17.0, *) {
             do {
@@ -83,8 +146,10 @@ class CalendarManager: ObservableObject {
                     appleUserEmail = source.title
                 }
                 await loadConnectedCalendars()
+                print("✅ Apple Calendar access granted")
+                print("   - User email: \(appleUserEmail ?? "unknown")")
             } catch {
-                print("Error requesting calendar access: \(error)")
+                print("❌ Error requesting calendar access: \(error)")
                 isAuthorized = false
                 appleUserEmail = nil
             }
@@ -99,9 +164,13 @@ class CalendarManager: ObservableObject {
                         appleUserEmail = source.title
                     }
                     await loadConnectedCalendars()
+                    print("✅ Apple Calendar access granted")
+                    print("   - User email: \(appleUserEmail ?? "unknown")")
+                } else {
+                    print("❌ Apple Calendar access denied by user")
                 }
             } catch {
-                print("Error requesting calendar access: \(error)")
+                print("❌ Error requesting calendar access: \(error)")
                 isAuthorized = false
                 appleUserEmail = nil
             }
@@ -109,14 +178,19 @@ class CalendarManager: ObservableObject {
     }
     
     func requestGoogleAccess() async throws {
+        print("🔄 Requesting Google Calendar access...")
         guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
               let window = windowScene.windows.first,
-              let rootViewController = window.rootViewController else { return }
+              let rootViewController = window.rootViewController else {
+            print("❌ Failed to get root view controller for Google Sign-In")
+            return
+        }
         
         do {
             // Configure Google Sign-In
             GIDSignIn.sharedInstance.configuration = GIDConfiguration(clientID: "144315286048-7jasampp9nttpd09rd3d31iui3j9stif.apps.googleusercontent.com")
             
+            print("🔄 Starting Google Sign-In flow...")
             // Sign in with Google
             let result = try await GIDSignIn.sharedInstance.signIn(
                 withPresenting: rootViewController,
@@ -130,9 +204,11 @@ class CalendarManager: ObservableObject {
             
             // Get Google ID token and access token
             guard let idToken = result.user.idToken?.tokenString else {
+                print("❌ Missing ID token from Google Sign-In")
                 throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Missing ID token"])
             }
             
+            print("🔄 Creating Firebase credential...")
             // Create Firebase credential
             let credential = GoogleAuthProvider.credential(
                 withIDToken: idToken,
@@ -149,8 +225,10 @@ class CalendarManager: ObservableObject {
             googleService?.authorizer = result.user.fetcherAuthorizer
             
             await loadConnectedCalendars()
+            print("✅ Google Calendar access granted")
+            print("   - User email: \(googleUserEmail ?? "unknown")")
         } catch {
-            print("Error signing in with Google: \(error)")
+            print("❌ Error signing in with Google: \(error)")
             isGoogleAuthorized = false
             googleUserEmail = nil
             throw error
@@ -189,7 +267,7 @@ class CalendarManager: ObservableObject {
         
         // Load Apple Calendars
         if isAuthorized {
-            let appleCalendars = eventStore.calendars(for: .event)
+            let appleCalendars = eventStore?.calendars(for: .event) ?? []
             calendars.append(contentsOf: appleCalendars.map { calendar in
                 Friend.ConnectedCalendar(
                     id: calendar.calendarIdentifier,
@@ -249,6 +327,8 @@ class CalendarManager: ObservableObject {
     struct CalendarEventResult {
         let eventId: String
         let htmlLink: String?
+        let isGoogleEvent: Bool
+        let googleEventId: String?
     }
     
     func createHangoutEvent(activity: String, location: String, date: Date, duration: TimeInterval, emailRecipients: [String] = [], attendeeNames: [String] = []) async throws -> CalendarEventResult {
@@ -305,7 +385,9 @@ class CalendarManager: ObservableObject {
                 }
                 return CalendarEventResult(
                     eventId: response.identifier ?? UUID().uuidString,
-                    htmlLink: response.htmlLink
+                    htmlLink: response.htmlLink,
+                    isGoogleEvent: true,
+                    googleEventId: response.identifier
                 )
             } catch {
                 print("Error creating Google Calendar event: \(error)")
@@ -316,12 +398,12 @@ class CalendarManager: ObservableObject {
         // For Apple Calendar
         guard isAuthorized else { throw CalendarError.unauthorized }
         
-        let event = EKEvent(eventStore: eventStore)
+        let event = EKEvent(eventStore: eventStore ?? EKEventStore())
         event.title = activity
         event.location = location
         event.startDate = date
         event.endDate = date.addingTimeInterval(duration)
-        event.calendar = eventStore.defaultCalendarForNewEvents
+        event.calendar = eventStore?.defaultCalendarForNewEvents
         
         // Add notes with attendees and email recipients
         var notes = ["KetchupSoon Event"]
@@ -332,10 +414,12 @@ class CalendarManager: ObservableObject {
         event.notes = notes.joined(separator: "\n")
         
         do {
-            try eventStore.save(event, span: .thisEvent)
+            try eventStore?.save(event, span: .thisEvent)
             return CalendarEventResult(
                 eventId: event.eventIdentifier,
-                htmlLink: nil
+                htmlLink: nil,
+                isGoogleEvent: false,
+                googleEventId: nil
             )
         } catch {
             throw CalendarError.eventCreationFailed
@@ -381,14 +465,16 @@ class CalendarManager: ObservableObject {
         print("Calendar authorization status - Apple: \(isAuthorized), Google: \(isGoogleAuthorized)")
         
         // Fetch Apple Calendar events
-        if isAuthorized {
+        if isAuthorized, let eventStore = eventStore {
             let calendars = eventStore.calendars(for: .event)
             print("Available Apple calendars: \(calendars.count)")
+            
             let predicate = eventStore.predicateForEvents(
                 withStart: startDate,
                 end: endDate,
                 calendars: calendars
             )
+            
             let appleEvents = eventStore.events(matching: predicate)
             print("Found \(appleEvents.count) Apple Calendar events")
             allEvents.append(contentsOf: appleEvents.map { CalendarEvent(event: $0, source: .apple) })
@@ -422,7 +508,7 @@ class CalendarManager: ObservableObject {
                     print("Found \(items.count) Google Calendar events")
                     // Convert Google Calendar events to EKEvents
                     for googleEvent in items {
-                        let event = EKEvent(eventStore: eventStore)
+                        let event = EKEvent(eventStore: eventStore ?? EKEventStore())
                         event.title = googleEvent.summary ?? "Untitled Event"
                         event.location = googleEvent.location
                         

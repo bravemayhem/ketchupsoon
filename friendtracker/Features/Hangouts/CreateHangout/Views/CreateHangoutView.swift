@@ -32,7 +32,7 @@ struct CreateHangoutView: View {
                 
                 FriendsSection(viewModel: viewModel, showingFriendPicker: $showingFriendPicker)
                 
-                AdditionalManualAttendeesSection(viewModel: viewModel)
+                // Additional Attendee section can added back in later if and when needed
                 
                 DateTimeSection(viewModel: viewModel)
                 
