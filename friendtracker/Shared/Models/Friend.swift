@@ -2,13 +2,44 @@ import Foundation
 import SwiftUI
 import SwiftData
 import Contacts
+import OSLog
 
 @Model
 final class Friend: Identifiable {
+    private static let logger = Logger(subsystem: "com.friendtracker", category: "FriendModel")
+    
     // Required properties
     @Attribute(.unique) var id: UUID
     var name: String
-    var needsToConnectFlag: Bool
+    var _needsToConnectFlag: Bool
+    var needsToConnectFlag: Bool {
+        get { _needsToConnectFlag }
+        set {
+            Self.logger.info("🔄 Changing needsToConnectFlag for \(self.name) from \(self._needsToConnectFlag) to \(newValue)")
+            Self.logger.info("🔄 Change initiated from:")
+            for (index, symbol) in Thread.callStackSymbols.enumerated() {
+                Self.logger.info("   [\(index)] \(symbol)")
+                // Stop after 5 frames to keep logs manageable
+                if index >= 5 { break }
+            }
+            
+            // Protection against automatic changes during contact sync.
+            // The wishlist status is a user preference that should only be modified
+            // through explicit user actions (like tapping the wishlist button).
+            // This check prevents the flag from being modified during contact
+            // information synchronization.
+            let callStack = Thread.callStackSymbols.joined()
+            if callStack.contains("ContactsManagerC15syncContactInfo") {
+                Self.logger.warning("⚠️ Attempted to change needsToConnectFlag during contact sync - ignoring change")
+                return // Don't allow the change during contact sync
+            }
+            
+            if let contactId = self.contactIdentifier {
+                Self.logger.info("ℹ️ Friend is linked to contact: \(contactId)")
+            }
+            _needsToConnectFlag = newValue
+        }
+    }
     var calendarIntegrationEnabled: Bool
     var calendarVisibilityPreference: CalendarVisibilityPreference
     var createdAt: Date
@@ -82,7 +113,7 @@ final class Friend: Identifiable {
         // Initialize required properties
         self.id = id
         self.name = name
-        self.needsToConnectFlag = needsToConnectFlag
+        self._needsToConnectFlag = needsToConnectFlag
         self.calendarIntegrationEnabled = calendarIntegrationEnabled
         self.calendarVisibilityPreference = calendarVisibilityPreference
         self.createdAt = createdAt

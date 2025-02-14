@@ -150,8 +150,8 @@ class ContactsManager: ObservableObject {
                 print("📱 ContactsManager: Found contact, updating friend information")
                 // Update friend's information on the main thread
                 await MainActor.run {
+                    // Only update contact-sourced information
                     friend.name = "\(contact.givenName) \(contact.familyName)".trimmingCharacters(in: .whitespaces)
-                    // Standardize phone number before setting
                     friend.phoneNumber = contact.phoneNumbers.first?.value.stringValue.standardizedPhoneNumber()
                     
                     // Handle email addresses
@@ -166,11 +166,11 @@ class ContactsManager: ObservableObject {
                     friend.location = contact.postalAddresses.first?.value.city
                     friend.photoData = contact.thumbnailImageData
                     
-                    // Ensure all required properties are set
-                    friend.needsToConnectFlag = false
-                    friend.calendarIntegrationEnabled = false
-                    friend.calendarVisibilityPreference = .none
-                    friend.createdAt = Date()
+                    // Do not modify user preferences during sync
+                    // friend.needsToConnectFlag = false  // Removed
+                    // friend.calendarIntegrationEnabled = false  // Removed
+                    // friend.calendarVisibilityPreference = .none  // Removed
+                    // friend.createdAt = Date()  // Removed
                 }
                 
                 print("📱 ContactsManager: Successfully updated friend information")

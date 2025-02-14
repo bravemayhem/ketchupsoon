@@ -66,18 +66,14 @@ class CalendarManager: ObservableObject {
         if let currentUser = auth.currentUser {
             do {
                 // Try to restore previous Google Sign-In
-                if let signInResult = try? await GIDSignIn.sharedInstance.restorePreviousSignIn() {
-                    isGoogleAuthorized = true
-                    googleUserEmail = currentUser.email
-                    
-                    // Configure Google Calendar service with the restored session
-                    googleService?.authorizer = signInResult.fetcherAuthorizer
-                    
-                    await loadConnectedCalendars()
-                } else {
-                    isGoogleAuthorized = false
-                    googleUserEmail = nil
-                }
+                let signInResult = try await GIDSignIn.sharedInstance.restorePreviousSignIn()
+                isGoogleAuthorized = true
+                googleUserEmail = currentUser.email
+                
+                // Configure Google Calendar service with the restored session
+                googleService?.authorizer = signInResult.fetcherAuthorizer
+                
+                await loadConnectedCalendars()
             } catch {
                 print("Error restoring Google Sign-In: \(error)")
                 isGoogleAuthorized = false
@@ -129,7 +125,8 @@ class CalendarManager: ObservableObject {
               let rootViewController = window.rootViewController else { return }
         
         do {
-            let signInConfig = GIDConfiguration(clientID: "144315286048-7jasampp9nttpd09rd3d31iui3j9stif.apps.googleusercontent.com")
+            // Configure Google Sign-In
+            GIDSignIn.sharedInstance.configuration = GIDConfiguration(clientID: "144315286048-7jasampp9nttpd09rd3d31iui3j9stif.apps.googleusercontent.com")
             
             // Sign in with Google
             let result = try await GIDSignIn.sharedInstance.signIn(
@@ -189,8 +186,8 @@ class CalendarManager: ObservableObject {
             throw CalendarError.unauthorized
         }
         
-        // Get fresh ID token
-        let token = try await currentUser.getIDToken()
+        // Get fresh ID token but discard it since we don't need it
+        _ = try await currentUser.getIDToken()
         
         // Update Google Calendar service authorization
         if let signInResult = try? await GIDSignIn.sharedInstance.restorePreviousSignIn() {

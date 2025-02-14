@@ -1,11 +1,13 @@
 import SwiftUI
 import SwiftData
+import OSLog
 
 struct FriendActionSection: View {
     @Bindable var friend: Friend
     let onMessageTap: () -> Void
     let onScheduleTap: () -> Void
     let onMarkSeenTap: () -> Void
+    private static let logger = Logger(subsystem: "com.friendtracker", category: "WishlistActions")
     
     var body: some View {
         Section("Actions") {
@@ -25,20 +27,25 @@ struct FriendActionSection: View {
             }
             
             Button {
-                friend.needsToConnectFlag.toggle()
-            } label: {
-                HStack {
-                    Label(friend.needsToConnectFlag ? "Remove from Wishlist" : "Add to Wishlist",
-                          systemImage: friend.needsToConnectFlag ? "star.slash" : "star")
-                        .actionLabelStyle()
-                    Spacer()
-                    Toggle("", isOn: $friend.needsToConnectFlag)
-                        .labelsHidden()
-                        .tint(AppColors.accent)
+                Self.logger.info("🌟 Wishlist button tapped for friend: \(friend.name)")
+                Self.logger.info("🌟 Current wishlist status: \(friend.needsToConnectFlag)")
+                
+                withAnimation {
+                    friend.needsToConnectFlag.toggle()
+                    Self.logger.info("🌟 New wishlist status: \(friend.needsToConnectFlag)")
                 }
+            } label: {
+                Label(friend.needsToConnectFlag ? "Remove from Wishlist" : "Add to Wishlist",
+                      systemImage: friend.needsToConnectFlag ? "star.slash" : "star")
+                    .actionLabelStyle()
             }
+            .tint(friend.needsToConnectFlag ? .red : AppColors.accent)
         }
         .listRowBackground(AppColors.secondarySystemBackground)
+        .onAppear {
+            Self.logger.info("⚡️ FriendActionSection appeared for friend: \(friend.name)")
+            Self.logger.info("⚡️ Initial wishlist status: \(friend.needsToConnectFlag)")
+        }
     }
 }
 
