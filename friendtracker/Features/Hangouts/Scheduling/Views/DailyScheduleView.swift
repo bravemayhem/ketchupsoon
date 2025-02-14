@@ -9,11 +9,13 @@ struct DailyScheduleView: View {
     @Binding var selectedEvent: CalendarManager.CalendarEvent?
     @Binding var showingEventDetails: Bool
     let onTimeSelected: (Date) -> Void
+    @State private var currentTime = Date()
     
     private let hourHeight: CGFloat = 60
     private let timeWidth: CGFloat = 60
     private let startHour = 7 // 7 AM
     private let endHour = 24 // 11 PM
+    private let timer = Timer.publish(every: 60, on: .main, in: .common).autoconnect()
     
     enum ViewMode {
         case daily
@@ -59,6 +61,11 @@ struct DailyScheduleView: View {
                             }
                         }
                         
+                        // Current time indicator
+                        if Calendar.current.isDate(date, inSameDayAs: Date()) {
+                            CurrentTimeIndicator(currentTime: currentTime, startHour: startHour, hourHeight: hourHeight)
+                        }
+                        
                         // Events
                         ForEach(events) { calendarEvent in
                             if let eventPosition = calculateEventPosition(calendarEvent.event) {
@@ -99,6 +106,9 @@ struct DailyScheduleView: View {
                     }
                 }
             }
+        }
+        .onReceive(timer) { time in
+            currentTime = time
         }
     }
     
@@ -193,6 +203,36 @@ struct EventView: View {
     private var borderView: some View {
         RoundedRectangle(cornerRadius: 8)
             .stroke(event.source == .google ? Color.purple.opacity(0.3) : Color.blue.opacity(0.3))
+    }
+}
+
+// Current Time Indicator Component
+private struct CurrentTimeIndicator: View {
+    let currentTime: Date
+    let startHour: Int
+    let hourHeight: CGFloat
+    
+    var body: some View {
+        GeometryReader { geometry in
+            HStack(spacing: 0) {
+                Circle()
+                    .fill(Color.black)
+                    .frame(width: 8, height: 8)
+                
+                Rectangle()
+                    .fill(Color.black)
+                    .frame(height: 2)
+            }
+            .offset(y: calculateOffset())
+        }
+    }
+    
+    private func calculateOffset() -> CGFloat {
+        let calendar = Calendar.current
+        let hour = Float(calendar.component(.hour, from: currentTime))
+        let minute = Float(calendar.component(.minute, from: currentTime))
+        let currentPosition = hour + minute / 60.0
+        return CGFloat(currentPosition - Float(startHour)) * hourHeight
     }
 }
 
