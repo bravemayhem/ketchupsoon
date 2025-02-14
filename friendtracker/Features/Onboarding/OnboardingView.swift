@@ -48,7 +48,6 @@ struct OnboardingView: View {
         PermissionsSetupView(
             notificationsStatus: notificationsManager.authorizationStatus,
             contactsStatus: contactsManager.authorizationStatus,
-            calendarStatus: calendarManager.isAuthorized,
             onRequestNotifications: {
                 Task {
                     try? await notificationsManager.requestAuthorization()
@@ -58,13 +57,95 @@ struct OnboardingView: View {
                 Task {
                     _ = await contactsManager.requestAccess()
                 }
-            },
-            onRequestCalendar: {
-                Task {
-                    _ = await calendarManager.requestAccess()
-                }
             }
         )
+    }
+    
+    private var calendarIntegrationView: some View {
+        VStack(spacing: 20) {
+            Image(systemName: "calendar.badge.plus")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 100, height: 100)
+                .foregroundColor(AppColors.accent)
+                .padding(.top, 60)
+            
+            Text("Connect Your Calendars")
+                .font(.title)
+                .bold()
+                .multilineTextAlignment(.center)
+            
+            Text("Choose which calendars to use for scheduling hangouts")
+                .font(.body)
+                .multilineTextAlignment(.center)
+                .foregroundColor(.secondary)
+                .padding(.horizontal)
+            
+            Text("Note: Calendar invites with attendee notifications are only supported with Google Calendar at this time")
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal)
+            
+            VStack(spacing: 24) {
+                // Google Calendar Permission Button (Now First)
+                PermissionButton(
+                    title: "Google Calendar",
+                    description: "Sync hangouts and send calendar invites to friends",
+                    iconName: "calendar.badge.plus",
+                    status: calendarManager.isGoogleAuthorized,
+                    action: {
+                        Task {
+                            if !calendarManager.isGoogleAuthorized {
+                                try? await calendarManager.requestGoogleAccess()
+                                if calendarManager.isGoogleAuthorized {
+                                    // Set as default calendar when authorized
+                                    UserDefaults.standard.set(Friend.CalendarType.google.rawValue, forKey: "defaultCalendarType")
+                                    calendarManager.selectedCalendarType = .google
+                                }
+                            }
+                        }
+                    }
+                )
+                
+                // Apple Calendar Permission Button (Now Second)
+                PermissionButton(
+                    title: "Apple Calendar",
+                    description: "Sync hangouts with your personal calendar",
+                    iconName: "calendar",
+                    status: calendarManager.isAuthorized,
+                    action: {
+                        Task {
+                            if !calendarManager.isAuthorized {
+                                await calendarManager.requestAccess()
+                                if calendarManager.isAuthorized {
+                                    // Set as default calendar if no other calendar is authorized
+                                    if !calendarManager.isGoogleAuthorized {
+                                        UserDefaults.standard.set(Friend.CalendarType.apple.rawValue, forKey: "defaultCalendarType")
+                                        calendarManager.selectedCalendarType = .apple
+                                    }
+                                }
+                            }
+                        }
+                    }
+                )
+            }
+            .padding(.horizontal)
+            
+            if calendarManager.isAuthorized || calendarManager.isGoogleAuthorized {
+                Text("✓ Calendar setup complete!")
+                    .foregroundColor(.green)
+                    .padding(.top)
+            } else {
+                Text("Connect at least one calendar to get started")
+                    .foregroundColor(.secondary)
+                    .padding(.top)
+                    .font(.caption)
+            }
+            
+            Spacer()
+        }
+        .padding()
     }
     
     private var isProfileValid: Bool {
@@ -94,13 +175,17 @@ struct OnboardingView: View {
             // Permissions setup view
             permissionsView
                 .tag(pages.count + 1)
+            
+            // Calendar integration view
+            calendarIntegrationView
+                .tag(pages.count + 2)
         }
         .tabViewStyle(.page)
         .indexViewStyle(.page(backgroundDisplayMode: .always))
         .overlay(alignment: .bottom) {
             if currentPage >= pages.count {
                 Button(action: handleNextStep) {
-                    Text(currentPage == pages.count + 1 ? "Get Started" : "Next")
+                    Text(currentPage == pages.count + 2 ? "Get Started" : "Next")
                         .font(.headline)
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
@@ -125,11 +210,15 @@ struct OnboardingView: View {
     
     private func handleNextStep() {
         if currentPage == pages.count {
-            // Save profile information
+            // Save profile information and dismiss keyboard
             userSettings.updateName(name)
             userSettings.updatePhoneNumber(phoneNumber)
+            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
             currentPage += 1
         } else if currentPage == pages.count + 1 {
+            // Move to calendar integration
+            currentPage += 1
+        } else if currentPage == pages.count + 2 {
             // Complete onboarding
             onboardingManager.completeOnboarding()
             dismiss()
@@ -234,68 +323,51 @@ struct ProfileSetupView: View {
 struct PermissionsSetupView: View {
     let notificationsStatus: UNAuthorizationStatus
     let contactsStatus: CNAuthorizationStatus
-    let calendarStatus: Bool
     let onRequestNotifications: () -> Void
     let onRequestContacts: () -> Void
-    let onRequestCalendar: () -> Void
-    
-    private var isCalendarAuthorized: Bool {
-        calendarStatus
-    }
     
     var body: some View {
-        ScrollView {
-            VStack(spacing: 20) {
-                Image(systemName: "gear.circle.fill")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 100, height: 100)
-                    .foregroundColor(AppColors.accent)
-                    .padding(.top, 60)
-                
-                Text("Enable Features")
-                    .font(.title)
-                    .bold()
-                    .multilineTextAlignment(.center)
-                
-                Text("Get the most out of Ketchup Soon by enabling these features")
-                    .font(.body)
-                    .multilineTextAlignment(.center)
-                    .foregroundColor(.secondary)
-                    .padding(.horizontal)
-                
-                VStack(spacing: 24) {
-                    PermissionButton(
-                        title: "Push Notifications",
-                        description: "Get reminders about upcoming hangouts",
-                        iconName: "bell.badge.fill",
-                        status: notificationsStatus == .authorized,
-                        action: onRequestNotifications
-                    )
-                    
-                    PermissionButton(
-                        title: "Contacts Access",
-                        description: "Easily add friends from your contacts",
-                        iconName: "person.crop.circle.fill.badge.plus",
-                        status: contactsStatus == .authorized,
-                        action: onRequestContacts
-                    )
-                    
-                    PermissionButton(
-                        title: "Calendar Access",
-                        description: "Sync hangouts with your calendar",
-                        iconName: "calendar.badge.plus",
-                        status: isCalendarAuthorized,
-                        action: onRequestCalendar
-                    )
-                }
+        VStack(spacing: 20) {
+            Image(systemName: "gear.circle.fill")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 100, height: 100)
+                .foregroundColor(AppColors.accent)
+                .padding(.top, 60)
+            
+            Text("Enable Features")
+                .font(.title)
+                .bold()
+                .multilineTextAlignment(.center)
+            
+            Text("Get the most out of Ketchup Soon by enabling these features")
+                .font(.body)
+                .multilineTextAlignment(.center)
+                .foregroundColor(.secondary)
                 .padding(.horizontal)
+            
+            VStack(spacing: 24) {
+                PermissionButton(
+                    title: "Push Notifications",
+                    description: "Get reminders about upcoming hangouts",
+                    iconName: "bell.badge.fill",
+                    status: notificationsStatus == .authorized,
+                    action: onRequestNotifications
+                )
                 
-                Spacer(minLength: 200) // Add extra space at bottom for keyboard
+                PermissionButton(
+                    title: "Contacts Access",
+                    description: "Easily add friends from your contacts",
+                    iconName: "person.crop.circle.fill.badge.plus",
+                    status: contactsStatus == .authorized,
+                    action: onRequestContacts
+                )
             }
-            .padding()
+            .padding(.horizontal)
+            
+            Spacer()
         }
-        .scrollDismissesKeyboard(.interactively)
+        .padding()
     }
 }
 
@@ -308,7 +380,7 @@ struct PermissionButton: View {
     
     var body: some View {
         Button(action: action) {
-            HStack {
+            HStack(alignment: .top, spacing: 12) {
                 Image(systemName: iconName)
                     .font(.title2)
                     .foregroundColor(AppColors.accent)
@@ -322,9 +394,9 @@ struct PermissionButton: View {
                     Text(description)
                         .font(.subheadline)
                         .foregroundColor(AppColors.secondaryLabel)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .multilineTextAlignment(.leading)
                 }
-                
-                Spacer()
                 
                 Image(systemName: status ? "checkmark.circle.fill" : "chevron.right.circle.fill")
                     .foregroundColor(status ? .green : AppColors.accent)
