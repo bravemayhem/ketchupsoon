@@ -6,12 +6,23 @@ struct WishlistView: View {
     @State private var selectedFriend: Friend?
     @State private var showingFriendPicker = false
     @State private var selectedFriends: [Friend] = []
+    @State private var wishlistOrder: [UUID] = [] // Store UUIDs instead of Strings
     
     var wishlistFriends: [Friend] {
-        friends.filter { friend in
-            // Only include friends that are manually flagged
+        let flaggedFriends = friends.filter { friend in
             friend.needsToConnectFlag
         }
+        
+        // Sort based on wishlistOrder if available, otherwise use default order
+        if !wishlistOrder.isEmpty {
+            return flaggedFriends.sorted { friend1, friend2 in
+                let index1 = wishlistOrder.firstIndex(of: friend1.id) ?? Int.max
+                let index2 = wishlistOrder.firstIndex(of: friend2.id) ?? Int.max
+                return index1 < index2
+            }
+        }
+        
+        return flaggedFriends
     }
     
     var body: some View {
@@ -64,13 +75,25 @@ struct WishlistView: View {
                     .listRowSeparator(.hidden)
                     .listRowBackground(Color.clear)
                     .tint(.clear)
+                    .onDrag {
+                        // Create drag item with friend's ID as UUID string
+                        NSItemProvider(object: friend.id.uuidString as NSString)
+                    }
                     .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                         Button(role: .destructive) {
                             friend.needsToConnectFlag = false
+                            // Remove from order list when removed from wishlist
+                            wishlistOrder.removeAll { $0 == friend.id }
                         } label: {
                             Label("Remove", systemImage: "trash")
                         }
                     }
+                }
+                .onMove { source, destination in
+                    // Update wishlistOrder when items are moved
+                    var updatedOrder = wishlistFriends.map { $0.id }
+                    updatedOrder.move(fromOffsets: source, toOffset: destination)
+                    wishlistOrder = updatedOrder
                 }
             }
         }
@@ -86,9 +109,12 @@ struct WishlistView: View {
                     .toolbar {
                         ToolbarItem(placement: .navigationBarTrailing) {
                             Button("Done") {
-                                // Add selected friends to wishlist
+                                // Add selected friends to wishlist and update order
                                 for friend in selectedFriends {
                                     friend.needsToConnectFlag = true
+                                    if !wishlistOrder.contains(friend.id) {
+                                        wishlistOrder.append(friend.id)
+                                    }
                                 }
                                 selectedFriends = []
                                 showingFriendPicker = false
@@ -103,6 +129,8 @@ struct WishlistView: View {
                     }
             }
         }
+        .environment(\.editMode, .constant(.inactive))
+        .scrollContentBackground(.hidden)
     }
 }
 
