@@ -13,7 +13,7 @@ struct ContentView: View {
         TabView(selection: $selectedTab) {
             NavigationTab(
                 title: "Ketchups",
-                subtitle: "Your social calendar at your finger tips",
+                subtitle: "Schedule time with the people who matter",
                 icon: "calendar",
                 subtitleAlwaysVisible: false,
                 showImportOptions: $showingImportOptions,

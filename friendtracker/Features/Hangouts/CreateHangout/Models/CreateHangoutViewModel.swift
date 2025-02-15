@@ -276,30 +276,6 @@ class CreateHangoutViewModel: ObservableObject {
                 hangout.eventLink = webLink
                 hangout.eventToken = result.token
                 
-                // If this is a Google Calendar event, update the message to include both links
-                let eventDetailsMessage = if calendarResult.isGoogleEvent {
-                    """
-                    Join me for \(hangoutTitle)!
-                    When: \(formatDate(selectedDate))
-                    \(selectedLocation.isEmpty ? "" : "Where: \(selectedLocation)\n")
-                    View event details and RSVP: \(webLink ?? "")
-                    Add to Google Calendar: \(googleEventLink ?? "")
-                    """
-                } else {
-                    """
-                    Join me for \(hangoutTitle)!
-                    When: \(formatDate(selectedDate))
-                    \(selectedLocation.isEmpty ? "" : "Where: \(selectedLocation)\n")
-                    View event details and RSVP: \(webLink ?? "")
-                    """
-                }
-                
-                // Show message sheet with web link for attendees
-                messageRecipient = selectedFriends.first?.phoneNumber ?? manualAttendees.first?.email
-                messageBody = eventDetailsMessage
-                showingMessageSheet = true
-                print("📱 Showing message sheet")
-                
                 // Save the updated hangout with all links
                 try modelContext.save()
                 print("✅ Saved hangout with all event links")

@@ -68,7 +68,13 @@ struct CalendarOverlayView: View {
                 }
             }) {
                 NavigationStack {
-                    CreateHangoutView(initialDate: selectedTime)
+                    CreateHangoutView(
+                        initialDate: selectedTime,
+                        onEventCreated: {
+                            showingCreateHangout = false
+                            dismiss()
+                        }
+                    )
                 }
             }
             .sheet(isPresented: $showingEventDetails) {

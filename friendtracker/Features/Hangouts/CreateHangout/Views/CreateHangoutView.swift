@@ -7,8 +7,9 @@ struct CreateHangoutView: View {
     @Environment(\.modelContext) private var modelContext
     @StateObject private var viewModel: CreateHangoutViewModel
     @State private var showingFriendPicker = false
+    let onEventCreated: (() -> Void)?
     
-    init(initialDate: Date? = nil, initialLocation: String? = nil, initialTitle: String? = nil, initialSelectedFriends: [Friend]? = nil) {
+    init(initialDate: Date? = nil, initialLocation: String? = nil, initialTitle: String? = nil, initialSelectedFriends: [Friend]? = nil, onEventCreated: (() -> Void)? = nil) {
         // Use a StateObject wrapper to initialize the viewModel with the default values
         // The actual modelContext will be injected from the environment
         _viewModel = StateObject(wrappedValue: CreateHangoutViewModel(
@@ -18,6 +19,8 @@ struct CreateHangoutView: View {
             initialTitle: initialTitle,
             initialSelectedFriends: initialSelectedFriends
         ))
+        
+        self.onEventCreated = onEventCreated
         
         // Configure UIDatePicker to snap to 5-minute intervals
         UIDatePicker.appearance().minuteInterval = 5
@@ -86,10 +89,11 @@ struct CreateHangoutView: View {
             .sheet(isPresented: $viewModel.showingWishlistPrompt) {
                 WishlistPromptView(viewModel: viewModel)
             }
-            .sheet(isPresented: $viewModel.showingMessageSheet) {
-                if let recipient = viewModel.messageRecipient,
-                   let body = viewModel.messageBody {
-                    SMSCalendarLinkView(recipient: recipient, message: body)
+            .onChange(of: viewModel.isCreatingEvent) { wasCreating, isCreating in
+                if wasCreating && !isCreating && viewModel.errorMessage == nil {
+                    // Event was successfully created (creation finished and no error)
+                    onEventCreated?()  // Call the completion handler
+                    dismiss()
                 }
             }
             .task {
