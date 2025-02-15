@@ -332,10 +332,11 @@ class CalendarManager: ObservableObject {
     }
     
     func createHangoutEvent(activity: String, location: String, date: Date, duration: TimeInterval, emailRecipients: [String] = [], attendeeNames: [String] = []) async throws -> CalendarEventResult {
-        // For Google Calendar
-        if selectedCalendarType == .google && isGoogleAuthorized {
-            guard let service = googleService else { throw CalendarError.unauthorized }
-            
+        var googleEventLink: String? = nil
+        var googleEventId: String? = nil
+        
+        // First, try to create Google Calendar event if authorized
+        if isGoogleAuthorized, let service = googleService {
             // Refresh token before operation
             try await refreshGoogleAuthorization()
             
@@ -383,42 +384,60 @@ class CalendarManager: ObservableObject {
                         }
                     }
                 }
-                return CalendarEventResult(
-                    eventId: response.identifier ?? UUID().uuidString,
-                    htmlLink: response.htmlLink,
-                    isGoogleEvent: true,
-                    googleEventId: response.identifier
-                )
+                googleEventLink = response.htmlLink
+                googleEventId = response.identifier
             } catch {
                 print("Error creating Google Calendar event: \(error)")
                 throw CalendarError.eventCreationFailed
             }
         }
         
-        // For Apple Calendar
-        guard isAuthorized else { throw CalendarError.unauthorized }
-        
-        let event = EKEvent(eventStore: eventStore ?? EKEventStore())
-        event.title = activity
-        event.location = location
-        event.startDate = date
-        event.endDate = date.addingTimeInterval(duration)
-        event.calendar = eventStore?.defaultCalendarForNewEvents
-        
-        // Add notes with attendees and email recipients
-        event.notes = "KetchupSoon Event 🍅"
-        
-        do {
-            try eventStore?.save(event, span: .thisEvent)
-            return CalendarEventResult(
-                eventId: event.eventIdentifier,
-                htmlLink: nil,
-                isGoogleEvent: false,
-                googleEventId: nil
-            )
-        } catch {
-            throw CalendarError.eventCreationFailed
+        // Then create Apple Calendar event if authorized
+        if isAuthorized {
+            guard let eventStore = self.eventStore else { throw CalendarError.unauthorized }
+            
+            let event = EKEvent(eventStore: eventStore)
+            event.title = activity
+            event.location = location
+            event.startDate = date
+            event.endDate = date.addingTimeInterval(duration)
+            event.calendar = eventStore.defaultCalendarForNewEvents
+            
+            // Add notes with event information and Google Calendar link if available
+            var notes = "KetchupSoon Event 🍅"
+            if let googleLink = googleEventLink {
+                notes += "\n\nView RSVPs and manage attendance: \(googleLink)"
+            }
+            event.notes = notes
+            
+            do {
+                try eventStore.save(event, span: .thisEvent)
+                // If we only created an Apple Calendar event, return its ID
+                if googleEventId == nil {
+                    return CalendarEventResult(
+                        eventId: event.eventIdentifier,
+                        htmlLink: nil,
+                        isGoogleEvent: false,
+                        googleEventId: nil
+                    )
+                }
+            } catch {
+                throw CalendarError.eventCreationFailed
+            }
         }
+        
+        // Return Google Calendar event details if created
+        if let googleEventId = googleEventId {
+            return CalendarEventResult(
+                eventId: googleEventId,
+                htmlLink: googleEventLink,
+                isGoogleEvent: true,
+                googleEventId: googleEventId
+            )
+        }
+        
+        // If neither calendar was available
+        throw CalendarError.unauthorized
     }
     
     // MARK: - Event Fetching
