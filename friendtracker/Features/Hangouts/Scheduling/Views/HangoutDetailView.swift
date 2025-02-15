@@ -115,7 +115,6 @@ private struct AttendeesView: View {
 private struct ActionButtonsView: View {
     let hangout: Hangout
     @Binding var showingRescheduleSheet: Bool
-    @Binding var showingMessageSheet: Bool
     
     var body: some View {
         VStack(spacing: 12) {
@@ -150,7 +149,6 @@ struct HangoutDetailView: View {
     let hangout: Hangout
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
-    @State private var showingMessageSheet = false
     @State private var showingRescheduleSheet = false
     @State private var showingFriendPicker = false
     @State private var selectedFriends: [Friend]
@@ -254,8 +252,7 @@ struct HangoutDetailView: View {
                 
                 ActionButtonsView(
                     hangout: hangout,
-                    showingRescheduleSheet: $showingRescheduleSheet,
-                    showingMessageSheet: $showingMessageSheet
+                    showingRescheduleSheet: $showingRescheduleSheet
                 )
             }
             .padding(.vertical)
@@ -276,11 +273,6 @@ struct HangoutDetailView: View {
                     initialTitle: hangout.title,
                     initialSelectedFriends: selectedFriends
                 )
-            }
-        }
-        .sheet(isPresented: $showingMessageSheet) {
-            if let url = hangout.calendarEventURL {
-                ShareSheet(items: [url])
             }
         }
         .sheet(isPresented: $showingFriendPicker) {
@@ -357,17 +349,6 @@ private struct AttendeeRow: View {
             }
         }
     }
-}
-
-// Helper view for sharing
-struct ShareSheet: UIViewControllerRepresentable {
-    let items: [Any]
-    
-    func makeUIViewController(context: Context) -> UIActivityViewController {
-        UIActivityViewController(activityItems: items, applicationActivities: nil)
-    }
-    
-    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
 
 #Preview {
