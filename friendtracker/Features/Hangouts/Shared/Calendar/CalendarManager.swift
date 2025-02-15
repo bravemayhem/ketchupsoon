@@ -342,7 +342,7 @@ class CalendarManager: ObservableObject {
             let event = GTLRCalendar_Event()
             event.summary = activity
             event.location = location
-            event.descriptionProperty = "KetchupSoon Event\nAttendees: \(attendeeNames.joined(separator: ", "))"
+            event.descriptionProperty = "KetchupSoon Event 🍅"
             
             let startDateTime = GTLRDateTime(date: date)
             let endDateTime = GTLRDateTime(date: date.addingTimeInterval(duration))
@@ -406,12 +406,7 @@ class CalendarManager: ObservableObject {
         event.calendar = eventStore?.defaultCalendarForNewEvents
         
         // Add notes with attendees and email recipients
-        var notes = ["KetchupSoon Event"]
-        notes.append("Attendees: \(attendeeNames.joined(separator: ", "))")
-        if !emailRecipients.isEmpty {
-            notes.append("Email Recipients: \(emailRecipients.joined(separator: ", "))")
-        }
-        event.notes = notes.joined(separator: "\n")
+        event.notes = "KetchupSoon Event 🍅"
         
         do {
             try eventStore?.save(event, span: .thisEvent)

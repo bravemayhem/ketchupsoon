@@ -50,7 +50,8 @@ enum AppColors {
     
     // Avatar Background Colors - Using only accent color for consistency
     static let avatarColors: [Color] = [
-        accent  // Soft orange (primary)
+        accent,  // Soft orange (primary)
+        futureGreen
     ]
     
     static func avatarColor(for name: String) -> Color {
