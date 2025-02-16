@@ -224,7 +224,6 @@ class PollOptionsViewModel: ObservableObject {
         var slots: [TimeRange] = []
         
         // Calculate total minutes for comparison
-        let startMinutes = range.startSlot.hour * 60 + range.startSlot.minute
         let endMinutes = range.endSlot.hour * 60 + range.endSlot.minute
         
         var currentHour = range.startSlot.hour
@@ -276,7 +275,7 @@ class PollOptionsViewModel: ObservableObject {
                                        minute: currentMinute)
                 
                 // Calculate end time (1 hour later)
-                var endHour = currentHour + 1
+                let endHour = currentHour + 1
                 let endMinute = currentMinute
                 
                 let endSlot = TimeSlot(date: range.startSlot.date, 
