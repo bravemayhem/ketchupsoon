@@ -214,13 +214,29 @@ struct FindTimeView: View {
                                         return
                                     }
                                     
-                                    // Rest of the existing grid selection logic
+                                    // Calculate grid position
                                     let availableWidth = geo.size.width - timeColumnWidth
                                     let colWidth = availableWidth / CGFloat(viewModel.visibleDays.count)
-                                    let col = Int((location.x - timeColumnWidth) / colWidth)
+                                    
+                                    // Lock to initial column if we're already dragging
+                                    let col: Int
+                                    if let (_, initialCol) = gridLastDraggedCell {
+                                        col = initialCol
+                                    } else {
+                                        col = min(
+                                            viewModel.visibleDays.count - 1,
+                                            max(0, Int((location.x - timeColumnWidth) / colWidth))
+                                        )
+                                    }
                                     
                                     // Compute row: each cell row has fixed height 32
-                                    let row = Int(location.y / 32)
+                                    // Adjust y position by scroll offset
+                                    let adjustedY = location.y - scrollOffset
+                                    let row = min(
+                                        30, // Maximum row index (9am to midnight)
+                                        max(0, Int(adjustedY / 32))
+                                    )
+                                    
                                     // Hours are from 9 to 0 (midnight), two rows per hour
                                     let hourValue = if row / 2 + 9 >= 24 {
                                         0 // midnight
@@ -229,7 +245,7 @@ struct FindTimeView: View {
                                     }
                                     let minuteValue = (row % 2 == 0) ? 0 : 30
                                     
-                                    print("Overlay drag: location: \(location), col: \(col), row: \(row), hour: \(hourValue), minute: \(minuteValue)")
+                                    print("Overlay drag: location: \(location), adjusted y: \(adjustedY), col: \(col), row: \(row), hour: \(hourValue), minute: \(minuteValue)")
                                     
                                     // Validate indices
                                     guard col >= 0 && col < viewModel.visibleDays.count else {
