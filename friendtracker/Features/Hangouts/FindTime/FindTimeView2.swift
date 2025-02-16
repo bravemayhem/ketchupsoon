@@ -146,6 +146,9 @@ struct FindTimeView: View {
     @State private var gridDragActive: Bool = false
     @State private var gridDragSelectionMode: Bool? = nil  // true for selecting, false for deselecting
     @State private var gridLastDraggedCell: (row: Int, col: Int)? = nil
+    @State private var scrollOffset: CGFloat = 0
+    @State private var isDraggingTimeColumn = false
+    @State private var lastDragValue: CGFloat = 0
     
     var body: some View {
         VStack(spacing: 0) {
@@ -160,10 +163,13 @@ struct FindTimeView: View {
             ZStack {
                 ScrollView(.vertical, showsIndicators: false) {
                     VStack(spacing: 0) {
-                        ForEach(9...17, id: \.self) { hour in
+                        ForEach(9...23, id: \.self) { hour in
                             TimeRowWithGrid(hour: hour, viewModel: viewModel)
                         }
+                        // Add midnight (0:00) as the last row
+                        TimeRowWithGrid(hour: 0, viewModel: viewModel)
                     }
+                    .offset(y: scrollOffset)
                 }
                 // Event overlay: draws calendar events spanning multiple cells
                 GeometryReader { geo in
@@ -179,27 +185,53 @@ struct FindTimeView: View {
                                 .onChanged { gesture in
                                     let location = gesture.location
                                     let timeColumnWidth: CGFloat = 70
-                                    // Only process if the gesture is in the grid area
+                                    
+                                    // Handle time column scrolling
                                     if location.x < timeColumnWidth {
+                                        if !isDraggingTimeColumn {
+                                            isDraggingTimeColumn = true
+                                            lastDragValue = gesture.translation.height
+                                        }
+                                        
+                                        let translation = gesture.translation.height - lastDragValue
+                                        lastDragValue = gesture.translation.height
+                                        
+                                        let newOffset = scrollOffset + translation
+                                        
+                                        // Calculate bounds
+                                        let totalHeight = CGFloat(31) * 32 // 31 half-hour slots (9am to midnight)
+                                        let maxScroll = min(0, -(totalHeight - geo.size.height))
+                                        
+                                        // Clamp the offset between maxScroll and 0
+                                        scrollOffset = max(maxScroll, min(0, newOffset))
                                         return
                                     }
                                     
-                                    // Compute column: available width = geo.size.width - timeColumnWidth
+                                    // If we're not in the time column, handle grid selection
+                                    if isDraggingTimeColumn {
+                                        isDraggingTimeColumn = false
+                                        return
+                                    }
+                                    
+                                    // Rest of the existing grid selection logic
                                     let availableWidth = geo.size.width - timeColumnWidth
                                     let colWidth = availableWidth / CGFloat(viewModel.visibleDays.count)
                                     let col = Int((location.x - timeColumnWidth) / colWidth)
                                     
                                     // Compute row: each cell row has fixed height 32
                                     let row = Int(location.y / 32)
-                                    // Hours are from 9 to 17, two rows per hour
-                                    let hourValue = 9 + (row / 2)
+                                    // Hours are from 9 to 0 (midnight), two rows per hour
+                                    let hourValue = if row / 2 + 9 >= 24 {
+                                        0 // midnight
+                                    } else {
+                                        9 + (row / 2)
+                                    }
                                     let minuteValue = (row % 2 == 0) ? 0 : 30
                                     
                                     print("Overlay drag: location: \(location), col: \(col), row: \(row), hour: \(hourValue), minute: \(minuteValue)")
                                     
                                     // Validate indices
-                                    guard hourValue >= 9 && hourValue <= 17,
-                                          col >= 0 && col < viewModel.visibleDays.count else {
+                                    guard col >= 0 && col < viewModel.visibleDays.count else {
                                         print("Overlay drag: invalid cell indices")
                                         return
                                     }
@@ -239,6 +271,14 @@ struct FindTimeView: View {
                                     gridDragActive = false
                                     gridLastDraggedCell = nil
                                     gridDragSelectionMode = nil
+                                    isDraggingTimeColumn = false
+                                    
+                                    // Add a small animation to settle
+                                    withAnimation(.interactiveSpring(response: 0.3, dampingFraction: 0.8, blendDuration: 0.1)) {
+                                        let totalHeight = CGFloat(31) * 32
+                                        let maxScroll = min(0, -(totalHeight - geo.size.height))
+                                        scrollOffset = max(maxScroll, min(0, scrollOffset))
+                                    }
                                 }
                         )
                 }
@@ -404,12 +444,26 @@ struct TimeLabel: View {
     let minute: Int
     
     var body: some View {
-        Text(timeString)
-            .font(.caption)
-            .foregroundColor(.secondary)
-            .frame(height: 32)
-            .frame(maxWidth: .infinity, alignment: .trailing)
-            .padding(.trailing, 8)
+        VStack(spacing: 0) {
+            if minute == 0 {
+                Text(timeString)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+                    .padding(.trailing, 8)
+                    .frame(height: 16, alignment: .bottom)
+                    .offset(y: -8)
+            } else {
+                Text(timeString)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+                    .padding(.trailing, 8)
+                    .frame(height: 16, alignment: .bottom)
+                    .offset(y: -8)
+            }
+        }
+        .frame(height: 32)
     }
     
     private var timeString: String {
