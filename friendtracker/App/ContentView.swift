@@ -173,13 +173,6 @@ private struct NavigationTab<Content: View>: View {
     }
 }
 
-struct ScrollOffsetPreferenceKey: PreferenceKey {
-    static var defaultValue: CGFloat = 0
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-        value = nextValue()
-    }
-}
-
 struct ImportOptionsView: View {
     @Environment(\.dismiss) private var dismiss
     @Binding var showingContactPicker: Bool

@@ -25,6 +25,7 @@ struct KetchupsView: View {
     @State private var showingAllUpcoming = false
     @State private var showingAllPast = false
     @State private var showingAllCompleted = false
+    @State private var showingFindTime = false
     
     init() {
         // Debug: Print available font names
@@ -81,19 +82,35 @@ struct KetchupsView: View {
     var body: some View {
         ScrollView {
             LazyVStack(spacing: AppTheme.spacingMedium, pinnedViews: [.sectionHeaders]) {
-                // Calendar Button at the top
-                Button(action: {
-                    showingCalendarOverlay = true
-                }) {
-                    HStack {
-                        Image(systemName: "calendar")
-                        Text("Calendar")
+                // Calendar and Find Time buttons at the top
+                HStack(spacing: AppTheme.spacingMedium) {
+                    Button(action: {
+                        showingCalendarOverlay = true
+                    }) {
+                        HStack {
+                            Image(systemName: "calendar")
+                            Text("Calendar")
+                        }
+                        .padding()
+                        .frame(maxWidth: .infinity)
+                        .background(AppColors.accent.opacity(0.1))
+                        .foregroundColor(AppColors.accent)
+                        .cornerRadius(10)
                     }
-                    .padding()
-                    .frame(maxWidth: .infinity)
-                    .background(AppColors.accent.opacity(0.1))
-                    .foregroundColor(AppColors.accent)
-                    .cornerRadius(10)
+                    
+                    Button(action: {
+                        showingFindTime = true
+                    }) {
+                        HStack {
+                            Image(systemName: "clock.arrow.2.circlepath")
+                            Text("Find a Time")
+                        }
+                        .padding()
+                        .frame(maxWidth: .infinity)
+                        .background(AppColors.accent.opacity(0.1))
+                        .foregroundColor(AppColors.accent)
+                        .cornerRadius(10)
+                    }
                 }
                 .padding(.horizontal)
                 
@@ -210,6 +227,11 @@ struct KetchupsView: View {
         }
         .sheet(isPresented: $showingAllCompleted) {
             HangoutListView(title: "Completed", hangouts: completedHangouts, maxItems: 10)
+        }
+        .sheet(isPresented: $showingFindTime) {
+            NavigationStack {
+                FindTimeView()
+            }
         }
         .onChange(of: selectedFriend) { _, newValue in
             if newValue == nil {
