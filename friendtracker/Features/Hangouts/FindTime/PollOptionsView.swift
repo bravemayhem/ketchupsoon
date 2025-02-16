@@ -42,6 +42,9 @@ struct TimeRange: Identifiable {
     }
     
     func splitIntoTimeSlots(duration: TimeInterval) -> [TimeRange] {
+        print("⏰ Splitting range into slots: \(startSlot.hour):\(startSlot.minute) - \(endSlot.hour):\(endSlot.minute)")
+        print("   Duration: \(duration/60) minutes")
+        
         let calendar = Calendar.current
         var slots: [TimeRange] = []
         
@@ -53,54 +56,66 @@ struct TimeRange: Identifiable {
         startComponents.hour = startSlot.hour
         startComponents.minute = startSlot.minute
         
-        // Create end date
+        // Create end date with the full range
         var endComponents = DateComponents()
         endComponents.year = calendar.component(.year, from: endSlot.date)
         endComponents.month = calendar.component(.month, from: endSlot.date)
         endComponents.day = calendar.component(.day, from: endSlot.date)
         endComponents.hour = endSlot.hour
-        endComponents.minute = endSlot.minute + 30 // Add 30 minutes to include the end slot
+        endComponents.minute = endSlot.minute + 30 // Add 30 minutes to include the full end slot
+        
+        // Normalize end time if minutes >= 60
+        if endComponents.minute ?? 0 >= 60 {
+            endComponents.hour = (endComponents.hour ?? 0) + 1
+            endComponents.minute = (endComponents.minute ?? 0) - 60
+        }
         
         guard let startDate = calendar.date(from: startComponents),
               let rangeEndDate = calendar.date(from: endComponents) else {
+            print("❌ Failed to create dates")
             return []
         }
         
         var currentStartDate = startDate
-        // For 1-hour slots, we want to slide by 30 minutes each time
-        let slideInterval: TimeInterval = 1800 // 30 minutes
         
         while currentStartDate < rangeEndDate {
             guard let slotEndDate = calendar.date(byAdding: .minute, value: Int(duration/60), to: currentStartDate) else {
+                print("❌ Failed to create slot end date")
                 break
             }
             
-            // Only add the slot if it fits entirely within our range
-            if slotEndDate <= rangeEndDate {
+            // For the last slot, make sure we don't exceed the range end
+            let actualEndDate = min(slotEndDate, rangeEndDate)
+            
+            // Only add the slot if it's a full slot
+            if actualEndDate.timeIntervalSince(currentStartDate) >= duration {
                 let startSlot = TimeSlot(
                     date: currentStartDate,
                     hour: calendar.component(.hour, from: currentStartDate),
                     minute: calendar.component(.minute, from: currentStartDate)
                 )
                 
-                let endComponents = calendar.dateComponents([.hour, .minute], from: slotEndDate)
+                let endComponents = calendar.dateComponents([.hour, .minute], from: actualEndDate)
                 let endSlot = TimeSlot(
-                    date: currentStartDate,
+                    date: startSlot.date,
                     hour: endComponents.hour ?? 0,
                     minute: endComponents.minute ?? 0
                 )
                 
                 slots.append(TimeRange(startSlot: startSlot, endSlot: endSlot, isSelected: false))
+                print("   Created slot: \(startSlot.hour):\(startSlot.minute) - \(endSlot.hour):\(endSlot.minute)")
             }
             
             // For 1-hour slots, slide by 30 minutes. For 30-minute slots, slide by the full duration
-            let slideAmount = duration == 3600 ? slideInterval : duration
+            let slideAmount = duration == 3600 ? 1800.0 : duration
             guard let nextStartDate = calendar.date(byAdding: .minute, value: Int(slideAmount/60), to: currentStartDate) else {
+                print("❌ Failed to create next start date")
                 break
             }
             currentStartDate = nextStartDate
         }
         
+        print("📦 Created \(slots.count) slots")
         return slots
     }
 }
@@ -113,78 +128,197 @@ class PollOptionsViewModel: ObservableObject {
     @Published var slotDuration: TimeInterval = 1800 // 30 minutes in seconds
     
     private var originalRanges: [TimeRange] = []
+    private var selectedTimeSlots: Set<TimeSlot>
     
     init(selectedTimeSlots: Set<TimeSlot>) {
-        self.originalRanges = PollOptionsViewModel.createTimeRanges(from: selectedTimeSlots)
+        self.selectedTimeSlots = selectedTimeSlots
+        self.originalRanges = PollOptionsViewModel.createAvailabilityRanges(from: selectedTimeSlots)
         self.timeRanges = self.originalRanges
     }
     
-    private static func createTimeRanges(from timeSlots: Set<TimeSlot>) -> [TimeRange] {
-        // Sort time slots by date and time
-        let sortedSlots = timeSlots.sorted { slot1, slot2 in
-            if slot1.date == slot2.date {
+    private static func createAvailabilityRanges(from timeSlots: Set<TimeSlot>) -> [TimeRange] {
+        print("🔍 Creating availability ranges from selected slots:")
+        timeSlots.forEach { slot in
+            print("   Selected slot: date: \(slot.date), hour: \(slot.hour), minute: \(slot.minute)")
+        }
+        
+        // Group slots by date
+        let slotsByDate = Dictionary(grouping: timeSlots) { slot in
+            let calendar = Calendar.current
+            let components = calendar.dateComponents([.year, .month, .day], from: slot.date)
+            return calendar.date(from: components) ?? slot.date
+        }
+        
+        var ranges: [TimeRange] = []
+        
+        for (_, slots) in slotsByDate {
+            // Sort slots by time for this date
+            let sortedSlots = slots.sorted { slot1, slot2 in
                 if slot1.hour == slot2.hour {
                     return slot1.minute < slot2.minute
                 }
                 return slot1.hour < slot2.hour
             }
-            return slot1.date < slot2.date
-        }
-        
-        var ranges: [TimeRange] = []
-        var currentRange: (start: TimeSlot, end: TimeSlot)? = nil
-        
-        for slot in sortedSlots {
-            if let current = currentRange {
-                // Check if this slot is consecutive with current range
-                let calendar = Calendar.current
-                var currentEndComponents = DateComponents()
-                currentEndComponents.year = calendar.component(.year, from: current.end.date)
-                currentEndComponents.month = calendar.component(.month, from: current.end.date)
-                currentEndComponents.day = calendar.component(.day, from: current.end.date)
-                currentEndComponents.hour = current.end.hour
-                currentEndComponents.minute = current.end.minute + 30
-                
-                var slotComponents = DateComponents()
-                slotComponents.year = calendar.component(.year, from: slot.date)
-                slotComponents.month = calendar.component(.month, from: slot.date)
-                slotComponents.day = calendar.component(.day, from: slot.date)
-                slotComponents.hour = slot.hour
-                slotComponents.minute = slot.minute
-                
-                guard let currentEndDate = calendar.date(from: currentEndComponents),
-                      let slotDate = calendar.date(from: slotComponents) else {
-                    continue
-                }
-                
-                if calendar.isDate(currentEndDate, equalTo: slotDate, toGranularity: .minute) {
-                    // Extend current range
-                    currentRange?.end = slot
+            
+            var currentRange: TimeSlot? = nil
+            var lastSlot: TimeSlot? = nil
+            
+            for slot in sortedSlots {
+                if let last = lastSlot {
+                    // Check if this slot is 30 minutes after the last one
+                    let isConsecutive = (slot.hour == last.hour && slot.minute == last.minute + 30) ||
+                                      (slot.hour == last.hour + 1 && last.minute == 30 && slot.minute == 0)
+                    
+                    if isConsecutive {
+                        lastSlot = slot
+                    } else {
+                        // End the current range
+                        if let start = currentRange {
+                            // Calculate proper end time (last slot + 30 minutes)
+                            var endHour = last.hour
+                            var endMinute = last.minute + 30
+                            if endMinute >= 60 {
+                                endHour += 1
+                                endMinute -= 60
+                            }
+                            let endSlot = TimeSlot(date: last.date, hour: endHour, minute: endMinute)
+                            ranges.append(TimeRange(startSlot: start, endSlot: endSlot))
+                            print("   Added range: \(start.hour):\(start.minute) - \(endHour):\(endMinute)")
+                        }
+                        currentRange = slot
+                        lastSlot = slot
+                    }
                 } else {
-                    // End current range and start new one
-                    ranges.append(TimeRange(startSlot: current.start, endSlot: current.end))
-                    currentRange = (start: slot, end: slot)
+                    currentRange = slot
+                    lastSlot = slot
                 }
-            } else {
-                // Start new range
-                currentRange = (start: slot, end: slot)
+            }
+            
+            // Add the last range if exists
+            if let start = currentRange, let last = lastSlot {
+                // Calculate proper end time (last slot + 30 minutes)
+                var endHour = last.hour
+                var endMinute = last.minute + 30
+                if endMinute >= 60 {
+                    endHour += 1
+                    endMinute -= 60
+                }
+                let endSlot = TimeSlot(date: last.date, hour: endHour, minute: endMinute)
+                ranges.append(TimeRange(startSlot: start, endSlot: endSlot))
+                print("   Added final range: \(start.hour):\(start.minute) - \(endHour):\(endMinute)")
             }
         }
         
-        // Add last range if exists
-        if let lastRange = currentRange {
-            ranges.append(TimeRange(startSlot: lastRange.start, endSlot: lastRange.end))
+        let sortedRanges = ranges.sorted { $0.startSlot.date < $1.startSlot.date }
+        print("📦 Created availability ranges:")
+        sortedRanges.forEach { range in
+            let endHour = range.endSlot.hour
+            let endMinute = range.endSlot.minute
+            print("   Range: \(range.startSlot.hour):\(range.startSlot.minute) - \(endHour):\(endMinute)")
+        }
+        return sortedRanges
+    }
+    
+    private func create30MinuteSlots(from range: TimeRange) -> [TimeRange] {
+        print("⏰ Creating 30-minute slots for range: \(range.startSlot.hour):\(range.startSlot.minute) - \(range.endSlot.hour):\(range.endSlot.minute)")
+        var slots: [TimeRange] = []
+        
+        // Calculate total minutes for comparison
+        let startMinutes = range.startSlot.hour * 60 + range.startSlot.minute
+        let endMinutes = range.endSlot.hour * 60 + range.endSlot.minute
+        
+        var currentHour = range.startSlot.hour
+        var currentMinute = range.startSlot.minute
+        
+        while (currentHour * 60 + currentMinute) < endMinutes {
+            let startSlot = TimeSlot(date: range.startSlot.date, hour: currentHour, minute: currentMinute)
+            
+            // Calculate end time
+            var endMinute = currentMinute + 30
+            var endHour = currentHour
+            if endMinute >= 60 {
+                endHour += 1
+                endMinute -= 60
+            }
+            
+            let endSlot = TimeSlot(date: range.startSlot.date, hour: endHour, minute: endMinute)
+            slots.append(TimeRange(startSlot: startSlot, endSlot: endSlot, isSelected: false))
+            print("   Created 30-min slot: \(currentHour):\(currentMinute) - \(endHour):\(endMinute)")
+            
+            // Move to next slot
+            currentMinute += 30
+            if currentMinute >= 60 {
+                currentHour += 1
+                currentMinute -= 60
+            }
         }
         
-        return ranges.sorted { $0.startSlot.date < $1.startSlot.date }
+        return slots
+    }
+    
+    private func create1HourSlots(from range: TimeRange) -> [TimeRange] {
+        print("⏰ Creating 1-hour slots for range: \(range.startSlot.hour):\(range.startSlot.minute) - \(range.endSlot.hour):\(range.endSlot.minute)")
+        var slots: [TimeRange] = []
+        
+        // Calculate the total minutes in the range
+        let startMinutes = range.startSlot.hour * 60 + range.startSlot.minute
+        let endMinutes = range.endSlot.hour * 60 + range.endSlot.minute
+        let totalMinutes = endMinutes - startMinutes
+        
+        // Create slots if we have at least 60 minutes
+        if totalMinutes >= 60 {
+            var currentHour = range.startSlot.hour
+            var currentMinute = range.startSlot.minute
+            
+            while (currentHour * 60 + currentMinute + 60) <= endMinutes {
+                let startSlot = TimeSlot(date: range.startSlot.date, 
+                                       hour: currentHour, 
+                                       minute: currentMinute)
+                
+                // Calculate end time (1 hour later)
+                var endHour = currentHour + 1
+                let endMinute = currentMinute
+                
+                let endSlot = TimeSlot(date: range.startSlot.date, 
+                                     hour: endHour, 
+                                     minute: endMinute)
+                
+                slots.append(TimeRange(startSlot: startSlot, endSlot: endSlot, isSelected: false))
+                print("   Created 1-hour slot: \(startSlot.hour):\(startSlot.minute) - \(endHour):\(endMinute)")
+                
+                // Move to next slot start (30-minute increment)
+                currentMinute += 30
+                if currentMinute >= 60 {
+                    currentHour += 1
+                    currentMinute -= 60
+                }
+            }
+        }
+        
+        return slots
     }
     
     func updateTimeRanges() {
+        print("\n🔄 Updating time ranges for mode: \(pollMode)")
         switch pollMode {
         case .availability:
             timeRanges = originalRanges
+            print("📊 Availability ranges:")
+            timeRanges.forEach { range in
+                print("   Range: \(range.startSlot.hour):\(range.startSlot.minute) - \(range.endSlot.hour):\(range.endSlot.minute + 30)")
+            }
+            
         case .timeSlots:
-            timeRanges = originalRanges.flatMap { $0.splitIntoTimeSlots(duration: slotDuration) }
+            if slotDuration == 1800 { // 30 minutes
+                timeRanges = originalRanges.flatMap(create30MinuteSlots)
+            } else { // 1 hour
+                timeRanges = originalRanges.flatMap(create1HourSlots)
+            }
+            
+            print("📊 Time slot ranges (duration: \(slotDuration/60) minutes):")
+            timeRanges.forEach { range in
+                print("   Slot: \(range.startSlot.hour):\(range.startSlot.minute) - \(range.endSlot.hour):\(range.endSlot.minute)")
+            }
         }
     }
     
