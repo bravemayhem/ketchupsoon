@@ -25,7 +25,7 @@ struct TimeRange: Identifiable {
         
         var endComponents = startComponents
         endComponents.hour = endSlot.hour
-        endComponents.minute = endSlot.minute + 30 // Add 30 minutes to include the full range
+        endComponents.minute = endSlot.minute
         
         guard let startDate = calendar.date(from: startComponents),
               let endDate = calendar.date(from: endComponents) else {
@@ -54,9 +54,12 @@ struct TimeRange: Identifiable {
         startComponents.minute = startSlot.minute
         
         // Create end date
-        var endComponents = startComponents
+        var endComponents = DateComponents()
+        endComponents.year = calendar.component(.year, from: endSlot.date)
+        endComponents.month = calendar.component(.month, from: endSlot.date)
+        endComponents.day = calendar.component(.day, from: endSlot.date)
         endComponents.hour = endSlot.hour
-        endComponents.minute = endSlot.minute + 30
+        endComponents.minute = endSlot.minute + 30 // Add 30 minutes to include the end slot
         
         guard let startDate = calendar.date(from: startComponents),
               let rangeEndDate = calendar.date(from: endComponents) else {
@@ -64,26 +67,38 @@ struct TimeRange: Identifiable {
         }
         
         var currentStartDate = startDate
+        // For 1-hour slots, we want to slide by 30 minutes each time
+        let slideInterval: TimeInterval = 1800 // 30 minutes
+        
         while currentStartDate < rangeEndDate {
-            guard let slotEndDate = calendar.date(byAdding: .minute, value: Int(duration/60), to: currentStartDate),
-                  slotEndDate <= rangeEndDate else {
+            guard let slotEndDate = calendar.date(byAdding: .minute, value: Int(duration/60), to: currentStartDate) else {
                 break
             }
             
-            let startSlot = TimeSlot(
-                date: currentStartDate,
-                hour: calendar.component(.hour, from: currentStartDate),
-                minute: calendar.component(.minute, from: currentStartDate)
-            )
+            // Only add the slot if it fits entirely within our range
+            if slotEndDate <= rangeEndDate {
+                let startSlot = TimeSlot(
+                    date: currentStartDate,
+                    hour: calendar.component(.hour, from: currentStartDate),
+                    minute: calendar.component(.minute, from: currentStartDate)
+                )
+                
+                let endComponents = calendar.dateComponents([.hour, .minute], from: slotEndDate)
+                let endSlot = TimeSlot(
+                    date: currentStartDate,
+                    hour: endComponents.hour ?? 0,
+                    minute: endComponents.minute ?? 0
+                )
+                
+                slots.append(TimeRange(startSlot: startSlot, endSlot: endSlot, isSelected: false))
+            }
             
-            let endSlot = TimeSlot(
-                date: slotEndDate,
-                hour: calendar.component(.hour, from: slotEndDate),
-                minute: calendar.component(.minute, from: slotEndDate)
-            )
-            
-            slots.append(TimeRange(startSlot: startSlot, endSlot: endSlot, isSelected: false))
-            currentStartDate = slotEndDate
+            // For 1-hour slots, slide by 30 minutes. For 30-minute slots, slide by the full duration
+            let slideAmount = duration == 3600 ? slideInterval : duration
+            guard let nextStartDate = calendar.date(byAdding: .minute, value: Int(slideAmount/60), to: currentStartDate) else {
+                break
+            }
+            currentStartDate = nextStartDate
         }
         
         return slots
@@ -123,27 +138,26 @@ class PollOptionsViewModel: ObservableObject {
             if let current = currentRange {
                 // Check if this slot is consecutive with current range
                 let calendar = Calendar.current
-                let currentEndComponents = DateComponents(
-                    year: calendar.component(.year, from: current.end.date),
-                    month: calendar.component(.month, from: current.end.date),
-                    day: calendar.component(.day, from: current.end.date),
-                    hour: current.end.hour,
-                    minute: current.end.minute + 30
-                )
-                let slotComponents = DateComponents(
-                    year: calendar.component(.year, from: slot.date),
-                    month: calendar.component(.month, from: slot.date),
-                    day: calendar.component(.day, from: slot.date),
-                    hour: slot.hour,
-                    minute: slot.minute
-                )
+                var currentEndComponents = DateComponents()
+                currentEndComponents.year = calendar.component(.year, from: current.end.date)
+                currentEndComponents.month = calendar.component(.month, from: current.end.date)
+                currentEndComponents.day = calendar.component(.day, from: current.end.date)
+                currentEndComponents.hour = current.end.hour
+                currentEndComponents.minute = current.end.minute + 30
+                
+                var slotComponents = DateComponents()
+                slotComponents.year = calendar.component(.year, from: slot.date)
+                slotComponents.month = calendar.component(.month, from: slot.date)
+                slotComponents.day = calendar.component(.day, from: slot.date)
+                slotComponents.hour = slot.hour
+                slotComponents.minute = slot.minute
                 
                 guard let currentEndDate = calendar.date(from: currentEndComponents),
                       let slotDate = calendar.date(from: slotComponents) else {
                     continue
                 }
                 
-                if currentEndDate == slotDate {
+                if calendar.isDate(currentEndDate, equalTo: slotDate, toGranularity: .minute) {
                     // Extend current range
                     currentRange?.end = slot
                 } else {

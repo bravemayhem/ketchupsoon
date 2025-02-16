@@ -89,7 +89,7 @@ struct KetchupsView: View {
                     }) {
                         HStack {
                             Image(systemName: "calendar")
-                            Text("Calendar")
+                            Text("Schedule")
                         }
                         .padding()
                         .frame(maxWidth: .infinity)
