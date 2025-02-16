@@ -319,7 +319,7 @@ struct FindTimeView: View {
             viewModel.gridScrollOffset = newValue
         }
         .sheet(isPresented: $showingPollOptions) {
-            PollOptionsView(selectedTimeSlots: viewModel.selectedTimeSlots)
+            ScheduleOptionsView(selectedTimeSlots: viewModel.selectedTimeSlots)
         }
     }
     

@@ -5,6 +5,11 @@ enum PollMode {
     case availability
 }
 
+enum SelectionType {
+    case oneOnOne
+    case poll
+}
+
 struct TimeRange: Identifiable {
     let id = UUID()
     let startSlot: TimeSlot
@@ -123,6 +128,7 @@ struct TimeRange: Identifiable {
 class PollOptionsViewModel: ObservableObject {
     @Published var timeRanges: [TimeRange]
     @Published var pollMode: PollMode = .availability
+    @Published var selectionType: SelectionType = .poll
     @Published var slotDuration: TimeInterval = 1800 // 30 minutes in seconds
     @Published var eventName: String = ""
     
@@ -336,7 +342,7 @@ struct TimeRangeRow: View {
     }
 }
 
-struct PollOptionsView: View {
+struct ScheduleOptionsView: View {
     @StateObject private var viewModel: PollOptionsViewModel
     @Environment(\.dismiss) private var dismiss
     
@@ -358,6 +364,12 @@ struct PollOptionsView: View {
                 }
                 
                 Section {
+                    Picker("Selection Type", selection: $viewModel.selectionType) {
+                        Text("1:1").tag(SelectionType.oneOnOne)
+                        Text("Poll").tag(SelectionType.poll)
+                    }
+                    .pickerStyle(.segmented)
+                    
                     Picker("Poll Mode", selection: $viewModel.pollMode) {
                         Text("Availability").tag(PollMode.availability)
                         Text("Time Slots").tag(PollMode.timeSlots)
@@ -377,6 +389,11 @@ struct PollOptionsView: View {
                             viewModel.updateTimeRanges()
                         }
                     }
+                } header: {
+                    Text("Poll Settings")
+                        .textCase(nil)
+                        .font(.headline)
+                        .foregroundColor(.primary)
                 }
                 
                 Section {
@@ -406,7 +423,7 @@ struct PollOptionsView: View {
                     .disabled(viewModel.eventName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             }
-            .navigationTitle("Poll Options")
+            .navigationTitle("Schedule Options")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -427,5 +444,5 @@ struct PollOptionsView: View {
         TimeSlot(date: Date().addingTimeInterval(86400), hour: 14, minute: 30),
         TimeSlot(date: Date().addingTimeInterval(86400), hour: 15, minute: 0)
     ]
-    return PollOptionsView(selectedTimeSlots: timeSlots)
+    return ScheduleOptionsView(selectedTimeSlots: timeSlots)
 } 
