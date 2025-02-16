@@ -161,144 +161,147 @@ struct FindTimeView: View {
                 .background(Color(.systemBackground))
             
             // Main grid with time column wrapped in a ZStack to allow overlay
-            ZStack {
-                ScrollView(.vertical, showsIndicators: false) {
-                    VStack(spacing: 0) {
-                        ForEach(9...23, id: \.self) { hour in
-                            TimeRowWithGrid(hour: hour, viewModel: viewModel)
+            GeometryReader { mainGeo in
+                ZStack {
+                    ScrollView(.vertical, showsIndicators: false) {
+                        VStack(spacing: 0) {
+                            ForEach(9...23, id: \.self) { hour in
+                                TimeRowWithGrid(hour: hour, viewModel: viewModel)
+                            }
+                            // Add midnight (0:00) as the last row
+                            TimeRowWithGrid(hour: 0, viewModel: viewModel)
                         }
-                        // Add midnight (0:00) as the last row
-                        TimeRowWithGrid(hour: 0, viewModel: viewModel)
+                        .offset(y: scrollOffset)
                     }
-                    .offset(y: scrollOffset)
-                }
-                // Event overlay: draws calendar events spanning multiple cells
-                GeometryReader { geo in
-                    EventOverlay(viewModel: viewModel, geo: geo)
-                }
-                // Overlay to capture drag across the grid
-                GeometryReader { geo in
-                    Rectangle()
-                        .fill(Color.clear)
-                        .contentShape(Rectangle())
-                        .gesture(
-                            DragGesture(minimumDistance: 1)
-                                .onChanged { gesture in
-                                    let location = gesture.location
-                                    let timeColumnWidth: CGFloat = 70
-                                    
-                                    // Handle time column scrolling
-                                    if location.x < timeColumnWidth {
-                                        if !isDraggingTimeColumn {
-                                            isDraggingTimeColumn = true
+                    // Event overlay: draws calendar events spanning multiple cells
+                    GeometryReader { geo in
+                        EventOverlay(viewModel: viewModel, geo: geo)
+                    }
+                    // Overlay to capture drag across the grid
+                    GeometryReader { geo in
+                        Rectangle()
+                            .fill(Color.clear)
+                            .contentShape(Rectangle())
+                            .gesture(
+                                DragGesture(minimumDistance: 1)
+                                    .onChanged { gesture in
+                                        let location = gesture.location
+                                        let timeColumnWidth: CGFloat = 70
+                                        
+                                        // Handle time column scrolling
+                                        if location.x < timeColumnWidth {
+                                            if !isDraggingTimeColumn {
+                                                isDraggingTimeColumn = true
+                                                lastDragValue = gesture.translation.height
+                                            }
+                                            
+                                            let translation = gesture.translation.height - lastDragValue
                                             lastDragValue = gesture.translation.height
+                                            
+                                            let newOffset = scrollOffset + translation
+                                            
+                                            // Calculate bounds
+                                            let totalHeight = CGFloat(31) * 32 // 31 half-hour slots (9am to midnight)
+                                            let maxScroll = min(0, -(totalHeight - mainGeo.size.height))
+                                            
+                                            // Clamp the offset between maxScroll and 0
+                                            scrollOffset = max(maxScroll, min(0, newOffset))
+                                            return
                                         }
                                         
-                                        let translation = gesture.translation.height - lastDragValue
-                                        lastDragValue = gesture.translation.height
+                                        // If we're not in the time column, handle grid selection
+                                        if isDraggingTimeColumn {
+                                            isDraggingTimeColumn = false
+                                            return
+                                        }
                                         
-                                        let newOffset = scrollOffset + translation
+                                        // Calculate grid position
+                                        let availableWidth = mainGeo.size.width - timeColumnWidth
+                                        let colWidth = availableWidth / CGFloat(viewModel.visibleDays.count)
                                         
-                                        // Calculate bounds
-                                        let totalHeight = CGFloat(31) * 32 // 31 half-hour slots (9am to midnight)
-                                        let maxScroll = min(0, -(totalHeight - geo.size.height))
+                                        // Lock to initial column if we're already dragging
+                                        let col: Int
+                                        if let (_, initialCol) = gridLastDraggedCell {
+                                            col = initialCol
+                                        } else {
+                                            col = min(
+                                                viewModel.visibleDays.count - 1,
+                                                max(0, Int((location.x - timeColumnWidth) / colWidth))
+                                            )
+                                        }
                                         
-                                        // Clamp the offset between maxScroll and 0
-                                        scrollOffset = max(maxScroll, min(0, newOffset))
-                                        return
-                                    }
-                                    
-                                    // If we're not in the time column, handle grid selection
-                                    if isDraggingTimeColumn {
-                                        isDraggingTimeColumn = false
-                                        return
-                                    }
-                                    
-                                    // Calculate grid position
-                                    let availableWidth = geo.size.width - timeColumnWidth
-                                    let colWidth = availableWidth / CGFloat(viewModel.visibleDays.count)
-                                    
-                                    // Lock to initial column if we're already dragging
-                                    let col: Int
-                                    if let (_, initialCol) = gridLastDraggedCell {
-                                        col = initialCol
-                                    } else {
-                                        col = min(
-                                            viewModel.visibleDays.count - 1,
-                                            max(0, Int((location.x - timeColumnWidth) / colWidth))
+                                        // Compute row: each cell row has fixed height 32
+                                        // Adjust y position by scroll offset
+                                        let adjustedY = location.y - scrollOffset
+                                        let row = min(
+                                            30, // Maximum row index (9am to midnight)
+                                            max(0, Int(adjustedY / 32))
                                         )
-                                    }
-                                    
-                                    // Compute row: each cell row has fixed height 32
-                                    // Adjust y position by scroll offset
-                                    let adjustedY = location.y - scrollOffset
-                                    let row = min(
-                                        30, // Maximum row index (9am to midnight)
-                                        max(0, Int(adjustedY / 32))
-                                    )
-                                    
-                                    // Hours are from 9 to 0 (midnight), two rows per hour
-                                    let hourValue = if row / 2 + 9 >= 24 {
-                                        0 // midnight
-                                    } else {
-                                        9 + (row / 2)
-                                    }
-                                    let minuteValue = (row % 2 == 0) ? 0 : 30
-                                    
-                                    print("Overlay drag: location: \(location), adjusted y: \(adjustedY), col: \(col), row: \(row), hour: \(hourValue), minute: \(minuteValue)")
-                                    
-                                    // Validate indices
-                                    guard col >= 0 && col < viewModel.visibleDays.count else {
-                                        print("Overlay drag: invalid cell indices")
-                                        return
-                                    }
-                                    
-                                    let date = viewModel.visibleDays[col]
-                                    let slot = TimeSlot(date: date, hour: hourValue, minute: minuteValue)
-                                    
-                                    if !gridDragActive {
-                                        gridDragActive = true
-                                        gridDragSelectionMode = !viewModel.selectedTimeSlots.contains(slot)
-                                        gridLastDraggedCell = (row, col)
                                         
-                                        if !viewModel.hasEvent(for: slot) {
-                                            let modeText = gridDragSelectionMode == true ? "selecting" : "deselecting"
-                                            print("Overlay drag: initial selection - mode: \(modeText)")
-                                            if gridDragSelectionMode == true {
-                                                viewModel.selectedTimeSlots.insert(slot)
-                                            } else {
-                                                viewModel.selectedTimeSlots.remove(slot)
-                                            }
+                                        // Hours are from 9 to 0 (midnight), two rows per hour
+                                        let hourValue = if row / 2 + 9 >= 24 {
+                                            0 // midnight
+                                        } else {
+                                            9 + (row / 2)
                                         }
-                                    } else if (gridLastDraggedCell ?? (-1, -1)) != (row, col) {
-                                        gridLastDraggedCell = (row, col)
-                                        if !viewModel.hasEvent(for: slot) {
-                                            let modeText = gridDragSelectionMode == true ? "selecting" : "deselecting"
-                                            print("Overlay drag: applying selection at cell (row: \(row), col: \(col)) - mode: \(modeText)")
-                                            if gridDragSelectionMode == true {
-                                                viewModel.selectedTimeSlots.insert(slot)
-                                            } else {
-                                                viewModel.selectedTimeSlots.remove(slot)
+                                        let minuteValue = (row % 2 == 0) ? 0 : 30
+                                        
+                                        print("Overlay drag: location: \(location), adjusted y: \(adjustedY), col: \(col), row: \(row), hour: \(hourValue), minute: \(minuteValue)")
+                                        
+                                        // Validate indices
+                                        guard col >= 0 && col < viewModel.visibleDays.count else {
+                                            print("Overlay drag: invalid cell indices")
+                                            return
+                                        }
+                                        
+                                        let date = viewModel.visibleDays[col]
+                                        let slot = TimeSlot(date: date, hour: hourValue, minute: minuteValue)
+                                        
+                                        if !gridDragActive {
+                                            gridDragActive = true
+                                            gridDragSelectionMode = !viewModel.selectedTimeSlots.contains(slot)
+                                            gridLastDraggedCell = (row, col)
+                                            
+                                            if !viewModel.hasEvent(for: slot) {
+                                                let modeText = gridDragSelectionMode == true ? "selecting" : "deselecting"
+                                                print("Overlay drag: initial selection - mode: \(modeText)")
+                                                if gridDragSelectionMode == true {
+                                                    viewModel.selectedTimeSlots.insert(slot)
+                                                } else {
+                                                    viewModel.selectedTimeSlots.remove(slot)
+                                                }
+                                            }
+                                        } else if (gridLastDraggedCell ?? (-1, -1)) != (row, col) {
+                                            gridLastDraggedCell = (row, col)
+                                            if !viewModel.hasEvent(for: slot) {
+                                                let modeText = gridDragSelectionMode == true ? "selecting" : "deselecting"
+                                                print("Overlay drag: applying selection at cell (row: \(row), col: \(col)) - mode: \(modeText)")
+                                                if gridDragSelectionMode == true {
+                                                    viewModel.selectedTimeSlots.insert(slot)
+                                                } else {
+                                                    viewModel.selectedTimeSlots.remove(slot)
+                                                }
                                             }
                                         }
                                     }
-                                }
-                                .onEnded { _ in
-                                    print("Overlay drag ended")
-                                    gridDragActive = false
-                                    gridLastDraggedCell = nil
-                                    gridDragSelectionMode = nil
-                                    isDraggingTimeColumn = false
-                                    
-                                    // Add a small animation to settle
-                                    withAnimation(.interactiveSpring(response: 0.3, dampingFraction: 0.8, blendDuration: 0.1)) {
-                                        let totalHeight = CGFloat(31) * 32
-                                        let maxScroll = min(0, -(totalHeight - geo.size.height))
-                                        scrollOffset = max(maxScroll, min(0, scrollOffset))
+                                    .onEnded { _ in
+                                        print("Overlay drag ended")
+                                        gridDragActive = false
+                                        gridLastDraggedCell = nil
+                                        gridDragSelectionMode = nil
+                                        isDraggingTimeColumn = false
+                                        
+                                        // Add a small animation to settle
+                                        withAnimation(.interactiveSpring(response: 0.3, dampingFraction: 0.8, blendDuration: 0.1)) {
+                                            let totalHeight = CGFloat(31) * 32
+                                            let maxScroll = min(0, -(totalHeight - mainGeo.size.height))
+                                            scrollOffset = max(maxScroll, min(0, scrollOffset))
+                                        }
                                     }
-                                }
-                        )
+                            )
+                    }
                 }
+                .clipped()
             }
             
             // Bottom buttons
@@ -311,6 +314,9 @@ struct FindTimeView: View {
             Task {
                 await viewModel.loadEvents()
             }
+        }
+        .onChange(of: scrollOffset) { _, newValue in
+            viewModel.gridScrollOffset = newValue
         }
         .sheet(isPresented: $showingPollOptions) {
             PollOptionsView(selectedTimeSlots: viewModel.selectedTimeSlots)
@@ -569,7 +575,7 @@ struct EventOverlay: View {
                     
                     // Round to nearest cell boundary
                     let cellsFromTop = Int(offsetMinutes / 30.0)
-                    let y = CGFloat(cellsFromTop) * cellHeight
+                    let y = CGFloat(cellsFromTop) * cellHeight + viewModel.gridScrollOffset
                     
                     // Calculate height to nearest cell boundary
                     let cellsSpanned = Int(ceil(durationMinutes / 30.0))
