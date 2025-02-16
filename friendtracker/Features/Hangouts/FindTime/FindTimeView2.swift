@@ -143,8 +143,9 @@ struct FindTimeView: View {
     @StateObject private var viewModel = FindTimeViewModel()
     @Environment(\.dismiss) private var dismiss
     @State private var showingShareSheet = false
-    @State private var isDragging = false
-    @State private var dragStartLocation: CGPoint?
+    @State private var gridDragActive: Bool = false
+    @State private var gridDragSelectionMode: Bool? = nil  // true for selecting, false for deselecting
+    @State private var gridLastDraggedCell: (row: Int, col: Int)? = nil
     
     var body: some View {
         VStack(spacing: 0) {
@@ -155,15 +156,89 @@ struct FindTimeView: View {
             weekHeader
                 .background(Color(.systemBackground))
             
-            // Main grid with time column
-            ScrollView(.vertical, showsIndicators: false) {
-                VStack(spacing: 0) {
-                    ForEach(9...17, id: \.self) { hour in
-                        TimeRowWithGrid(hour: hour, viewModel: viewModel)
+            // Main grid with time column wrapped in a ZStack to allow drag overlay
+            ZStack {
+                ScrollView(.vertical, showsIndicators: false) {
+                    VStack(spacing: 0) {
+                        ForEach(9...17, id: \.self) { hour in
+                            TimeRowWithGrid(hour: hour, viewModel: viewModel)
+                        }
                     }
                 }
+                // Overlay to capture drag across the grid
+                GeometryReader { geo in
+                    Rectangle()
+                        .fill(Color.clear)
+                        .contentShape(Rectangle())
+                        .gesture(
+                            DragGesture(minimumDistance: 1)
+                                .onChanged { gesture in
+                                    let location = gesture.location
+                                    let timeColumnWidth: CGFloat = 70
+                                    // Only process if the gesture is in the grid area
+                                    if location.x < timeColumnWidth {
+                                        return
+                                    }
+                                    
+                                    // Compute column: available width = geo.size.width - timeColumnWidth
+                                    let availableWidth = geo.size.width - timeColumnWidth
+                                    let colWidth = availableWidth / CGFloat(viewModel.visibleDays.count)
+                                    let col = Int((location.x - timeColumnWidth) / colWidth)
+                                    
+                                    // Compute row: each cell row has fixed height 32
+                                    let row = Int(location.y / 32)
+                                    // Hours are from 9 to 17, two rows per hour
+                                    let hourValue = 9 + (row / 2)
+                                    let minuteValue = (row % 2 == 0) ? 0 : 30
+                                    
+                                    print("Overlay drag: location: \(location), col: \(col), row: \(row), hour: \(hourValue), minute: \(minuteValue)")
+                                    
+                                    // Validate indices
+                                    guard hourValue >= 9 && hourValue <= 17,
+                                          col >= 0 && col < viewModel.visibleDays.count else {
+                                        print("Overlay drag: invalid cell indices")
+                                        return
+                                    }
+                                    
+                                    let date = viewModel.visibleDays[col]
+                                    let slot = TimeSlot(date: date, hour: hourValue, minute: minuteValue)
+                                    
+                                    if !gridDragActive {
+                                        gridDragActive = true
+                                        gridDragSelectionMode = !viewModel.selectedTimeSlots.contains(slot)
+                                        gridLastDraggedCell = (row, col)
+                                        
+                                        if !viewModel.hasEvent(for: slot) {
+                                            let modeText = gridDragSelectionMode == true ? "selecting" : "deselecting"
+                                            print("Overlay drag: initial selection - mode: \(modeText)")
+                                            if gridDragSelectionMode == true {
+                                                viewModel.selectedTimeSlots.insert(slot)
+                                            } else {
+                                                viewModel.selectedTimeSlots.remove(slot)
+                                            }
+                                        }
+                                    } else if (gridLastDraggedCell ?? (-1, -1)) != (row, col) {
+                                        gridLastDraggedCell = (row, col)
+                                        if !viewModel.hasEvent(for: slot) {
+                                            let modeText = gridDragSelectionMode == true ? "selecting" : "deselecting"
+                                            print("Overlay drag: applying selection at cell (row: \(row), col: \(col)) - mode: \(modeText)")
+                                            if gridDragSelectionMode == true {
+                                                viewModel.selectedTimeSlots.insert(slot)
+                                            } else {
+                                                viewModel.selectedTimeSlots.remove(slot)
+                                            }
+                                        }
+                                    }
+                                }
+                                .onEnded { _ in
+                                    print("Overlay drag ended")
+                                    gridDragActive = false
+                                    gridLastDraggedCell = nil
+                                    gridDragSelectionMode = nil
+                                }
+                        )
+                }
             }
-            .frame(maxHeight: .infinity)
             
             // Bottom buttons
             bottomButtons
@@ -289,9 +364,7 @@ struct FindTimeView: View {
 struct TimeRowWithGrid: View {
     let hour: Int
     @ObservedObject var viewModel: FindTimeViewModel
-    @State private var isDragging = false
-    @State private var lastDraggedSlot: TimeSlot?
-
+    
     var body: some View {
         VStack(spacing: 0) {
             ForEach([0, 30], id: \.self) { minute in
@@ -308,44 +381,15 @@ struct TimeRowWithGrid: View {
                                 isSelected: viewModel.selectedTimeSlots.contains(slot),
                                 hasEvent: viewModel.hasEvent(for: slot),
                                 eventDetails: viewModel.eventDetailsForSlot(slot),
-                                onTap: { 
+                                onTap: {
                                     print("TimeRowWithGrid: Cell tapped for hour: \(hour), minute: \(minute)")
                                     viewModel.toggleTimeSlot(slot)
                                 }
                             )
                             .contentShape(Rectangle())
-                            .gesture(
-                                DragGesture(minimumDistance: 0)
-                                    .onChanged { gesture in
-                                        print("TimeRowWithGrid: Drag changed at hour: \(hour), minute: \(minute)")
-                                        handleDrag(gesture: gesture, date: date, hour: hour, minute: minute)
-                                    }
-                                    .onEnded { _ in
-                                        print("TimeRowWithGrid: Drag ended")
-                                        isDragging = false
-                                        lastDraggedSlot = nil
-                                    }
-                            )
                         }
                     }
                 }
-            }
-        }
-    }
-    
-    private func handleDrag(gesture: DragGesture.Value, date: Date, hour: Int, minute: Int) {
-        let slot = TimeSlot(date: date, hour: hour, minute: minute)
-        print("TimeRowWithGrid: Handling drag for slot - hour: \(hour), minute: \(minute), isDragging: \(isDragging)")
-        
-        // If we just started dragging or if this is a different slot than last time
-        if !isDragging || lastDraggedSlot != slot {
-            isDragging = true
-            lastDraggedSlot = slot
-            
-            // Toggle the slot
-            if !viewModel.hasEvent(for: slot) {
-                print("TimeRowWithGrid: Toggling slot - hour: \(hour), minute: \(minute)")
-                viewModel.toggleTimeSlot(slot)
             }
         }
     }
