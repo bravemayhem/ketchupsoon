@@ -123,7 +123,6 @@ struct TimeRange: Identifiable {
 @MainActor
 class PollOptionsViewModel: ObservableObject {
     @Published var timeRanges: [TimeRange]
-    @Published var showingFindTimeView = false
     @Published var pollMode: PollMode = .availability
     @Published var slotDuration: TimeInterval = 1800 // 30 minutes in seconds
     
@@ -393,21 +392,12 @@ struct PollOptionsView: View {
             .navigationTitle("Poll Options")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Edit") {
-                        viewModel.showingFindTimeView = true
-                    }
-                    .foregroundColor(AppColors.accent)
-                }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Done") {
                         dismiss()
                     }
                     .foregroundColor(AppColors.accent)
                 }
-            }
-            .sheet(isPresented: $viewModel.showingFindTimeView) {
-                FindTimeView()
             }
         }
     }

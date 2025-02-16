@@ -344,11 +344,6 @@ struct FindTimeView: View {
                 }
                 
                 Spacer()
-                
-                Button("Edit event") {
-                    // TODO: Implement edit
-                }
-                .foregroundColor(AppColors.accent)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
