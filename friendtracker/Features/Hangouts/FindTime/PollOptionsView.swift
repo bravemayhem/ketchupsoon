@@ -9,7 +9,6 @@ struct TimeRange: Identifiable {
     let id = UUID()
     let startSlot: TimeSlot
     let endSlot: TimeSlot
-    var isSelected: Bool = false
     
     var formattedTimeRange: String {
         let formatter = DateFormatter()
@@ -102,7 +101,7 @@ struct TimeRange: Identifiable {
                     minute: endComponents.minute ?? 0
                 )
                 
-                slots.append(TimeRange(startSlot: startSlot, endSlot: endSlot, isSelected: false))
+                slots.append(TimeRange(startSlot: startSlot, endSlot: endSlot))
                 print("   Created slot: \(startSlot.hour):\(startSlot.minute) - \(endSlot.hour):\(endSlot.minute)")
             }
             
@@ -125,6 +124,7 @@ class PollOptionsViewModel: ObservableObject {
     @Published var timeRanges: [TimeRange]
     @Published var pollMode: PollMode = .availability
     @Published var slotDuration: TimeInterval = 1800 // 30 minutes in seconds
+    @Published var eventName: String = ""
     
     private var originalRanges: [TimeRange] = []
     private var selectedTimeSlots: Set<TimeSlot>
@@ -240,7 +240,7 @@ class PollOptionsViewModel: ObservableObject {
             }
             
             let endSlot = TimeSlot(date: range.startSlot.date, hour: endHour, minute: endMinute)
-            slots.append(TimeRange(startSlot: startSlot, endSlot: endSlot, isSelected: false))
+            slots.append(TimeRange(startSlot: startSlot, endSlot: endSlot))
             print("   Created 30-min slot: \(currentHour):\(currentMinute) - \(endHour):\(endMinute)")
             
             // Move to next slot
@@ -281,7 +281,7 @@ class PollOptionsViewModel: ObservableObject {
                                      hour: endHour, 
                                      minute: endMinute)
                 
-                slots.append(TimeRange(startSlot: startSlot, endSlot: endSlot, isSelected: false))
+                slots.append(TimeRange(startSlot: startSlot, endSlot: endSlot))
                 print("   Created 1-hour slot: \(startSlot.hour):\(startSlot.minute) - \(endHour):\(endMinute)")
                 
                 // Move to next slot start (30-minute increment)
@@ -319,11 +319,20 @@ class PollOptionsViewModel: ObservableObject {
             }
         }
     }
+}
+
+struct TimeRangeRow: View {
+    let range: TimeRange
     
-    func toggleOption(_ range: TimeRange) {
-        if let index = timeRanges.firstIndex(where: { $0.id == range.id }) {
-            timeRanges[index].isSelected.toggle()
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(range.formattedDate)
+                .font(.headline)
+            Text(range.formattedTimeRange)
+                .font(.subheadline)
+                .foregroundColor(.secondary)
         }
+        .padding(.vertical, 4)
     }
 }
 
@@ -338,6 +347,16 @@ struct PollOptionsView: View {
     var body: some View {
         NavigationStack {
             List {
+                Section {
+                    TextField("Event Name", text: $viewModel.eventName)
+                        .textFieldStyle(.plain)
+                } header: {
+                    Text("Event Details")
+                        .textCase(nil)
+                        .font(.headline)
+                        .foregroundColor(.primary)
+                }
+                
                 Section {
                     Picker("Poll Mode", selection: $viewModel.pollMode) {
                         Text("Availability").tag(PollMode.availability)
@@ -362,12 +381,10 @@ struct PollOptionsView: View {
                 
                 Section {
                     ForEach(viewModel.timeRanges) { range in
-                        TimeRangeRow(range: range) {
-                            viewModel.toggleOption(range)
-                        }
+                        TimeRangeRow(range: range)
                     }
                 } header: {
-                    Text("Select your preferred time slots")
+                    Text("Your Available Times")
                         .textCase(nil)
                         .font(.headline)
                         .foregroundColor(.primary)
@@ -386,7 +403,7 @@ struct PollOptionsView: View {
                                 .foregroundColor(AppColors.accent)
                         }
                     }
-                    .disabled(viewModel.timeRanges.isEmpty)
+                    .disabled(viewModel.eventName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             }
             .navigationTitle("Poll Options")
@@ -400,36 +417,6 @@ struct PollOptionsView: View {
                 }
             }
         }
-    }
-}
-
-struct TimeRangeRow: View {
-    let range: TimeRange
-    let onTap: () -> Void
-    
-    var body: some View {
-        Button(action: onTap) {
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(range.formattedDate)
-                        .font(.headline)
-                    Text(range.formattedTimeRange)
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                }
-                
-                Spacer()
-                
-                if range.isSelected {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(AppColors.accent)
-                } else {
-                    Image(systemName: "circle")
-                        .foregroundColor(.gray)
-                }
-            }
-        }
-        .foregroundColor(.primary)
     }
 }
 
