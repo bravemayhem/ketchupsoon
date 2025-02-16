@@ -21,6 +21,7 @@ class PollResponsesViewModel: ObservableObject {
     @Published var responses: [TimeSlotResponse] = []
     @Published var isLoading = false
     @Published var error: Error?
+    @Published var connectionStatus: String = "Not tested"
     
     let eventName: String
     let selectionType: SelectionType
@@ -30,15 +31,56 @@ class PollResponsesViewModel: ObservableObject {
         self.selectionType = selectionType
     }
     
+    func testSupabaseConnection() async {
+        isLoading = true
+        connectionStatus = "Testing..."
+        
+        do {
+            let success = try await SupabaseManager.shared.testConnection()
+            connectionStatus = success ? "✅ Connected to Supabase" : "❌ Connection failed"
+            if success {
+                // If connected successfully, fetch responses
+                await fetchResponses()
+            }
+        } catch {
+            connectionStatus = "❌ Error: \(error.localizedDescription)"
+            self.error = error
+        }
+        
+        isLoading = false
+    }
+    
     func fetchResponses() async {
         isLoading = true
         
-        // TODO: Implement API call to fetch responses
-        // try {
-        //     responses = try await fetchPollResponses()
-        // } catch {
-        //     self.error = error
-        // }
+        do {
+            let fetchedResponses = try await SupabaseManager.shared.fetchPollResponses(eventId: eventName)
+            
+            // Group responses by time slot
+            var slotResponses: [String: [PollResponse]] = [:]
+            for response in fetchedResponses {
+                for slot in response.selectedSlots {
+                    let key = "\(slot.start.ISO8601Format())_\(slot.end.ISO8601Format())"
+                    slotResponses[key, default: []].append(response)
+                }
+            }
+            
+            // Convert to TimeSlotResponse array
+            responses = slotResponses.map { key, responses in
+                let parts = key.split(separator: "_")
+                let start = ISO8601DateFormatter().date(from: String(parts[0]))!
+                let end = ISO8601DateFormatter().date(from: String(parts[1]))!
+                return TimeSlotResponse(
+                    timeRange: TimeRange(start: start, end: end),
+                    respondents: responses
+                )
+            }
+            
+            connectionStatus = "✅ Fetched \(responses.count) time slots with responses"
+        } catch {
+            self.error = error
+            connectionStatus = "❌ Error fetching responses: \(error.localizedDescription)"
+        }
         
         isLoading = false
     }
@@ -58,6 +100,25 @@ struct PollResponsesView: View {
                     .font(.headline)
             } header: {
                 Text("Event")
+                    .textCase(nil)
+                    .font(.headline)
+                    .foregroundColor(.primary)
+            }
+            
+            Section {
+                Text(viewModel.connectionStatus)
+                    .foregroundColor(viewModel.connectionStatus.contains("✅") ? .green : .red)
+                
+                Button(action: {
+                    Task {
+                        await viewModel.testSupabaseConnection()
+                    }
+                }) {
+                    Text("Refresh Responses")
+                }
+                .disabled(viewModel.isLoading)
+            } header: {
+                Text("Status")
                     .textCase(nil)
                     .font(.headline)
                     .foregroundColor(.primary)
@@ -84,7 +145,7 @@ struct PollResponsesView: View {
         }
         .navigationTitle("Poll Responses")
         .task {
-            await viewModel.fetchResponses()
+            await viewModel.testSupabaseConnection()
         }
     }
 }

@@ -157,6 +157,38 @@ struct PhoneNumberParts {
     }
 }
 
+// Poll response data structure for Supabase
+struct SupabasePollResponseData: Codable {
+    let event_id: String
+    let respondent_name: String
+    let respondent_email: String?
+    let respondent_phone: String?
+    let selected_slots: [TimeRange]
+    let status: String
+}
+
+struct SchedulePoll: Codable {
+    let id: String
+    let title: String
+    let time_slots: [TimeRange]
+    let created_at: String
+    let expires_at: String
+    let status: String
+}
+
+// Add these structs at the top with the other data structures
+struct CreateSchedulePollRequest: Encodable {
+    let title: String
+    let creator_name: String
+    let expires_at: String
+}
+
+struct CreateTimeSlotRequest: Encodable {
+    let poll_id: String
+    let start_time: String
+    let end_time: String
+}
+
 class SupabaseManager {
     static let shared = SupabaseManager()
     private let client: SupabaseClient
@@ -250,7 +282,7 @@ class SupabaseManager {
             is_private: false
         )
         
-        print("📤 Sending event data to Supabase:")
+        print("�� Sending event data to Supabase:")
         do {
             let encoder = JSONEncoder()
             encoder.outputFormatting = .prettyPrinted
@@ -561,5 +593,77 @@ class SupabaseManager {
             .execute()
         
         return try decoder.decode(Bool.self, from: response.data)
+    }
+    
+    // Fetch poll responses for an event
+    func fetchPollResponses(eventId: String) async throws -> [PollResponse] {
+        let response = try await client
+            .from("poll_responses")
+            .select("*")
+            .eq("event_id", value: eventId)
+            .execute()
+        
+        let responses = try decoder.decode([SupabasePollResponseData].self, from: response.data)
+        
+        return responses.map { data in
+            PollResponse(
+                respondentName: data.respondent_name,
+                respondentEmail: data.respondent_email ?? "",
+                selectedSlots: data.selected_slots,
+                responseDate: Date() // TODO: Parse from response
+            )
+        }
+    }
+    
+    // Submit a poll response
+    func submitPollResponse(eventId: String, name: String, email: String?, phone: String?, selectedSlots: [TimeRange]) async throws {
+        let responseData = SupabasePollResponseData(
+            event_id: eventId,
+            respondent_name: name,
+            respondent_email: email,
+            respondent_phone: phone?.standardizedPhoneNumber(),
+            selected_slots: selectedSlots,
+            status: "confirmed"
+        )
+        
+        try await client
+            .from("poll_responses")
+            .insert(responseData)
+            .execute()
+    }
+    
+    // Create a schedule poll
+    func createSchedulePoll(title: String, timeSlots: [TimeRange]) async throws -> SchedulePoll {
+        let pollRequest = CreateSchedulePollRequest(
+            title: title,
+            creator_name: UserSettings.shared.name ?? "Test User",
+            expires_at: ISO8601DateFormatter().string(from: Calendar.current.date(byAdding: .day, value: 7, to: Date())!)
+        )
+        
+        // First create the poll
+        let pollResponse = try await client
+            .from("schedule_polls")
+            .insert(pollRequest)
+            .select()
+            .single()
+            .execute()
+        
+        let poll = try decoder.decode(SchedulePoll.self, from: pollResponse.data)
+        
+        // Then create the time slots
+        let slotRequests = timeSlots.map { slot in
+            CreateTimeSlotRequest(
+                poll_id: poll.id,
+                start_time: slot.start.ISO8601Format(),
+                end_time: slot.end.ISO8601Format()
+            )
+        }
+        
+        try await client
+            .from("time_slots")
+            .insert(slotRequests)
+            .execute()
+        
+        return poll
     }
 } 

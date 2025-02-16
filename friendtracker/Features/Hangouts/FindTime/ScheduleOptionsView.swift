@@ -1,5 +1,15 @@
 import SwiftUI
 
+extension Date {
+    var hour: Int {
+        return Calendar.current.component(.hour, from: self)
+    }
+    
+    var minute: Int {
+        return Calendar.current.component(.minute, from: self)
+    }
+}
+
 enum PollMode {
     case timeSlots
     case availability
@@ -10,43 +20,64 @@ enum SelectionType {
     case poll
 }
 
-struct TimeRange: Identifiable {
-    let id = UUID()
-    let startSlot: TimeSlot
-    let endSlot: TimeSlot
+struct TimeRange: Identifiable, Codable {
+    let id: String
+    let start: Date
+    let end: Date
+    
+    var formattedDate: String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .full
+        return formatter.string(from: start)
+    }
     
     var formattedTimeRange: String {
         let formatter = DateFormatter()
         formatter.timeStyle = .short
-        
-        let calendar = Calendar.current
-        var startComponents = DateComponents()
-        startComponents.year = calendar.component(.year, from: startSlot.date)
-        startComponents.month = calendar.component(.month, from: startSlot.date)
-        startComponents.day = calendar.component(.day, from: startSlot.date)
-        startComponents.hour = startSlot.hour
-        startComponents.minute = startSlot.minute
-        
-        var endComponents = startComponents
-        endComponents.hour = endSlot.hour
-        endComponents.minute = endSlot.minute
-        
-        guard let startDate = calendar.date(from: startComponents),
-              let endDate = calendar.date(from: endComponents) else {
-            return ""
-        }
-        
-        return "\(formatter.string(from: startDate)) - \(formatter.string(from: endDate))"
+        return "\(formatter.string(from: start)) - \(formatter.string(from: end))"
     }
     
-    var formattedDate: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "EEEE, MMMM d"  // This will show "Tuesday, February 18"
-        return formatter.string(from: startSlot.date)
+    // Add Codable conformance for Supabase JSON format
+    enum CodingKeys: String, CodingKey {
+        case id
+        case start = "start_time"
+        case end = "end_time"
+    }
+    
+    init(id: String = UUID().uuidString, start: Date, end: Date) {
+        self.id = id
+        self.start = start
+        self.end = end
+    }
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        
+        let dateFormatter = ISO8601DateFormatter()
+        
+        let startString = try container.decode(String.self, forKey: .start)
+        guard let startDate = dateFormatter.date(from: startString) else {
+            throw DecodingError.dataCorruptedError(forKey: .start, in: container, debugDescription: "Invalid date format")
+        }
+        start = startDate
+        
+        let endString = try container.decode(String.self, forKey: .end)
+        guard let endDate = dateFormatter.date(from: endString) else {
+            throw DecodingError.dataCorruptedError(forKey: .end, in: container, debugDescription: "Invalid date format")
+        }
+        end = endDate
+    }
+    
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(start.ISO8601Format(), forKey: .start)
+        try container.encode(end.ISO8601Format(), forKey: .end)
     }
     
     func splitIntoTimeSlots(duration: TimeInterval) -> [TimeRange] {
-        print("⏰ Splitting range into slots: \(startSlot.hour):\(startSlot.minute) - \(endSlot.hour):\(endSlot.minute)")
+        print("⏰ Splitting range into slots: \(start.hour):\(start.minute) - \(end.hour):\(end.minute)")
         print("   Duration: \(duration/60) minutes")
         
         let calendar = Calendar.current
@@ -54,19 +85,16 @@ struct TimeRange: Identifiable {
         
         // Create start date
         var startComponents = DateComponents()
-        startComponents.year = calendar.component(.year, from: startSlot.date)
-        startComponents.month = calendar.component(.month, from: startSlot.date)
-        startComponents.day = calendar.component(.day, from: startSlot.date)
-        startComponents.hour = startSlot.hour
-        startComponents.minute = startSlot.minute
+        startComponents.year = calendar.component(.year, from: start)
+        startComponents.month = calendar.component(.month, from: start)
+        startComponents.day = calendar.component(.day, from: start)
+        startComponents.hour = calendar.component(.hour, from: start)
+        startComponents.minute = calendar.component(.minute, from: start)
         
         // Create end date with the full range
-        var endComponents = DateComponents()
-        endComponents.year = calendar.component(.year, from: endSlot.date)
-        endComponents.month = calendar.component(.month, from: endSlot.date)
-        endComponents.day = calendar.component(.day, from: endSlot.date)
-        endComponents.hour = endSlot.hour
-        endComponents.minute = endSlot.minute + 30 // Add 30 minutes to include the full end slot
+        var endComponents = startComponents
+        endComponents.hour = calendar.component(.hour, from: end)
+        endComponents.minute = calendar.component(.minute, from: end)
         
         // Normalize end time if minutes >= 60
         if endComponents.minute ?? 0 >= 60 {
@@ -106,7 +134,7 @@ struct TimeRange: Identifiable {
                     minute: endComponents.minute ?? 0
                 )
                 
-                slots.append(TimeRange(startSlot: startSlot, endSlot: endSlot))
+                slots.append(TimeRange(start: startSlot.date, end: endSlot.date))
                 print("   Created slot: \(startSlot.hour):\(startSlot.minute) - \(endSlot.hour):\(endSlot.minute)")
             }
             
@@ -190,7 +218,7 @@ class PollOptionsViewModel: ObservableObject {
                                 endMinute -= 60
                             }
                             let endSlot = TimeSlot(date: last.date, hour: endHour, minute: endMinute)
-                            ranges.append(TimeRange(startSlot: start, endSlot: endSlot))
+                            ranges.append(TimeRange(start: start.date, end: endSlot.date))
                             print("   Added range: \(start.hour):\(start.minute) - \(endHour):\(endMinute)")
                         }
                         currentRange = slot
@@ -212,33 +240,33 @@ class PollOptionsViewModel: ObservableObject {
                     endMinute -= 60
                 }
                 let endSlot = TimeSlot(date: last.date, hour: endHour, minute: endMinute)
-                ranges.append(TimeRange(startSlot: start, endSlot: endSlot))
+                ranges.append(TimeRange(start: start.date, end: endSlot.date))
                 print("   Added final range: \(start.hour):\(start.minute) - \(endHour):\(endMinute)")
             }
         }
         
-        let sortedRanges = ranges.sorted { $0.startSlot.date < $1.startSlot.date }
+        let sortedRanges = ranges.sorted { $0.start < $1.start }
         print("📦 Created availability ranges:")
         sortedRanges.forEach { range in
-            let endHour = range.endSlot.hour
-            let endMinute = range.endSlot.minute
-            print("   Range: \(range.startSlot.hour):\(range.startSlot.minute) - \(endHour):\(endMinute)")
+            let endHour = Calendar.current.component(.hour, from: range.end)
+            let endMinute = Calendar.current.component(.minute, from: range.end)
+            print("   Range: \(Calendar.current.component(.hour, from: range.start)):\(Calendar.current.component(.minute, from: range.start)) - \(endHour):\(endMinute)")
         }
         return sortedRanges
     }
     
     private func create30MinuteSlots(from range: TimeRange) -> [TimeRange] {
-        print("⏰ Creating 30-minute slots for range: \(range.startSlot.hour):\(range.startSlot.minute) - \(range.endSlot.hour):\(range.endSlot.minute)")
+        print("⏰ Creating 30-minute slots for range: \(range.start.hour):\(range.start.minute) - \(range.end.hour):\(range.end.minute)")
         var slots: [TimeRange] = []
         
         // Calculate total minutes for comparison
-        let endMinutes = range.endSlot.hour * 60 + range.endSlot.minute
+        let endMinutes = range.end.hour * 60 + range.end.minute
         
-        var currentHour = range.startSlot.hour
-        var currentMinute = range.startSlot.minute
+        var currentHour = range.start.hour
+        var currentMinute = range.start.minute
         
         while (currentHour * 60 + currentMinute) < endMinutes {
-            let startSlot = TimeSlot(date: range.startSlot.date, hour: currentHour, minute: currentMinute)
+            let startSlot = TimeSlot(date: range.start, hour: currentHour, minute: currentMinute)
             
             // Calculate end time
             var endMinute = currentMinute + 30
@@ -248,8 +276,8 @@ class PollOptionsViewModel: ObservableObject {
                 endMinute -= 60
             }
             
-            let endSlot = TimeSlot(date: range.startSlot.date, hour: endHour, minute: endMinute)
-            slots.append(TimeRange(startSlot: startSlot, endSlot: endSlot))
+            let endSlot = TimeSlot(date: range.start, hour: endHour, minute: endMinute)
+            slots.append(TimeRange(start: startSlot.date, end: endSlot.date))
             print("   Created 30-min slot: \(currentHour):\(currentMinute) - \(endHour):\(endMinute)")
             
             // Move to next slot
@@ -264,21 +292,21 @@ class PollOptionsViewModel: ObservableObject {
     }
     
     private func create1HourSlots(from range: TimeRange) -> [TimeRange] {
-        print("⏰ Creating 1-hour slots for range: \(range.startSlot.hour):\(range.startSlot.minute) - \(range.endSlot.hour):\(range.endSlot.minute)")
+        print("⏰ Creating 1-hour slots for range: \(range.start.hour):\(range.start.minute) - \(range.end.hour):\(range.end.minute)")
         var slots: [TimeRange] = []
         
         // Calculate the total minutes in the range
-        let startMinutes = range.startSlot.hour * 60 + range.startSlot.minute
-        let endMinutes = range.endSlot.hour * 60 + range.endSlot.minute
+        let startMinutes = range.start.hour * 60 + range.start.minute
+        let endMinutes = range.end.hour * 60 + range.end.minute
         let totalMinutes = endMinutes - startMinutes
         
         // Create slots if we have at least 60 minutes
         if totalMinutes >= 60 {
-            var currentHour = range.startSlot.hour
-            var currentMinute = range.startSlot.minute
+            var currentHour = range.start.hour
+            var currentMinute = range.start.minute
             
             while (currentHour * 60 + currentMinute + 60) <= endMinutes {
-                let startSlot = TimeSlot(date: range.startSlot.date, 
+                let startSlot = TimeSlot(date: range.start, 
                                        hour: currentHour, 
                                        minute: currentMinute)
                 
@@ -286,11 +314,11 @@ class PollOptionsViewModel: ObservableObject {
                 let endHour = currentHour + 1
                 let endMinute = currentMinute
                 
-                let endSlot = TimeSlot(date: range.startSlot.date, 
+                let endSlot = TimeSlot(date: range.start, 
                                      hour: endHour, 
                                      minute: endMinute)
                 
-                slots.append(TimeRange(startSlot: startSlot, endSlot: endSlot))
+                slots.append(TimeRange(start: startSlot.date, end: endSlot.date))
                 print("   Created 1-hour slot: \(startSlot.hour):\(startSlot.minute) - \(endHour):\(endMinute)")
                 
                 // Move to next slot start (30-minute increment)
@@ -312,7 +340,7 @@ class PollOptionsViewModel: ObservableObject {
             timeRanges = originalRanges
             print("📊 Availability ranges:")
             timeRanges.forEach { range in
-                print("   Range: \(range.startSlot.hour):\(range.startSlot.minute) - \(range.endSlot.hour):\(range.endSlot.minute + 30)")
+                print("   Range: \(range.start.hour):\(range.start.minute) - \(range.end.hour):\(range.end.minute + 30)")
             }
             
         case .timeSlots:
@@ -324,7 +352,7 @@ class PollOptionsViewModel: ObservableObject {
             
             print("📊 Time slot ranges (duration: \(slotDuration/60) minutes):")
             timeRanges.forEach { range in
-                print("   Slot: \(range.startSlot.hour):\(range.startSlot.minute) - \(range.endSlot.hour):\(range.endSlot.minute)")
+                print("   Slot: \(range.start.hour):\(range.start.minute) - \(range.end.hour):\(range.end.minute)")
             }
         }
     }
