@@ -131,6 +131,9 @@ class PollOptionsViewModel: ObservableObject {
     @Published var selectionType: SelectionType = .poll
     @Published var slotDuration: TimeInterval = 1800 // 30 minutes in seconds
     @Published var eventName: String = ""
+    @Published var isLoading = false
+    @Published var shareURL: URL?
+    @Published var error: Error?
     
     private var originalRanges: [TimeRange] = []
     private var selectedTimeSlots: Set<TimeSlot>
@@ -325,6 +328,28 @@ class PollOptionsViewModel: ObservableObject {
             }
         }
     }
+    
+    func createAndSharePoll() async {
+        isLoading = true
+        defer { isLoading = false }
+        
+        do {
+            // TODO: Implement API call to create poll
+            // let response = try await createPoll(
+            //     eventName: eventName,
+            //     selectionType: selectionType,
+            //     displayMode: pollMode,
+            //     timeSlots: timeRanges
+            // )
+            // shareURL = response.shareURL
+            
+            // For now, simulate API call
+            try await Task.sleep(nanoseconds: 1_000_000_000) // 1 second delay
+            shareURL = URL(string: "https://friendtracker.app/schedule/123")
+        } catch {
+            self.error = error
+        }
+    }
 }
 
 struct TimeRangeRow: View {
@@ -345,6 +370,8 @@ struct TimeRangeRow: View {
 struct ScheduleOptionsView: View {
     @StateObject private var viewModel: PollOptionsViewModel
     @Environment(\.dismiss) private var dismiss
+    @State private var showingResponses = false
+    @State private var showingShareSheet = false
     
     init(selectedTimeSlots: Set<TimeSlot>) {
         _viewModel = StateObject(wrappedValue: PollOptionsViewModel(selectedTimeSlots: selectedTimeSlots))
@@ -408,19 +435,44 @@ struct ScheduleOptionsView: View {
                         .padding(.bottom, 8)
                 }
                 
-                Section {
-                    Button(action: {
-                        // TODO: Implement share functionality
-                    }) {
-                        HStack {
-                            Text("Share Poll")
-                                .foregroundColor(AppColors.accent)
-                            Spacer()
-                            Image(systemName: "square.and.arrow.up")
-                                .foregroundColor(AppColors.accent)
+                if viewModel.shareURL != nil {
+                    Section {
+                        Button(action: {
+                            showingResponses = true
+                        }) {
+                            HStack {
+                                Text("View Responses")
+                                    .foregroundColor(AppColors.accent)
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .foregroundColor(AppColors.accent)
+                            }
                         }
                     }
-                    .disabled(viewModel.eventName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+                
+                Section {
+                    Button(action: {
+                        Task {
+                            await viewModel.createAndSharePoll()
+                            if viewModel.shareURL != nil {
+                                showingShareSheet = true
+                            }
+                        }
+                    }) {
+                        HStack {
+                            Text(viewModel.shareURL == nil ? "Share" : "Share Again")
+                                .foregroundColor(AppColors.accent)
+                            Spacer()
+                            if viewModel.isLoading {
+                                ProgressView()
+                            } else {
+                                Image(systemName: "square.and.arrow.up")
+                                    .foregroundColor(AppColors.accent)
+                            }
+                        }
+                    }
+                    .disabled(viewModel.eventName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || viewModel.isLoading)
                 }
             }
             .navigationTitle("Schedule Options")
@@ -433,8 +485,43 @@ struct ScheduleOptionsView: View {
                     .foregroundColor(AppColors.accent)
                 }
             }
+            .sheet(isPresented: $showingResponses) {
+                NavigationStack {
+                    PollResponsesView(
+                        eventName: viewModel.eventName,
+                        selectionType: viewModel.selectionType
+                    )
+                }
+            }
+            .sheet(isPresented: $showingShareSheet) {
+                if let url = viewModel.shareURL {
+                    ShareSheet(items: [url])
+                }
+            }
+            .alert("Error", isPresented: .init(
+                get: { viewModel.error != nil },
+                set: { if !$0 { viewModel.error = nil } }
+            )) {
+                Button("OK") {
+                    viewModel.error = nil
+                }
+            } message: {
+                if let error = viewModel.error {
+                    Text(error.localizedDescription)
+                }
+            }
         }
     }
+}
+
+struct ShareSheet: UIViewControllerRepresentable {
+    let items: [Any]
+    
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: items, applicationActivities: nil)
+    }
+    
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
 
 #Preview {

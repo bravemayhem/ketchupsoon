@@ -230,7 +230,7 @@ struct KetchupsView: View {
         }
         .sheet(isPresented: $showingFindTime) {
             NavigationStack {
-                FindTimeView()
+                FindTimeOptionsView()
             }
         }
         .onChange(of: selectedFriend) { _, newValue in
