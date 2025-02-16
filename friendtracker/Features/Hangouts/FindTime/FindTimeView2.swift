@@ -158,7 +158,7 @@ struct FindTimeView: View {
     
     private var titleSection: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("Hello")
+            Text("Create Poll Options")
                 .font(.title)
                 .foregroundColor(.primary)
             
