@@ -20,6 +20,24 @@ struct TimeSlot: Identifiable, Hashable {
         formatter.timeStyle = .short
         return formatter.string(from: date)
     }
+    
+    static func == (lhs: TimeSlot, rhs: TimeSlot) -> Bool {
+        let calendar = Calendar.current
+        return calendar.component(.year, from: lhs.date) == calendar.component(.year, from: rhs.date) &&
+               calendar.component(.month, from: lhs.date) == calendar.component(.month, from: rhs.date) &&
+               calendar.component(.day, from: lhs.date) == calendar.component(.day, from: rhs.date) &&
+               lhs.hour == rhs.hour &&
+               lhs.minute == rhs.minute
+    }
+    
+    func hash(into hasher: inout Hasher) {
+        let calendar = Calendar.current
+        hasher.combine(calendar.component(.year, from: date))
+        hasher.combine(calendar.component(.month, from: date))
+        hasher.combine(calendar.component(.day, from: date))
+        hasher.combine(hour)
+        hasher.combine(minute)
+    }
 }
 
 @MainActor
@@ -97,11 +115,15 @@ class FindTimeViewModel: ObservableObject {
     }
     
     func toggleTimeSlot(_ slot: TimeSlot) {
+        print("FindTimeViewModel: Toggling time slot - hour: \(slot.hour), minute: \(slot.minute)")
         if selectedTimeSlots.contains(slot) {
+            print("FindTimeViewModel: Removing slot")
             selectedTimeSlots.remove(slot)
         } else {
+            print("FindTimeViewModel: Adding slot")
             selectedTimeSlots.insert(slot)
         }
+        print("FindTimeViewModel: Current selected slots count: \(selectedTimeSlots.count)")
     }
     
     func moveToNextWeek() {
@@ -267,7 +289,9 @@ struct FindTimeView: View {
 struct TimeRowWithGrid: View {
     let hour: Int
     @ObservedObject var viewModel: FindTimeViewModel
-    
+    @State private var isDragging = false
+    @State private var lastDraggedSlot: TimeSlot?
+
     var body: some View {
         VStack(spacing: 0) {
             ForEach([0, 30], id: \.self) { minute in
@@ -284,37 +308,45 @@ struct TimeRowWithGrid: View {
                                 isSelected: viewModel.selectedTimeSlots.contains(slot),
                                 hasEvent: viewModel.hasEvent(for: slot),
                                 eventDetails: viewModel.eventDetailsForSlot(slot),
-                                onTap: { viewModel.toggleTimeSlot(slot) }
+                                onTap: { 
+                                    print("TimeRowWithGrid: Cell tapped for hour: \(hour), minute: \(minute)")
+                                    viewModel.toggleTimeSlot(slot)
+                                }
+                            )
+                            .contentShape(Rectangle())
+                            .gesture(
+                                DragGesture(minimumDistance: 0)
+                                    .onChanged { gesture in
+                                        print("TimeRowWithGrid: Drag changed at hour: \(hour), minute: \(minute)")
+                                        handleDrag(gesture: gesture, date: date, hour: hour, minute: minute)
+                                    }
+                                    .onEnded { _ in
+                                        print("TimeRowWithGrid: Drag ended")
+                                        isDragging = false
+                                        lastDraggedSlot = nil
+                                    }
                             )
                         }
                     }
-                    .contentShape(Rectangle())
-                    .allowsHitTesting(true)
-                    .gesture(
-                        DragGesture(minimumDistance: 0)
-                            .onChanged { gesture in
-                                handleDrag(gesture: gesture, hour: hour, minute: minute)
-                            }
-                    )
                 }
             }
         }
     }
     
-    private func handleDrag(gesture: DragGesture.Value, hour: Int, minute: Int) {
-        let location = gesture.location
-        // Calculate which cell was dragged based on location.x
-        let cellWidth = (UIScreen.main.bounds.width - 60) / 3 // Subtract time column width
-        let dayIndex = Int(location.x / cellWidth)
-        
-        guard dayIndex >= 0 && dayIndex < viewModel.visibleDays.count else { return }
-        
-        let date = viewModel.visibleDays[dayIndex]
+    private func handleDrag(gesture: DragGesture.Value, date: Date, hour: Int, minute: Int) {
         let slot = TimeSlot(date: date, hour: hour, minute: minute)
+        print("TimeRowWithGrid: Handling drag for slot - hour: \(hour), minute: \(minute), isDragging: \(isDragging)")
         
-        // Only toggle if we haven't already selected this slot
-        if !viewModel.selectedTimeSlots.contains(slot) {
-            viewModel.toggleTimeSlot(slot)
+        // If we just started dragging or if this is a different slot than last time
+        if !isDragging || lastDraggedSlot != slot {
+            isDragging = true
+            lastDraggedSlot = slot
+            
+            // Toggle the slot
+            if !viewModel.hasEvent(for: slot) {
+                print("TimeRowWithGrid: Toggling slot - hour: \(hour), minute: \(minute)")
+                viewModel.toggleTimeSlot(slot)
+            }
         }
     }
 }
@@ -376,6 +408,10 @@ struct TimeSlotCell: View {
             }
         }
         .frame(maxWidth: .infinity)
+        .onTapGesture {
+            print("TimeSlotCell: Tapped cell - isSelected: \(isSelected)")
+            onTap()
+        }
     }
     
     private var backgroundColor: Color {
