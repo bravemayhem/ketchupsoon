@@ -143,6 +143,7 @@ struct FindTimeView: View {
     @StateObject private var viewModel = FindTimeViewModel()
     @Environment(\.dismiss) private var dismiss
     @State private var showingShareSheet = false
+    @State private var showingPollOptions = false
     @State private var gridDragActive: Bool = false
     @State private var gridDragSelectionMode: Bool? = nil  // true for selecting, false for deselecting
     @State private var gridLastDraggedCell: (row: Int, col: Int)? = nil
@@ -295,11 +296,14 @@ struct FindTimeView: View {
                 await viewModel.loadEvents()
             }
         }
+        .sheet(isPresented: $showingPollOptions) {
+            PollOptionsView(selectedTimeSlots: viewModel.selectedTimeSlots)
+        }
     }
     
     private var titleSection: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("Create Poll Options")
+            Text("Enter Availability")
                 .font(.title)
                 .foregroundColor(.primary)
             
@@ -372,7 +376,7 @@ struct FindTimeView: View {
             Spacer()
             
             Button("Create Poll") {
-                showingShareSheet = true
+                showingPollOptions = true
             }
             .buttonStyle(.borderedProminent)
             .disabled(viewModel.selectedTimeSlots.isEmpty)
@@ -546,7 +550,6 @@ struct EventOverlay: View {
                     let offsetMinutes = eventStart.timeIntervalSince(gridStart) / 60.0
                     
                     let cellHeight: CGFloat = 32
-                    let totalMinutes: CGFloat = 510  // 8.5 hours * 60
                     
                     // Round to nearest cell boundary
                     let cellsFromTop = Int(offsetMinutes / 30.0)
