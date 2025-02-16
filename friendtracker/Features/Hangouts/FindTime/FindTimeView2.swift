@@ -156,7 +156,7 @@ struct FindTimeView: View {
             weekHeader
                 .background(Color(.systemBackground))
             
-            // Main grid with time column wrapped in a ZStack to allow drag overlay
+            // Main grid with time column wrapped in a ZStack to allow overlay
             ZStack {
                 ScrollView(.vertical, showsIndicators: false) {
                     VStack(spacing: 0) {
@@ -164,6 +164,10 @@ struct FindTimeView: View {
                             TimeRowWithGrid(hour: hour, viewModel: viewModel)
                         }
                     }
+                }
+                // Event overlay: draws calendar events spanning multiple cells
+                GeometryReader { geo in
+                    EventOverlay(viewModel: viewModel, geo: geo)
                 }
                 // Overlay to capture drag across the grid
                 GeometryReader { geo in
@@ -463,6 +467,58 @@ struct TimeSlotCell: View {
             return Color.gray.opacity(0.15)
         }
         return isSelected ? AppColors.futureGreen.opacity(0.3) : Color.gray.opacity(0.05)
+    }
+}
+
+struct EventOverlay: View {
+    @ObservedObject var viewModel: FindTimeViewModel
+    let geo: GeometryProxy
+    
+    var body: some View {
+        ForEach(Array(viewModel.visibleDays.enumerated()), id: \.offset) { index, day in
+            let timeColumnWidth: CGFloat = 70
+            let colWidth = (geo.size.width - timeColumnWidth) / CGFloat(viewModel.visibleDays.count)
+            let x = timeColumnWidth + CGFloat(index) * colWidth
+            
+            ForEach(Array((viewModel.calendarEvents[day] ?? []).enumerated()), id: \.offset) { eventIndex, event in
+                let calendar = Calendar.current
+                if let gridStart = calendar.date(bySettingHour: 9, minute: 0, second: 0, of: day),
+                   let gridEnd = calendar.date(bySettingHour: 17, minute: 30, second: 0, of: day) {
+                    
+                    let eventStart = max(event.event.startDate ?? day, gridStart)
+                    let eventEnd = min(event.event.endDate ?? day, gridEnd)
+                    
+                    let durationMinutes = eventEnd.timeIntervalSince(eventStart) / 60.0
+                    let offsetMinutes = eventStart.timeIntervalSince(gridStart) / 60.0
+                    
+                    let cellHeight: CGFloat = 32
+                    let totalMinutes: CGFloat = 510  // 8.5 hours * 60
+                    
+                    // Round to nearest cell boundary
+                    let cellsFromTop = Int(offsetMinutes / 30.0)
+                    let y = CGFloat(cellsFromTop) * cellHeight
+                    
+                    // Calculate height to nearest cell boundary
+                    let cellsSpanned = Int(ceil(durationMinutes / 30.0))
+                    let height = CGFloat(max(1, cellsSpanned)) * cellHeight
+                    
+                    if height > 0 {
+                        ZStack(alignment: .leading) {
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(Color.blue)
+                            
+                            Text(event.event.title ?? "Untitled Event")
+                                .font(.caption2)
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 4)
+                                .lineLimit(1)
+                        }
+                        .frame(width: colWidth, height: height)
+                        .position(x: x + colWidth/2, y: y + height/2)
+                    }
+                }
+            }
+        }
     }
 }
 
