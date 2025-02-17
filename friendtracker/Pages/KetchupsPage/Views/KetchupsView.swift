@@ -85,11 +85,11 @@ struct KetchupsView: View {
                 // Calendar and Find Time buttons at the top
                 HStack(spacing: AppTheme.spacingMedium) {
                     Button(action: {
-                        showingCalendarOverlay = true
+                        showingFindTime = true
                     }) {
                         HStack {
-                            Image(systemName: "calendar")
-                            Text("Schedule")
+                            Image(systemName: "clock.arrow.2.circlepath")
+                            Text("Find a Time")
                         }
                         .padding()
                         .frame(maxWidth: .infinity)
@@ -99,11 +99,11 @@ struct KetchupsView: View {
                     }
                     
                     Button(action: {
-                        showingFindTime = true
+                        showingCalendarOverlay = true
                     }) {
                         HStack {
-                            Image(systemName: "clock.arrow.2.circlepath")
-                            Text("Find a Time")
+                            Image(systemName: "calendar")
+                            Text("Schedule")
                         }
                         .padding()
                         .frame(maxWidth: .infinity)
