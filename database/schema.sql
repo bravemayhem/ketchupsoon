@@ -3,6 +3,9 @@ DROP TABLE IF EXISTS verification_attempts CASCADE;
 DROP TABLE IF EXISTS invites CASCADE;
 DROP TABLE IF EXISTS event_attendees CASCADE;
 DROP TABLE IF EXISTS events CASCADE;
+DROP TABLE IF EXISTS schedule_polls CASCADE;
+DROP TABLE IF EXISTS time_slots CASCADE;
+DROP TABLE IF EXISTS poll_responses CASCADE;
 DROP FUNCTION IF EXISTS update_updated_at_column CASCADE;
 DROP FUNCTION IF EXISTS standardize_phone CASCADE;
 DROP FUNCTION IF EXISTS verify_invite_phone CASCADE;
@@ -35,6 +38,44 @@ CREATE TABLE event_attendees (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Create schedule_polls table
+CREATE TABLE schedule_polls (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    title TEXT NOT NULL,
+    creator_name TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    status TEXT DEFAULT 'open' CHECK (status IN ('open', 'closed')),
+    selection_type TEXT NOT NULL DEFAULT 'poll' CHECK (selection_type IN ('one_on_one', 'poll'))
+);
+
+-- Create time_slots table
+CREATE TABLE time_slots (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    poll_id UUID REFERENCES schedule_polls(id) ON DELETE CASCADE,
+    start_time TIMESTAMP WITH TIME ZONE NOT NULL,
+    end_time TIMESTAMP WITH TIME ZONE NOT NULL
+);
+
+-- Create poll_responses table
+CREATE TABLE poll_responses (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    poll_id UUID REFERENCES schedule_polls(id) ON DELETE CASCADE,
+    respondent_name TEXT NOT NULL,
+    respondent_email TEXT NOT NULL,
+    respondent_phone TEXT,
+    selected_slots JSONB,
+    responded_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create response_selected_slots table to track which slots each response selected
+CREATE TABLE response_selected_slots (
+    response_id UUID REFERENCES poll_responses(id) ON DELETE CASCADE,
+    time_slot_id UUID REFERENCES time_slots(id) ON DELETE CASCADE,
+    PRIMARY KEY (response_id, time_slot_id)
+);
+
 -- Drop and recreate invites table with verified_at column and without event_id unique constraint
 CREATE TABLE invites (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -62,6 +103,8 @@ CREATE INDEX idx_event_attendees_event_id ON event_attendees(event_id);
 CREATE INDEX idx_events_creator_id ON events(creator_id);
 CREATE INDEX idx_event_attendees_phone_number ON event_attendees(phone_number);
 CREATE INDEX idx_invites_token ON invites(token);
+CREATE INDEX idx_time_slots_poll_id ON time_slots(poll_id);
+CREATE INDEX idx_poll_responses_poll_id ON poll_responses(poll_id);
 
 -- Create updated_at trigger function
 CREATE OR REPLACE FUNCTION update_updated_at_column()

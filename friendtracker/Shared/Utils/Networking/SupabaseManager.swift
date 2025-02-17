@@ -1,6 +1,7 @@
 import Foundation
 import Supabase
 
+// MARK: Event Section
 // Event data structure for Supabase
 struct SupabaseEventData: Encodable {
     let title: String
@@ -155,6 +156,48 @@ struct PhoneNumberParts {
             )
         }
     }
+}
+
+// MARK: Poll Section
+// Poll data structures for Supabase
+struct SupabasePollData: Encodable {
+    let title: String
+    let creator_name: String
+    let created_at: String
+    let expires_at: String
+    let selection_type: String
+}
+
+struct SupabaseTimeSlotData: Encodable {
+    let poll_id: String
+    let start_time: String
+    let end_time: String
+}
+
+// Poll response structure
+struct PollResponseData: Codable {
+    let id: String
+    let respondent_name: String
+    let respondent_email: String
+    let selected_slots: [TimeSlotData]
+    let created_at: String
+}
+
+// Time slot data structure
+struct TimeSlotData: Codable {
+    let start_time: String
+    let end_time: String
+}
+
+// Poll data structure from Supabase
+private struct PollData: Codable {
+    let id: String
+    let title: String
+    let created_at: String
+    let expires_at: String
+    let selection_type: String
+    let time_slots: [TimeSlotData]
+    let poll_responses: [PollResponseData]
 }
 
 class SupabaseManager {
@@ -561,5 +604,158 @@ class SupabaseManager {
             .execute()
         
         return try decoder.decode(Bool.self, from: response.data)
+    }
+    
+    // Create poll in Supabase
+    func createPoll(title: String, timeRanges: [TimeRange], selectionType: SelectionType) async throws -> String {
+        print("🎲 Creating poll: \(title)")
+        
+        let pollData = SupabasePollData(
+            title: title,
+            creator_name: UserSettings.shared.name ?? "Anonymous",
+            created_at: Date().ISO8601Format(),
+            expires_at: Calendar.current.date(byAdding: .day, value: 7, to: Date())?.ISO8601Format() ?? "",
+            selection_type: selectionType == .oneOnOne ? "one_on_one" : "poll"
+        )
+        
+        // Create the poll
+        let pollResponse = try await client
+            .from("schedule_polls")
+            .insert(pollData)
+            .select()
+            .single()
+            .execute()
+            
+        guard let pollId = try decoder.decode([String: String].self, from: pollResponse.data)["id"] else {
+            throw NSError(domain: "SupabaseManager", code: 500, userInfo: [NSLocalizedDescriptionKey: "Failed to get poll ID"])
+        }
+            
+        print("✅ Created poll with ID: \(pollId)")
+        
+        // Create time slots
+        for range in timeRanges {
+            // Get the base date components
+            let calendar = Calendar.current
+            var startComponents = calendar.dateComponents([.year, .month, .day], from: range.startSlot.date)
+            startComponents.timeZone = TimeZone(identifier: "UTC")  // Use UTC for consistency
+            startComponents.hour = range.startSlot.hour
+            startComponents.minute = range.startSlot.minute
+            
+            var endComponents = calendar.dateComponents([.year, .month, .day], from: range.startSlot.date)  // Use same base date
+            endComponents.timeZone = TimeZone(identifier: "UTC")  // Use UTC for consistency
+            endComponents.hour = range.endSlot.hour
+            endComponents.minute = range.endSlot.minute
+            
+            guard let startDate = calendar.date(from: startComponents),
+                  let endDate = calendar.date(from: endComponents) else {
+                print("❌ Failed to create dates for time slot")
+                continue
+            }
+            
+            print("📅 Creating time slot: \(startDate) - \(endDate)")
+            
+            let formatter = ISO8601DateFormatter()
+            formatter.timeZone = TimeZone(identifier: "UTC")!
+            
+            let slotData = SupabaseTimeSlotData(
+                poll_id: pollId,
+                start_time: formatter.string(from: startDate),
+                end_time: formatter.string(from: endDate)
+            )
+            
+            try await client
+                .from("time_slots")
+                .insert(slotData)
+                .execute()
+        }
+        
+        return pollId
+    }
+    
+    func fetchUserPolls() async throws -> [Poll] {
+        print("🔍 Fetching user polls")
+        
+        let pollsResponse = try await client
+            .from("schedule_polls")
+            .select("""
+                *,
+                time_slots (*),
+                poll_responses (*)
+            """)
+            .order("created_at", ascending: false)
+            .execute()
+            
+        let pollsData = try decoder.decode([PollData].self, from: pollsResponse.data)
+        
+        return pollsData.map { data in
+            // Convert time slots to TimeRange objects
+            let timeSlots = data.time_slots.map { slot -> TimeRange in
+                let startDate = ISO8601DateFormatter().date(from: slot.start_time) ?? Date()
+                let endDate = ISO8601DateFormatter().date(from: slot.end_time) ?? Date()
+                
+                var calendar = Calendar.current
+                calendar.timeZone = TimeZone(identifier: "UTC")!
+                let startComponents = calendar.dateComponents([.hour, .minute], from: startDate)
+                let endComponents = calendar.dateComponents([.hour, .minute], from: endDate)
+                
+                let startSlot = TimeSlot(
+                    date: startDate,
+                    hour: startComponents.hour ?? 0,
+                    minute: startComponents.minute ?? 0
+                )
+                
+                let endSlot = TimeSlot(
+                    date: endDate,
+                    hour: endComponents.hour ?? 0,
+                    minute: endComponents.minute ?? 0
+                )
+                
+                return TimeRange(startSlot: startSlot, endSlot: endSlot)
+            }
+            
+            // Convert responses
+            let responses = data.poll_responses.map { response -> PollResponse in
+                let selectedSlots = response.selected_slots.map { slot -> TimeRange in
+                    let startDate = ISO8601DateFormatter().date(from: slot.start_time) ?? Date()
+                    let endDate = ISO8601DateFormatter().date(from: slot.end_time) ?? Date()
+                    
+                    var calendar = Calendar.current
+                    calendar.timeZone = TimeZone(identifier: "UTC")!
+                    let startComponents = calendar.dateComponents([.hour, .minute], from: startDate)
+                    let endComponents = calendar.dateComponents([.hour, .minute], from: endDate)
+                    
+                    let startSlot = TimeSlot(
+                        date: startDate,
+                        hour: startComponents.hour ?? 0,
+                        minute: startComponents.minute ?? 0
+                    )
+                    
+                    let endSlot = TimeSlot(
+                        date: endDate,
+                        hour: endComponents.hour ?? 0,
+                        minute: endComponents.minute ?? 0
+                    )
+                    
+                    return TimeRange(startSlot: startSlot, endSlot: endSlot)
+                }
+                
+                return PollResponse(
+                    respondentName: response.respondent_name,
+                    respondentEmail: response.respondent_email,
+                    selectedSlots: selectedSlots,
+                    responseDate: ISO8601DateFormatter().date(from: response.created_at) ?? Date()
+                )
+            }
+            
+            return Poll(
+                id: data.id,
+                title: data.title,
+                createdAt: ISO8601DateFormatter().date(from: data.created_at) ?? Date(),
+                expiresAt: ISO8601DateFormatter().date(from: data.expires_at) ?? Date(),
+                selectionType: data.selection_type == "one_on_one" ? .oneOnOne : .poll,
+                responses: responses,
+                timeSlots: timeSlots
+            )
+        }
     }
 } 
