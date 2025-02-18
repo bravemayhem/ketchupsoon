@@ -26,9 +26,6 @@ class CreateHangoutViewModel: ObservableObject {
     // Dictionary to store selected email addresses for friends
     @Published private var selectedEmailAddresses: [Friend.ID: String] = [:]
     
-    // Dictionary to store custom email addresses for friends
-    @Published private var customEmailAddresses: [Friend.ID: String] = [:]
-    
     let calendarManager: CalendarManager
     private var modelContext: ModelContext
     
@@ -36,15 +33,14 @@ class CreateHangoutViewModel: ObservableObject {
         hangoutTitle.isEmpty || 
         selectedFriends.isEmpty || 
         selectedFriends.contains { friend in
-            friend.email?.isEmpty ?? true
+            let hasSelectedEmail = selectedEmailAddresses[friend.id] != nil
+            let hasPrimaryEmail = friend.email?.isEmpty == false
+            return !hasSelectedEmail && !hasPrimaryEmail
         }
     }
     
     var emailRecipients: [String] {
         let friendEmails = selectedFriends.compactMap { friend -> String? in
-            if let customEmail = customEmailAddresses[friend.id] {
-                return customEmail
-            }
             if let selectedEmail = selectedEmailAddresses[friend.id] {
                 return selectedEmail
             }
@@ -108,30 +104,11 @@ class CreateHangoutViewModel: ObservableObject {
     }
     
     func getSelectedEmail(for friend: Friend) -> String? {
-        if let customEmail = customEmailAddresses[friend.id] {
-            return customEmail
-        }
         return selectedEmailAddresses[friend.id] ?? friend.email
     }
     
     func setSelectedEmail(_ email: String, for friend: Friend) {
         selectedEmailAddresses[friend.id] = email
-        // Clear any custom email when selecting an existing one
-        customEmailAddresses.removeValue(forKey: friend.id)
-        objectWillChange.send()
-    }
-    
-    func setCustomEmail(_ email: String, for friend: Friend) {
-        if isValidEmail(email) {
-            customEmailAddresses[friend.id] = email
-            // Clear any selected email when using a custom one
-            selectedEmailAddresses.removeValue(forKey: friend.id)
-            objectWillChange.send()
-        }
-    }
-    
-    func clearCustomEmail(for friend: Friend) {
-        customEmailAddresses.removeValue(forKey: friend.id)
         objectWillChange.send()
     }
     
