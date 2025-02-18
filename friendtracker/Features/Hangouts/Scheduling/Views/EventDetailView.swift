@@ -3,7 +3,7 @@ import EventKit
 import SwiftData
 
 struct EventDetailView: View {
-    let event: CalendarManager.CalendarEvent
+    let event: CalendarEvent
     let modelContext: ModelContext
     @Environment(\.dismiss) private var dismiss
     @State private var showingFriendPicker = false
@@ -94,7 +94,7 @@ struct EventDetailView: View {
 #Preview {
     NavigationStack {
         EventDetailView(
-            event: CalendarManager.CalendarEvent(
+            event: CalendarEvent(
                 event: EKEvent(eventStore: EKEventStore()),
                 source: .apple
             ),

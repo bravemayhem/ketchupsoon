@@ -50,8 +50,8 @@ struct WishlistPromptView: View {
 #Preview {
     let friend = Friend(name: "Test Friend", needsToConnectFlag: true)
     let viewModel = CreateHangoutViewModel(
-        modelContext: ModelContext(try! ModelContainer(for: Friend.self)),
-        initialSelectedFriends: [friend]
+        modelContext: ModelContext(try! ModelContainer(for: Friend.self, Hangout.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true)))
     )
+    viewModel.selectedFriends = [friend]
     return WishlistPromptView(viewModel: viewModel)
 } 

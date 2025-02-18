@@ -10,10 +10,11 @@ struct CreateHangoutView: View {
     let onEventCreated: (() -> Void)?
     
     init(initialDate: Date? = nil, initialLocation: String? = nil, initialTitle: String? = nil, initialSelectedFriends: [Friend]? = nil, onEventCreated: (() -> Void)? = nil) {
-        // Use a StateObject wrapper to initialize the viewModel with the default values
-        // The actual modelContext will be injected from the environment
+        let container = try! ModelContainer(for: Friend.self, Hangout.self, Tag.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
+        let context = ModelContext(container)
+        
         _viewModel = StateObject(wrappedValue: CreateHangoutViewModel(
-            modelContext: ModelContext(try! ModelContainer(for: Friend.self, Hangout.self, Tag.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true))),
+            modelContext: context,
             initialDate: initialDate,
             initialLocation: initialLocation,
             initialTitle: initialTitle,

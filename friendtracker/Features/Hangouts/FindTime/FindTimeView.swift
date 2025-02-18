@@ -5,7 +5,7 @@ import Foundation
 class FindTimeViewModel: ObservableObject {
     @Published var selectedTimeSlots: Set<TimeSlot> = []
     @Published var currentWeekStart: Date = Date()
-    @Published var calendarEvents: [Date: [CalendarManager.CalendarEvent]] = [:]
+    @Published var calendarEvents: [Date: [CalendarEvent]] = [:]
     @Published var isDragging = false
     @Published var dragStartPoint: CGPoint?
     @Published var gridScrollOffset: CGFloat = 0

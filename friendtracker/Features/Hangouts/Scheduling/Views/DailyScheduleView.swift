@@ -3,10 +3,10 @@ import EventKit
 import SwiftData
 
 struct DailyScheduleView: View {
-    let events: [CalendarManager.CalendarEvent]
+    let events: [CalendarEvent]
     let date: Date
     let viewMode: ViewMode
-    @Binding var selectedEvent: CalendarManager.CalendarEvent?
+    @Binding var selectedEvent: CalendarEvent?
     @Binding var showingEventDetails: Bool
     let onTimeSelected: (Date) -> Void
     @State private var currentTime = Date()
@@ -143,7 +143,7 @@ struct DailyScheduleView: View {
 
 // Event Title View Component
 private struct EventTitleView: View {
-    let event: CalendarManager.CalendarEvent
+    let event: CalendarEvent
     
     var body: some View {
         HStack(spacing: 8) {
@@ -181,7 +181,7 @@ private struct EventLocationView: View {
 
 // Main Event View
 struct EventView: View {
-    let event: CalendarManager.CalendarEvent
+    let event: CalendarEvent
     
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {

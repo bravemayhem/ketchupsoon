@@ -1,18 +1,7 @@
 import SwiftUI
 import SwiftData
 import MessageUI
-
-struct ManualAttendee: Identifiable, Equatable, Codable {
-    var id = UUID()
-    var name: String
-    var email: String
-    
-    init(id: UUID = UUID(), name: String, email: String) {
-        self.id = id
-        self.name = name
-        self.email = email
-    }
-}
+import EventKit
 
 @MainActor
 class CreateHangoutViewModel: ObservableObject {
@@ -23,14 +12,11 @@ class CreateHangoutViewModel: ObservableObject {
     @Published var selectedDuration: TimeInterval? = nil
     @Published var isLoading = false
     @Published var errorMessage: String?
-    @Published var selectedCalendarType: CalendarManager.CalendarType
+    @Published var selectedCalendarType: CalendarType
     @Published var showingCustomDurationInput = false
     @Published var customHours: Int = 1
     @Published var customMinutes: Int = 0
     @Published var showingWishlistPrompt = false
-    @Published var manualAttendees: [ManualAttendee] = []
-    @Published var newManualAttendeeName: String = ""
-    @Published var newManualAttendeeEmail: String = ""
     @Published var newEmail: String = ""
     @Published private var additionalEmailRecipients: [String] = []
     
@@ -64,8 +50,7 @@ class CreateHangoutViewModel: ObservableObject {
             }
             return friend.email
         }
-        let manualEmails = manualAttendees.map(\.email)
-        return friendEmails + manualEmails
+        return friendEmails
     }
     
     // MARK: - Email Editing Functions
@@ -107,24 +92,13 @@ class CreateHangoutViewModel: ObservableObject {
     }
     
     func addEmailRecipient(_ email: String) {
-        guard !additionalEmailRecipients.contains(email) else { return }
+        guard !email.isEmpty && email.contains("@") else { return }
         additionalEmailRecipients.append(email)
+        newEmail = ""
     }
     
     func removeEmailRecipient(_ email: String) {
         additionalEmailRecipients.removeAll { $0 == email }
-    }
-    
-    func addManualAttendee(name: String, email: String) {
-        guard !email.isEmpty && email.contains("@") else { return }
-        let attendee = ManualAttendee(name: name, email: email)
-        manualAttendees.append(attendee)
-        newManualAttendeeName = ""
-        newManualAttendeeEmail = ""
-    }
-    
-    func removeManualAttendee(_ attendee: ManualAttendee) {
-        manualAttendees.removeAll { $0.id == attendee.id }
     }
     
     func removeFriend(_ friend: Friend) {
@@ -174,20 +148,14 @@ class CreateHangoutViewModel: ObservableObject {
     @Published var connectionTestResult: String?
     
     
-    init(modelContext: ModelContext,
-         initialDate: Date? = nil,
-         initialLocation: String? = nil,
-         initialTitle: String? = nil,
-         initialSelectedFriends: [Friend]? = nil) {
+    init(modelContext: ModelContext, initialDate: Date? = nil, initialLocation: String? = nil, initialTitle: String? = nil, initialSelectedFriends: [Friend]? = nil) {
         self.modelContext = modelContext
-        self.selectedDate = initialDate ?? Date()
+        self.selectedDate = initialDate ?? Date().addingTimeInterval(3600)
         self.selectedLocation = initialLocation ?? ""
         self.hangoutTitle = initialTitle ?? ""
         self.selectedFriends = initialSelectedFriends ?? []
         self.calendarManager = CalendarManager.shared
-        // Use the default calendar type from AppStorage
-        let defaultType = UserDefaults.standard.string(forKey: "defaultCalendarType") ?? "apple"
-        self.selectedCalendarType = defaultType == "google" ? .google : .apple
+        self.selectedCalendarType = calendarManager.selectedCalendarType
     }
 
     private func saveHangout(_ hangout: Hangout) throws {
@@ -249,14 +217,12 @@ class CreateHangoutViewModel: ObservableObject {
             
             // Create calendar event
             print("📅 Creating calendar event...")
-            let attendeeNames = selectedFriends.map { $0.name }
             let calendarResult = try await calendarManager.createHangoutEvent(
                 activity: hangoutTitle,
                 location: selectedLocation,
                 date: selectedDate,
                 duration: selectedDuration ?? 3600,
-                emailRecipients: emailRecipients,
-                attendeeNames: attendeeNames
+                emailRecipients: emailRecipients
             )
             print("✅ Calendar event created with ID: \(calendarResult.eventId)")
             
