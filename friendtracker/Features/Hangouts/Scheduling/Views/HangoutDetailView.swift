@@ -329,7 +329,23 @@ struct HangoutDetailView: View {
         do {
             // First try to delete from calendar if it exists
             if let googleEventId = hangout.googleEventId {
-                try await calendarManager.deleteEvent(eventId: googleEventId, isGoogleEvent: true)
+                // Ensure calendar manager is initialized
+                await calendarManager.ensureInitialized()
+                
+                // If not authorized, try to request access
+                if !calendarManager.isGoogleAuthorized {
+                    if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                       let rootViewController = windowScene.windows.first?.rootViewController {
+                        try? await calendarManager.requestGoogleAccess(from: rootViewController)
+                    }
+                }
+                
+                // Only proceed with deletion if we're authorized
+                if calendarManager.isGoogleAuthorized {
+                    try await calendarManager.deleteEvent(eventId: googleEventId, isGoogleEvent: true)
+                } else {
+                    throw CalendarError.unauthorized
+                }
             }
             
             // Delete from local database
