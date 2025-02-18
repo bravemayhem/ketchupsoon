@@ -47,7 +47,11 @@ class CreateHangoutViewModel: ObservableObject {
     private var modelContext: ModelContext
     
     var isScheduleButtonDisabled: Bool {
-        hangoutTitle.isEmpty || selectedFriends.isEmpty
+        hangoutTitle.isEmpty || 
+        selectedFriends.isEmpty || 
+        selectedFriends.contains { friend in
+            friend.email?.isEmpty ?? true
+        }
     }
     
     var emailRecipients: [String] {

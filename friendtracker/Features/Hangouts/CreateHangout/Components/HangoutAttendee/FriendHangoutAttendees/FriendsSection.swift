@@ -36,8 +36,8 @@ struct FriendsSection: View {
             if !viewModel.selectedFriends.isEmpty {
                 let missingEmails = viewModel.selectedFriends.filter { $0.email?.isEmpty ?? true }.count
                 if missingEmails > 0 {
-                    Text("\(missingEmails) friend\(missingEmails > 1 ? "s" : "") missing email address\(missingEmails > 1 ? "es" : "") - they won't receive calendar invites")
-                        .foregroundStyle(.secondary)
+                    Text("\(missingEmails) friend\(missingEmails > 1 ? "s" : "") missing email address\(missingEmails > 1 ? "es" : "") - please provide a valid email address")
+                        .foregroundStyle(.red)
                 }
             }
         }
