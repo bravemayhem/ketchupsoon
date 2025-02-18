@@ -6,6 +6,7 @@ DROP TABLE IF EXISTS events CASCADE;
 DROP TABLE IF EXISTS schedule_polls CASCADE;
 DROP TABLE IF EXISTS time_slots CASCADE;
 DROP TABLE IF EXISTS poll_responses CASCADE;
+DROP TABLE IF EXISTS response_selected_slots CASCADE;
 DROP FUNCTION IF EXISTS update_updated_at_column CASCADE;
 DROP FUNCTION IF EXISTS standardize_phone CASCADE;
 DROP FUNCTION IF EXISTS verify_invite_phone CASCADE;
@@ -24,7 +25,8 @@ CREATE TABLE events (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     creator_id UUID NOT NULL,
     is_private BOOLEAN DEFAULT FALSE,
-    google_calendar_id TEXT -- Store the Google Calendar event ID
+    google_calendar_id TEXT, -- Store the Google Calendar event ID
+    google_calendar_link TEXT -- Store the Google Calendar event link
 );
 
 -- Create event_attendees table
@@ -269,22 +271,24 @@ BEGIN
         );
     END IF;
 
-    -- Check recent failed attempts, but skip for development
+    -- Check recent failed attempts for this specific invite token, but skip for development
     IF p_ip != 'development' THEN
         SELECT COUNT(*)
         INTO v_attempt_count
         FROM verification_attempts
         WHERE ip_address = p_ip
-        AND attempt_time > NOW() - INTERVAL '1 hour'
+        AND token = p_token  -- Only count attempts for this specific invite
+        AND attempt_time > NOW() - INTERVAL '15 minutes'  -- Reduced window to 15 minutes
         AND success = false;
 
         -- If too many attempts, return rate limit error
-        IF v_attempt_count >= 5 THEN
+        IF v_attempt_count >= 3 THEN  -- Reduced max attempts to 3
             RETURN json_build_object(
                 'success', false,
                 'error', 'RATE_LIMIT_EXCEEDED',
-                'message', 'Too many failed attempts. Please try again later',
-                'attempts', v_attempt_count
+                'message', 'Too many failed attempts. Please try again in 15 minutes.',
+                'attempts', v_attempt_count,
+                'debug', v_debug_info
             );
         END IF;
     ELSE
