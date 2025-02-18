@@ -12,6 +12,8 @@ class CalendarManager: ObservableObject {
     private var eventStore: EKEventStore?
     private var googleService: GTLRCalendarService?
     private let auth = Auth.auth()
+    private let ketchupCalendarName = "Ketchup Soon Events"
+    private var ketchupCalendarId: String? // Store the Ketchup calendar ID
     
     @Published var isAuthorized = false
     @Published var isGoogleAuthorized = false
@@ -109,6 +111,9 @@ class CalendarManager: ObservableObject {
                 // Configure Google Calendar service with the restored session
                 googleService?.authorizer = signInResult.fetcherAuthorizer
                 
+                // Ensure Ketchup calendar exists
+                await ensureKetchupCalendarExists()
+                
                 await loadConnectedCalendars()
                 print("✅ Successfully restored Google Sign-In")
             } catch {
@@ -118,6 +123,93 @@ class CalendarManager: ObservableObject {
             }
         } else {
             print("ℹ️ No existing Google user found")
+        }
+    }
+    
+    // Function to ensure Ketchup calendar exists
+    private func ensureKetchupCalendarExists() async {
+        guard let service = googleService else { return }
+        
+        print("🔍 Checking for Ketchup calendar...")
+        
+        do {
+            // First, try to find existing Ketchup calendar
+            let listQuery = GTLRCalendarQuery_CalendarListList.query()
+            let calendarList = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<GTLRCalendar_CalendarList, Error>) in
+                service.executeQuery(listQuery) { callbackTicket, response, error in
+                    if let error = error {
+                        continuation.resume(throwing: error)
+                        return
+                    }
+                    if let calendarList = response as? GTLRCalendar_CalendarList {
+                        continuation.resume(returning: calendarList)
+                    } else {
+                        continuation.resume(throwing: NSError(domain: "", code: -1))
+                    }
+                }
+            }
+            
+            // Look for existing Ketchup calendar
+            if let existingCalendar = calendarList.items?.first(where: { $0.summary == ketchupCalendarName }) {
+                print("✅ Found existing Ketchup calendar: \(existingCalendar.identifier ?? "")")
+                ketchupCalendarId = existingCalendar.identifier
+                return
+            }
+            
+            print("📅 Creating new Ketchup calendar...")
+            
+            // Create new calendar
+            let calendar = GTLRCalendar_Calendar()
+            calendar.summary = ketchupCalendarName
+            calendar.descriptionProperty = "Calendar for Ketchup Soon events"
+            calendar.timeZone = TimeZone.current.identifier
+            
+            // Set calendar to be public by default
+            let acl = GTLRCalendar_AclRule()
+            acl.scope = GTLRCalendar_AclRule_Scope()
+            acl.scope?.type = "default"
+            acl.role = "reader"
+            
+            let createQuery = GTLRCalendarQuery_CalendarsInsert.query(withObject: calendar)
+            
+            let newCalendar = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<GTLRCalendar_Calendar, Error>) in
+                service.executeQuery(createQuery) { callbackTicket, response, error in
+                    if let error = error {
+                        continuation.resume(throwing: error)
+                        return
+                    }
+                    if let calendar = response as? GTLRCalendar_Calendar {
+                        continuation.resume(returning: calendar)
+                    } else {
+                        continuation.resume(throwing: NSError(domain: "", code: -1))
+                    }
+                }
+            }
+            
+            print("✅ Created new Ketchup calendar: \(newCalendar.identifier ?? "")")
+            ketchupCalendarId = newCalendar.identifier
+            
+            // Set public access
+            if let calendarId = newCalendar.identifier {
+                let aclQuery = GTLRCalendarQuery_AclInsert.query(withObject: acl, calendarId: calendarId)
+                _ = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<GTLRCalendar_AclRule, Error>) in
+                    service.executeQuery(aclQuery) { callbackTicket, response, error in
+                        if let error = error {
+                            continuation.resume(throwing: error)
+                            return
+                        }
+                        if let rule = response as? GTLRCalendar_AclRule {
+                            continuation.resume(returning: rule)
+                        } else {
+                            continuation.resume(throwing: NSError(domain: "", code: -1))
+                        }
+                    }
+                }
+                print("✅ Set Ketchup calendar to public")
+            }
+            
+        } catch {
+            print("❌ Error managing Ketchup calendar: \(error)")
         }
     }
     
@@ -335,8 +427,8 @@ class CalendarManager: ObservableObject {
         var googleEventLink: String? = nil
         var googleEventId: String? = nil
         
-        // First, try to create Google Calendar event if authorized
-        if isGoogleAuthorized, let service = googleService {
+        // First, try to create Google Calendar event if authorized and selected
+        if selectedCalendarType == .google && isGoogleAuthorized, let service = googleService {
             // Refresh token before operation
             try await refreshGoogleAuthorization()
             
@@ -345,15 +437,25 @@ class CalendarManager: ObservableObject {
             event.location = location
             event.descriptionProperty = "KetchupSoon Event 🍅"
             
+            // Set guest permissions
+            event.guestsCanModify = true    // Allow guests to modify their response
+            event.guestsCanSeeOtherGuests = true  // Allow guests to see other guests
+            event.guestsCanInviteOthers = false  // Don't allow inviting others
+            event.anyoneCanAddSelf = true   // Allow people to add themselves
+            event.transparency = "transparent" // Don't block free/busy
+            event.visibility = "public"     // Make event public
+            
             let startDateTime = GTLRDateTime(date: date)
             let endDateTime = GTLRDateTime(date: date.addingTimeInterval(duration))
             
             let start = GTLRCalendar_EventDateTime()
             start.dateTime = startDateTime
+            start.timeZone = TimeZone.current.identifier
             event.start = start
             
             let end = GTLRCalendar_EventDateTime()
             end.dateTime = endDateTime
+            end.timeZone = TimeZone.current.identifier
             event.end = end
             
             // Add all attendees from emailRecipients
@@ -361,14 +463,19 @@ class CalendarManager: ObservableObject {
                 let attendees = emailRecipients.map { email in
                     let attendee = GTLRCalendar_EventAttendee()
                     attendee.email = email
+                    attendee.responseStatus = "needsAction"
+                    attendee.optional = false  // Make attendance required
+                    attendee.additionalGuests = 0  // No additional guests allowed
                     return attendee
                 }
                 event.attendees = attendees
             }
             
-            let query = GTLRCalendarQuery_EventsInsert.query(withObject: event, calendarId: "primary")
-            // Send email notifications to all attendees
-            query.sendUpdates = "all"
+            // Use Ketchup calendar if available, otherwise use primary
+            let calendarId = ketchupCalendarId ?? "primary"
+            let query = GTLRCalendarQuery_EventsInsert.query(withObject: event, calendarId: calendarId)
+            query.sendUpdates = "all"  // Send updates to all attendees
+            query.supportsAttachments = true  // Enable attachments if needed
             
             do {
                 let response = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<GTLRCalendar_Event, Error>) in
@@ -386,14 +493,40 @@ class CalendarManager: ObservableObject {
                 }
                 googleEventLink = response.htmlLink
                 googleEventId = response.identifier
+                
+                // If Apple Calendar is also authorized, create a linked local event
+                if isAuthorized, let eventStore = self.eventStore {
+                    let localEvent = EKEvent(eventStore: eventStore)
+                    localEvent.title = activity
+                    localEvent.location = location
+                    localEvent.startDate = date
+                    localEvent.endDate = date.addingTimeInterval(duration)
+                    localEvent.calendar = eventStore.defaultCalendarForNewEvents
+                    
+                    // Add Google Calendar reference and link in notes
+                    var notes = "KetchupSoon Event 🍅\n\n"
+                    notes += "This event is managed via Google Calendar.\n"
+                    notes += "View and manage RSVPs: \(googleEventLink ?? "")\n"
+                    notes += "Google Calendar ID: \(googleEventId ?? "")"
+                    localEvent.notes = notes
+                    
+                    try eventStore.save(localEvent, span: .thisEvent)
+                }
+                
+                return CalendarEventResult(
+                    eventId: googleEventId ?? "",
+                    htmlLink: googleEventLink,
+                    isGoogleEvent: true,
+                    googleEventId: googleEventId
+                )
             } catch {
                 print("Error creating Google Calendar event: \(error)")
                 throw CalendarError.eventCreationFailed
             }
         }
         
-        // Then create Apple Calendar event if authorized
-        if isAuthorized {
+        // Only create Apple Calendar event if Google Calendar is not being used
+        if selectedCalendarType == .apple && isAuthorized {
             guard let eventStore = self.eventStore else { throw CalendarError.unauthorized }
             
             let event = EKEvent(eventStore: eventStore)
@@ -402,41 +535,21 @@ class CalendarManager: ObservableObject {
             event.startDate = date
             event.endDate = date.addingTimeInterval(duration)
             event.calendar = eventStore.defaultCalendarForNewEvents
-            
-            // Add notes with event information and Google Calendar link if available
-            var notes = "KetchupSoon Event 🍅"
-            if let googleLink = googleEventLink {
-                notes += "\n\nView RSVPs and manage attendance: \(googleLink)"
-            }
-            event.notes = notes
+            event.notes = "KetchupSoon Event 🍅"
             
             do {
                 try eventStore.save(event, span: .thisEvent)
-                // If we only created an Apple Calendar event, return its ID
-                if googleEventId == nil {
-                    return CalendarEventResult(
-                        eventId: event.eventIdentifier,
-                        htmlLink: nil,
-                        isGoogleEvent: false,
-                        googleEventId: nil
-                    )
-                }
+                return CalendarEventResult(
+                    eventId: event.eventIdentifier,
+                    htmlLink: nil,
+                    isGoogleEvent: false,
+                    googleEventId: nil
+                )
             } catch {
                 throw CalendarError.eventCreationFailed
             }
         }
         
-        // Return Google Calendar event details if created
-        if let googleEventId = googleEventId {
-            return CalendarEventResult(
-                eventId: googleEventId,
-                htmlLink: googleEventLink,
-                isGoogleEvent: true,
-                googleEventId: googleEventId
-            )
-        }
-        
-        // If neither calendar was available
         throw CalendarError.unauthorized
     }
     
