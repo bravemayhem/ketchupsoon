@@ -13,6 +13,7 @@ enum CalendarError: Error {
     case eventNotFound
     case eventUpdateFailed
     case eventDeletionFailed
+    case invalidResponse
 }
 
 // MARK: - Calendar Event Result

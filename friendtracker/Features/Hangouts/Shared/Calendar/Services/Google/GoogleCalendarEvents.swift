@@ -62,6 +62,17 @@ actor GoogleCalendarEvents: GoogleCalendarEventsProtocol {
         ketchupCalendarId = newCalendar.identifier
     }
     
+    private func ensureAuthorization() async throws {
+        print("🔑 GoogleCalendarEvents: Authorization status: \(await auth.isAuthorized)")
+        guard await auth.isAuthorized else {
+            print("❌ GoogleCalendarEvents: Not authorized")
+            throw CalendarError.unauthorized
+        }
+        
+        // Always try to refresh authorization before making requests
+        try await auth.refreshAuthorization()
+    }
+    
     func createEvent(activity: String, location: String, date: Date, duration: TimeInterval, emailRecipients: [String]) async throws -> CalendarEventResult {
         guard let service = service, await auth.isAuthorized else {
             throw CalendarError.unauthorized
@@ -266,104 +277,38 @@ actor GoogleCalendarEvents: GoogleCalendarEventsProtocol {
     
     func fetchEvent(eventId: String) async throws -> GTLRCalendar_Event {
         print("🔄 GoogleCalendarEvents: Starting fetchEvent for ID: \(eventId)")
+        try await ensureAuthorization()
         
         guard let service = service else {
             print("❌ GoogleCalendarEvents: Service is nil")
             throw CalendarError.unauthorized
         }
         
-        let isAuthorized = await auth.isAuthorized
-        print("🔑 GoogleCalendarEvents: Authorization status: \(isAuthorized)")
-        
-        guard isAuthorized else {
-            print("❌ GoogleCalendarEvents: Not authorized")
-            throw CalendarError.unauthorized
-        }
-        
-        print("🔄 GoogleCalendarEvents: Refreshing authorization")
-        do {
-            try await auth.refreshAuthorization()
-            print("✅ GoogleCalendarEvents: Authorization refreshed successfully")
-        } catch {
-            print("❌ GoogleCalendarEvents: Failed to refresh authorization: \(error)")
-            throw CalendarError.unauthorized
-        }
-        
-        print("🔄 GoogleCalendarEvents: Ensuring Ketchup calendar exists")
-        do {
-            try await ensureKetchupCalendarExists()
-            print("✅ GoogleCalendarEvents: Ketchup calendar check completed")
-        } catch {
-            print("⚠️ GoogleCalendarEvents: Error checking Ketchup calendar: \(error)")
-            // Continue anyway as we'll try both calendars
-        }
-        
-        print("📍 GoogleCalendarEvents: Using calendar ID: \(currentCalendarId)")
-        print("🔍 GoogleCalendarEvents: Searching for event: \(eventId)")
-        
-        // First try the Ketchup calendar if it exists
-        if let ketchupId = ketchupCalendarId {
-            print("🔍 GoogleCalendarEvents: Trying Ketchup calendar first")
-            do {
-                let query = GTLRCalendarQuery_EventsGet.query(withCalendarId: ketchupId, eventId: eventId)
-                let event = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<GTLRCalendar_Event, Error>) in
-                    service.executeQuery(query) { callbackTicket, response, error in
-                        if let error = error {
-                            print("⚠️ GoogleCalendarEvents: Error in Ketchup calendar: \(error)")
-                            if let gtlrError = error as NSError? {
-                                print("   Domain: \(gtlrError.domain)")
-                                print("   Code: \(gtlrError.code)")
-                                print("   Description: \(gtlrError.localizedDescription)")
-                                if let structuredError = gtlrError.userInfo["GTLRStructuredError"] {
-                                    print("   Structured error: \(structuredError)")
-                                }
-                            }
-                            continuation.resume(throwing: error)
-                            return
-                        }
-                        if let event = response as? GTLRCalendar_Event {
-                            print("✅ GoogleCalendarEvents: Found event in Ketchup calendar")
-                            continuation.resume(returning: event)
-                        } else {
-                            print("⚠️ GoogleCalendarEvents: Response was not an event")
-                            continuation.resume(throwing: CalendarError.eventNotFound)
-                        }
-                    }
-                }
-                return event
-            } catch {
-                print("⚠️ GoogleCalendarEvents: Event not found in Ketchup calendar, trying primary")
-            }
-        }
-        
-        print("🔍 GoogleCalendarEvents: Trying primary calendar")
         let query = GTLRCalendarQuery_EventsGet.query(withCalendarId: "primary", eventId: eventId)
         
-        let event = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<GTLRCalendar_Event, Error>) in
-            service.executeQuery(query) { callbackTicket, response, error in
-                if let error = error {
-                    print("❌ GoogleCalendarEvents: Error in primary calendar")
-                    if let gtlrError = error as NSError? {
-                        print("   Domain: \(gtlrError.domain)")
-                        print("   Code: \(gtlrError.code)")
-                        print("   Description: \(gtlrError.localizedDescription)")
-                        if let structuredError = gtlrError.userInfo["GTLRStructuredError"] {
-                            print("   Structured error: \(structuredError)")
-                        }
+        do {
+            let result = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<GTLRCalendar_Event, Error>) in
+                service.executeQuery(query) { (ticket, result, error) in
+                    if let error = error {
+                        print("❌ GoogleCalendarEvents: Failed to fetch event: \(error)")
+                        continuation.resume(throwing: error)
+                        return
                     }
-                    continuation.resume(throwing: error)
-                    return
-                }
-                if let event = response as? GTLRCalendar_Event {
-                    print("✅ GoogleCalendarEvents: Found event in primary calendar")
+                    
+                    guard let event = result as? GTLRCalendar_Event else {
+                        print("❌ GoogleCalendarEvents: Invalid response type")
+                        continuation.resume(throwing: CalendarError.invalidResponse)
+                        return
+                    }
+                    
+                    print("✅ GoogleCalendarEvents: Successfully fetched event")
                     continuation.resume(returning: event)
-                } else {
-                    print("❌ GoogleCalendarEvents: Response was not an event")
-                    continuation.resume(throwing: CalendarError.eventNotFound)
                 }
             }
+            return result
+        } catch {
+            print("❌ GoogleCalendarEvents: Error fetching event: \(error)")
+            throw error
         }
-        
-        return event
     }
 } 

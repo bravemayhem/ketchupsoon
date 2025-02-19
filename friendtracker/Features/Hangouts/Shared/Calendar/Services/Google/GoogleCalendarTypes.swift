@@ -19,7 +19,7 @@ protocol GoogleCalendarEventsProtocol: Actor {
 protocol GoogleCalendarAuthProtocol: Actor {
     var isAuthorized: Bool { get }
     var userEmail: String? { get }
-    func setup() async
+    func setup() async throws
     func requestAccess(from viewController: UIViewController) async throws
     func signOut() async
     func refreshAuthorization() async throws

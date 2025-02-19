@@ -84,10 +84,16 @@ class CalendarManager: ObservableObject, AppleCalendarServiceDelegate, GoogleCal
         }
         
         if selectedCalendarType == .google {
-            await googleAuth.setup()
-            isGoogleAuthorized = await googleAuth.isAuthorized
-            googleUserEmail = await googleAuth.userEmail
-            await googleMonitoring.startEventMonitoring()
+            do {
+                try await googleAuth.setup()
+                isGoogleAuthorized = await googleAuth.isAuthorized
+                googleUserEmail = await googleAuth.userEmail
+                await googleMonitoring.startEventMonitoring()
+            } catch {
+                print("❌ Failed to setup Google Calendar: \(error)")
+                isGoogleAuthorized = false
+                googleUserEmail = nil
+            }
         }
         
         await loadConnectedCalendars()
