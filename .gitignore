@@ -90,3 +90,7 @@ yarn-error.log*
 .env.test.local
 .env.production.local
 *.code-workspace
+
+# MCP Server Scripts
+start-mcp.sh
+start-supabase-mcp.sh

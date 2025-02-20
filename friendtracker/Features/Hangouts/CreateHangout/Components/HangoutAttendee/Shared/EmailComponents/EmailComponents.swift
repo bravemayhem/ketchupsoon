@@ -105,11 +105,31 @@ struct EmailDropdownMenu: View {
                     ToolbarItem(placement: .confirmationAction) {
                         Button("Save") {
                             if viewModel.isValidEmail(newEmailInput) {
-                                // Create a new array and append the new email
-                                let currentEmails = Array(friend.additionalEmails)
-                                var updatedEmails = currentEmails
-                                updatedEmails.append(newEmailInput)
-                                friend.additionalEmails = updatedEmails
+                                if friend.email == nil {
+                                    // If there's no primary email, set this as the primary
+                                    friend.email = newEmailInput
+                                } else {
+                                    // If there's already a primary email, add to additional emails
+                                    let currentEmails = Array(friend.additionalEmails)
+                                    var updatedEmails = currentEmails
+                                    updatedEmails.append(newEmailInput)
+                                    friend.additionalEmails = updatedEmails
+                                }
+                                
+                                // If this friend is linked to a contact, update the contact
+                                if let identifier = friend.contactIdentifier {
+                                    Task {
+                                        do {
+                                            try await ContactsManager.shared.updateContactEmails(
+                                                identifier: identifier,
+                                                primaryEmail: friend.email,
+                                                additionalEmails: friend.additionalEmails
+                                            )
+                                        } catch {
+                                            print("❌ Failed to update contact email: \(error)")
+                                        }
+                                    }
+                                }
                                 
                                 viewModel.setSelectedEmail(newEmailInput, for: friend)
                                 showingAddEmailSheet = false

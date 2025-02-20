@@ -17,17 +17,7 @@ final class Hangout: Identifiable {
     var googleEventId: String?  // Store the Google Calendar event ID
     var googleEventLink: String?  // Store the Google Calendar event link
     @Relationship(deleteRule: .cascade) var friends: [Friend]
-    @Attribute(.transformable(by: ManualAttendeeArrayValueTransformer.self)) private var _manualAttendees: Data?
-    
-    var manualAttendees: [ManualAttendee] {
-        get {
-            guard let data = _manualAttendees else { return [] }
-            return (try? JSONDecoder().decode([ManualAttendee].self, from: data)) ?? []
-        }
-        set {
-            _manualAttendees = try? JSONEncoder().encode(newValue)
-        }
-    }
+    var attendeeEmails: [String] = []  // Store all attendee emails from calendar events
     
     init(date: Date, title: String, location: String, isScheduled: Bool, friends: [Friend], duration: TimeInterval = 3600) {
         self.id = UUID()
@@ -44,7 +34,7 @@ final class Hangout: Identifiable {
         self.googleEventId = nil
         self.googleEventLink = nil
         self.friends = friends
-        self._manualAttendees = nil
+        self.attendeeEmails = []
     }
     
     // Create a new hangout as a reschedule of this one
@@ -58,7 +48,7 @@ final class Hangout: Identifiable {
             duration: duration
         )
         rescheduled.originalHangoutId = self.id
-        rescheduled.manualAttendees = self.manualAttendees
+        rescheduled.attendeeEmails = self.attendeeEmails
         return rescheduled
     }
     
@@ -130,44 +120,44 @@ final class Hangout: Identifiable {
     }
 }
 
-final class ManualAttendeeArrayValueTransformer: ValueTransformer {
-    static let name = NSValueTransformerName("ManualAttendeeArrayValueTransformer")
+final class ExternalContactArrayValueTransformer: ValueTransformer {
+    static let name = NSValueTransformerName("ExternalContactArrayValueTransformer")
     
     override class func transformedValueClass() -> AnyClass {
         NSData.self
-    }
-    
-    override func transformedValue(_ value: Any?) -> Any? {
-        // Handle both array and data input for backward compatibility
-        if let data = value as? Data {
-            return data
-        }
-        if let attendees = value as? [ManualAttendee] {
-            return try? JSONEncoder().encode(attendees)
-        }
-        return nil
-    }
-    
-    override func reverseTransformedValue(_ value: Any?) -> Any? {
-        guard let data = value as? Data else { return nil }
-        // Try to decode as array first
-        if let attendees = try? JSONDecoder().decode([ManualAttendee].self, from: data) {
-            return attendees
-        }
-        // If that fails, return the raw data (for backward compatibility)
-        return data
     }
     
     override class func allowsReverseTransformation() -> Bool {
         return true
     }
     
+    override func transformedValue(_ value: Any?) -> Any? {
+        guard let contacts = value as? [ExternalContact] else { return nil }
+        return try? JSONEncoder().encode(contacts)
+    }
+    
+    override func reverseTransformedValue(_ value: Any?) -> Any? {
+        guard let data = value as? Data else { return nil }
+        return try? JSONDecoder().decode([ExternalContact].self, from: data)
+    }
+    
     static func register() {
-        if !ValueTransformer.valueTransformerNames().contains(name) {
-            ValueTransformer.setValueTransformer(
-                ManualAttendeeArrayValueTransformer(),
-                forName: name
-            )
-        }
+        ValueTransformer.setValueTransformer(
+            ExternalContactArrayValueTransformer(),
+            forName: name
+        )
+    }
+}
+
+// MARK: - ExternalContact
+struct ExternalContact: Identifiable, Equatable, Codable {
+    var id: UUID
+    var name: String
+    var email: String
+    
+    init(id: UUID = UUID(), name: String, email: String) {
+        self.id = id
+        self.name = name
+        self.email = email
     }
 }

@@ -1,6 +1,7 @@
 import Foundation
 import Supabase
 
+// MARK: Event Section
 // Event data structure for Supabase
 struct SupabaseEventData: Encodable {
     let title: String
@@ -11,6 +12,8 @@ struct SupabaseEventData: Encodable {
     let created_at: String
     let creator_id: String
     let is_private: Bool
+    let google_calendar_id: String?
+    let google_calendar_link: String?
 }
 
 // Attendee data structure for Supabase
@@ -33,6 +36,8 @@ struct EventResponse: Codable {
     let created_at: String
     let creator_id: String
     let is_private: Bool
+    let google_calendar_id: String?
+    let google_calendar_link: String?
     let event_attendees: [AttendeeResponse]?
 }
 
@@ -157,6 +162,48 @@ struct PhoneNumberParts {
     }
 }
 
+// MARK: Poll Section
+// Poll data structures for Supabase
+struct SupabasePollData: Encodable {
+    let title: String
+    let creator_name: String
+    let created_at: String
+    let expires_at: String
+    let selection_type: String
+}
+
+struct SupabaseTimeSlotData: Encodable {
+    let poll_id: String
+    let start_time: String
+    let end_time: String
+}
+
+// Poll response structure
+struct PollResponseData: Codable {
+    let id: String
+    let respondent_name: String
+    let respondent_email: String
+    let selected_slots: [TimeSlotData]
+    let created_at: String
+}
+
+// Time slot data structure
+struct TimeSlotData: Codable {
+    let start_time: String
+    let end_time: String
+}
+
+// Poll data structure from Supabase
+private struct PollData: Codable {
+    let id: String
+    let title: String
+    let created_at: String
+    let expires_at: String
+    let selection_type: String
+    let time_slots: [TimeSlotData]
+    let poll_responses: [PollResponseData]
+}
+
 class SupabaseManager {
     static let shared = SupabaseManager()
     private let client: SupabaseClient
@@ -178,7 +225,14 @@ class SupabaseManager {
     
     // Create event in Supabase
     func createEvent(_ hangout: Hangout) async throws -> (eventId: String, token: String)? {
-        print("🚀 Starting hangout creation...")
+        print("🚀 Starting hangout creation in Supabase...")
+        print("📊 Event details:")
+        print("   - Title: \(hangout.title)")
+        print("   - Date: \(hangout.date)")
+        print("   - Location: \(hangout.location)")
+        print("   - Duration: \(hangout.endDate.timeIntervalSince(hangout.date)) seconds")
+        print("   - Google Calendar ID: \(hangout.googleEventId ?? "none")")
+        print("   - Google Calendar Link: \(hangout.googleEventLink ?? "none")")
         
         // Capture friend data on main thread before async operation
         let friendsData = await MainActor.run {
@@ -192,9 +246,11 @@ class SupabaseManager {
         }
         
         // Add debug logging for friends and their phone numbers
-        print("📱 Checking phone numbers for all friends:")
+        print("👥 Attendee details:")
         for friendData in friendsData {
-            print("  - \(friendData.name): phoneNumber = \(String(describing: friendData.phoneNumber))")
+            print("   - Name: \(friendData.name)")
+            print("     Phone: \(String(describing: friendData.phoneNumber))")
+            print("     Email: \(friendData.email)")
         }
         
         // Validate required fields
@@ -208,54 +264,42 @@ class SupabaseManager {
         if !friendsWithoutPhones.isEmpty {
             print("❌ Error: Found \(friendsWithoutPhones.count) friends without phone numbers:")
             for friend in friendsWithoutPhones {
-                print("  - \(friend.name): phoneNumber = \(String(describing: friend.phoneNumber))")
+                print("   - \(friend.name): phoneNumber = \(String(describing: friend.phoneNumber))")
             }
             throw NSError(domain: "SupabaseManager", code: 400, userInfo: [
                 NSLocalizedDescriptionKey: "All friends must have phone numbers. Missing for: \(friendsWithoutPhones.map { $0.name }.joined(separator: ", "))"
             ])
         }
         
-        // Get the organizer's phone number from UserSettings
-        let organizer = Friend(
-            name: UserSettings.shared.name ?? "Organizer",
-            phoneNumber: UserSettings.shared.phoneNumber,
-            email: UserSettings.shared.email
-        )
-        
-        // Check if either the organizer or any friends have a phone number
-        let hasPhoneNumber = UserSettings.shared.hasPhoneNumber ||
-                            friendsData.contains(where: { $0.phoneNumber != nil && !$0.phoneNumber!.isEmpty })
-        
-        guard hasPhoneNumber else {
-            print("❌ Error: No valid phone numbers found")
-            throw NSError(domain: "SupabaseManager", code: 400, userInfo: [
-                NSLocalizedDescriptionKey: "Either you or at least one friend must have a phone number"
-            ])
-        }
-        
         let duration = Int(hangout.endDate.timeIntervalSince(hangout.date))
-        print("⏱ Raw duration: \(duration)")
+        print("⏱ Duration calculation:")
+        print("   - Start date: \(hangout.date)")
+        print("   - End date: \(hangout.endDate)")
+        print("   - Raw duration: \(duration)")
         // Use a default duration of 1 hour if not specified
         let finalDuration = duration <= 0 ? 3600 : duration
-        print("⏱ Final duration: \(finalDuration)")
+        print("   - Final duration: \(finalDuration)")
         
         let eventData = SupabaseEventData(
             title: hangout.title,
             date: hangout.date.ISO8601Format(),
-            location: hangout.location,  // Allow empty location
+            location: hangout.location,
             description: "",
             duration: finalDuration,
             created_at: Date().ISO8601Format(),
             creator_id: UUID().uuidString,
-            is_private: false
+            is_private: false,
+            google_calendar_id: hangout.googleEventId,
+            google_calendar_link: hangout.googleEventLink
         )
         
-        print("📤 Sending event data to Supabase:")
+        print("📤 Preparing Supabase request:")
         do {
             let encoder = JSONEncoder()
             encoder.outputFormatting = .prettyPrinted
             let jsonData = try encoder.encode(eventData)
             if let jsonString = String(data: jsonData, encoding: .utf8) {
+                print("📝 Event data JSON:")
                 print(jsonString)
             }
         } catch {
@@ -263,38 +307,33 @@ class SupabaseManager {
         }
         
         do {
-            // Create the request but don't execute it yet
+            print("📡 Sending request to Supabase...")
             let request = try client
                 .from("events")
                 .insert(eventData)
-                .select()  // Add select to return the inserted row
+                .select()
                 
-            // Print the request details
-            print("🔍 Request URL: \(request)")
+            print("🔍 Request details:")
+            print("   - Table: events")
+            print("   - Method: INSERT")
+            print("   - Returning: All columns")
             
-            // Execute the request
             let response = try await request.execute()
             
-            print("📥 Response status: \(response.status)")
-            print("📥 Raw response data:")
+            print("📥 Response received:")
+            print("   - Status: \(response.status)")
+            print("   - Data length: \(response.data.count) bytes")
+            
             if let responseString = String(data: response.data, encoding: .utf8) {
+                print("📄 Response data:")
                 print(responseString)
-            } else {
-                print("❌ Unable to decode response data as UTF8 string")
             }
             
-            // Check response status
             guard response.status == 201 || response.status == 200 else {
                 print("❌ Error: Unexpected response status: \(response.status)")
                 throw NSError(domain: "SupabaseManager", code: response.status, userInfo: [
                     NSLocalizedDescriptionKey: "Server returned unexpected status: \(response.status)"
                 ])
-            }
-            
-            // Check if response data is empty
-            guard !response.data.isEmpty else {
-                print("❌ Error: Empty response data")
-                throw NSError(domain: "SupabaseManager", code: 500, userInfo: [NSLocalizedDescriptionKey: "No response data received from server"])
             }
             
             // Try to decode the response
@@ -305,15 +344,16 @@ class SupabaseManager {
                     throw NSError(domain: "SupabaseManager", code: 500, userInfo: [NSLocalizedDescriptionKey: "Failed to get event ID"])
                 }
                 
-                print("✅ Created event with ID: \(eventId)")
+                print("✅ Event created successfully:")
+                print("   - Event ID: \(eventId)")
                 
                 // Add organizer first if they have a phone number
-                if let organizerPhone = organizer.phoneNumber, !organizerPhone.isEmpty {
+                if let organizerPhone = UserSettings.shared.phoneNumber?.standardizedPhoneNumber(), !organizerPhone.isEmpty {
                     let organizerData = SupabaseAttendeeData(
                         event_id: eventId,
-                        name: organizer.name,
-                        email: organizer.email ?? "",
-                        phone_number: organizerPhone.standardizedPhoneNumber(),
+                        name: UserSettings.shared.name ?? "Organizer",
+                        email: UserSettings.shared.email ?? "",
+                        phone_number: organizerPhone,
                         rsvp_status: "accepted"  // Organizer is automatically accepted
                     )
                     
@@ -405,7 +445,9 @@ class SupabaseManager {
             duration: duration,
             created_at: Date().ISO8601Format(),
             creator_id: UUID().uuidString,
-            is_private: false
+            is_private: false,
+            google_calendar_id: nil,
+            google_calendar_link: nil
         )
         
         try await client
@@ -561,5 +603,158 @@ class SupabaseManager {
             .execute()
         
         return try decoder.decode(Bool.self, from: response.data)
+    }
+    
+    // Create poll in Supabase
+    func createPoll(title: String, timeRanges: [TimeRange], selectionType: SelectionType) async throws -> String {
+        print("🎲 Creating poll: \(title)")
+        
+        let pollData = SupabasePollData(
+            title: title,
+            creator_name: UserSettings.shared.name ?? "Anonymous",
+            created_at: Date().ISO8601Format(),
+            expires_at: Calendar.current.date(byAdding: .day, value: 7, to: Date())?.ISO8601Format() ?? "",
+            selection_type: selectionType == .oneOnOne ? "one_on_one" : "poll"
+        )
+        
+        // Create the poll
+        let pollResponse = try await client
+            .from("schedule_polls")
+            .insert(pollData)
+            .select()
+            .single()
+            .execute()
+            
+        guard let pollId = try decoder.decode([String: String].self, from: pollResponse.data)["id"] else {
+            throw NSError(domain: "SupabaseManager", code: 500, userInfo: [NSLocalizedDescriptionKey: "Failed to get poll ID"])
+        }
+            
+        print("✅ Created poll with ID: \(pollId)")
+        
+        // Create time slots
+        for range in timeRanges {
+            // Get the base date components
+            let calendar = Calendar.current
+            var startComponents = calendar.dateComponents([.year, .month, .day], from: range.startSlot.date)
+            startComponents.timeZone = TimeZone(identifier: "UTC")  // Use UTC for consistency
+            startComponents.hour = range.startSlot.hour
+            startComponents.minute = range.startSlot.minute
+            
+            var endComponents = calendar.dateComponents([.year, .month, .day], from: range.startSlot.date)  // Use same base date
+            endComponents.timeZone = TimeZone(identifier: "UTC")  // Use UTC for consistency
+            endComponents.hour = range.endSlot.hour
+            endComponents.minute = range.endSlot.minute
+            
+            guard let startDate = calendar.date(from: startComponents),
+                  let endDate = calendar.date(from: endComponents) else {
+                print("❌ Failed to create dates for time slot")
+                continue
+            }
+            
+            print("📅 Creating time slot: \(startDate) - \(endDate)")
+            
+            let formatter = ISO8601DateFormatter()
+            formatter.timeZone = TimeZone(identifier: "UTC")!
+            
+            let slotData = SupabaseTimeSlotData(
+                poll_id: pollId,
+                start_time: formatter.string(from: startDate),
+                end_time: formatter.string(from: endDate)
+            )
+            
+            try await client
+                .from("time_slots")
+                .insert(slotData)
+                .execute()
+        }
+        
+        return pollId
+    }
+    
+    func fetchUserPolls() async throws -> [Poll] {
+        print("🔍 Fetching user polls")
+        
+        let pollsResponse = try await client
+            .from("schedule_polls")
+            .select("""
+                *,
+                time_slots (*),
+                poll_responses (*)
+            """)
+            .order("created_at", ascending: false)
+            .execute()
+            
+        let pollsData = try decoder.decode([PollData].self, from: pollsResponse.data)
+        
+        return pollsData.map { data in
+            // Convert time slots to TimeRange objects
+            let timeSlots = data.time_slots.map { slot -> TimeRange in
+                let startDate = ISO8601DateFormatter().date(from: slot.start_time) ?? Date()
+                let endDate = ISO8601DateFormatter().date(from: slot.end_time) ?? Date()
+                
+                var calendar = Calendar.current
+                calendar.timeZone = TimeZone(identifier: "UTC")!
+                let startComponents = calendar.dateComponents([.hour, .minute], from: startDate)
+                let endComponents = calendar.dateComponents([.hour, .minute], from: endDate)
+                
+                let startSlot = TimeSlot(
+                    date: startDate,
+                    hour: startComponents.hour ?? 0,
+                    minute: startComponents.minute ?? 0
+                )
+                
+                let endSlot = TimeSlot(
+                    date: endDate,
+                    hour: endComponents.hour ?? 0,
+                    minute: endComponents.minute ?? 0
+                )
+                
+                return TimeRange(startSlot: startSlot, endSlot: endSlot)
+            }
+            
+            // Convert responses
+            let responses = data.poll_responses.map { response -> PollResponse in
+                let selectedSlots = response.selected_slots.map { slot -> TimeRange in
+                    let startDate = ISO8601DateFormatter().date(from: slot.start_time) ?? Date()
+                    let endDate = ISO8601DateFormatter().date(from: slot.end_time) ?? Date()
+                    
+                    var calendar = Calendar.current
+                    calendar.timeZone = TimeZone(identifier: "UTC")!
+                    let startComponents = calendar.dateComponents([.hour, .minute], from: startDate)
+                    let endComponents = calendar.dateComponents([.hour, .minute], from: endDate)
+                    
+                    let startSlot = TimeSlot(
+                        date: startDate,
+                        hour: startComponents.hour ?? 0,
+                        minute: startComponents.minute ?? 0
+                    )
+                    
+                    let endSlot = TimeSlot(
+                        date: endDate,
+                        hour: endComponents.hour ?? 0,
+                        minute: endComponents.minute ?? 0
+                    )
+                    
+                    return TimeRange(startSlot: startSlot, endSlot: endSlot)
+                }
+                
+                return PollResponse(
+                    respondentName: response.respondent_name,
+                    respondentEmail: response.respondent_email,
+                    selectedSlots: selectedSlots,
+                    responseDate: ISO8601DateFormatter().date(from: response.created_at) ?? Date()
+                )
+            }
+            
+            return Poll(
+                id: data.id,
+                title: data.title,
+                createdAt: ISO8601DateFormatter().date(from: data.created_at) ?? Date(),
+                expiresAt: ISO8601DateFormatter().date(from: data.expires_at) ?? Date(),
+                selectionType: data.selection_type == "one_on_one" ? .oneOnOne : .poll,
+                responses: responses,
+                timeSlots: timeSlots
+            )
+        }
     }
 } 

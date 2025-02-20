@@ -2,14 +2,13 @@ import SwiftUI
 import EventKit
 
 struct EventListItemView: View {
-    let event: CalendarManager.CalendarEvent
+    let event: CalendarEvent
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Text(event.event.title)
                     .font(.headline)
-                    .foregroundColor(AppColors.label)
                 Spacer(minLength: 0)
                 if event.isKetchupEvent {
                     Image("Logo")
@@ -21,33 +20,40 @@ struct EventListItemView: View {
                 }
             }
             
-            HStack {
-                Text(formatTime(event.event.startDate))
-                Text("-")
-                Text(formatTime(event.event.endDate))
-            }
-            .font(.subheadline)
-            .foregroundColor(.gray)
-            
             if let location = event.event.location, !location.isEmpty {
-                Text(location)
-                    .font(.subheadline)
+                HStack {
+                    Image(systemName: "location")
+                        .foregroundColor(.gray)
+                    Text(location)
+                        .font(.subheadline)
+                        .foregroundColor(.gray)
+                }
+            }
+            
+            HStack {
+                Image(systemName: "clock")
                     .foregroundColor(.gray)
+                if event.event.isAllDay {
+                    Text("All Day")
+                        .font(.subheadline)
+                        .foregroundColor(.gray)
+                } else {
+                    Text("\(event.event.startDate.formatted(date: .omitted, time: .shortened)) - \(event.event.endDate.formatted(date: .omitted, time: .shortened))")
+                        .font(.subheadline)
+                        .foregroundColor(.gray)
+                }
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-    
-    private func formatTime(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.timeStyle = .short
-        return formatter.string(from: date)
+        .padding(.vertical, 4)
+        .contentShape(Rectangle())
     }
 }
 
 #Preview {
-    EventListItemView(event: CalendarManager.CalendarEvent(
-        event: EKEvent(eventStore: EKEventStore()),
-        source: .apple
-    ))
+    EventListItemView(
+        event: CalendarEvent(
+            event: EKEvent(eventStore: EKEventStore()),
+            source: .apple
+        )
+    )
 } 

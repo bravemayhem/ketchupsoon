@@ -8,25 +8,34 @@ struct CalendarOverlayView: View {
     @Environment(\.modelContext) private var modelContext
     @StateObject private var calendarManager = CalendarManager.shared
     @State private var selectedDate = Date()
-    @State private var events: [CalendarManager.CalendarEvent] = []
+    @State private var events: [CalendarEvent] = []
     @State private var showingAuthPrompt = false
     @State private var isLoading = false
     @State private var viewMode: DailyScheduleView.ViewMode = .daily
     @State private var showingCreateHangout = false
     @State private var selectedTime: Date?
-    @State private var selectedEvent: CalendarManager.CalendarEvent?
+    @State private var selectedEvent: CalendarEvent?
     @State private var showingEventDetails = false
     
     var body: some View {
         NavigationView {
             VStack(spacing: 0) {
-                if !calendarManager.isAuthorized && !calendarManager.isGoogleAuthorized {
+                if isLoading {
+                    ProgressView()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if !calendarManager.isAuthorized && !calendarManager.isGoogleAuthorized {
                     ContentUnavailableView(
-                        "Calendar Access Required",
+                        "No Calendar Access",
                         systemImage: "calendar.badge.exclamationmark",
-                        description: Text("Please connect your calendars in Settings to view your schedule.")
+                        description: Text("Connect a calendar to view and schedule hangouts")
                     )
-                    .padding()
+                    .overlay(alignment: .bottom) {
+                        Button("Connect Calendar") {
+                            showingAuthPrompt = true
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .padding(.bottom, 32)
+                    }
                 } else {
                     VStack(spacing: 0) {
                         calendarHeader
@@ -161,6 +170,10 @@ struct CalendarOverlayView: View {
             self.events = fetchedEvents
             self.isLoading = false
         }
+    }
+    
+    func addEvent(_ event: CalendarEvent) {
+        // Implementation of addEvent function
     }
 }
 

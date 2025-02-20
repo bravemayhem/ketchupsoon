@@ -84,26 +84,26 @@ struct KetchupsView: View {
             LazyVStack(spacing: AppTheme.spacingMedium, pinnedViews: [.sectionHeaders]) {
                 // Calendar and Find Time buttons at the top
                 HStack(spacing: AppTheme.spacingMedium) {
+                    // Button(action: {
+                    //     showingFindTime = true
+                    // }) {
+                    //     HStack {
+                    //         Image(systemName: "clock.arrow.2.circlepath")
+                    //         Text("Find a Time")
+                    //     }
+                    //     .padding()
+                    //     .frame(maxWidth: .infinity)
+                    //     .background(AppColors.accent.opacity(0.1))
+                    //     .foregroundColor(AppColors.accent)
+                    //     .cornerRadius(10)
+                    // }
+                    
                     Button(action: {
                         showingCalendarOverlay = true
                     }) {
                         HStack {
                             Image(systemName: "calendar")
                             Text("Schedule")
-                        }
-                        .padding()
-                        .frame(maxWidth: .infinity)
-                        .background(AppColors.accent.opacity(0.1))
-                        .foregroundColor(AppColors.accent)
-                        .cornerRadius(10)
-                    }
-                    
-                    Button(action: {
-                        showingFindTime = true
-                    }) {
-                        HStack {
-                            Image(systemName: "clock.arrow.2.circlepath")
-                            Text("Find a Time")
                         }
                         .padding()
                         .frame(maxWidth: .infinity)
