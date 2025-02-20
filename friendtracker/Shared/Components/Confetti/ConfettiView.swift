@@ -15,7 +15,7 @@ struct ConfettiView: View {
     
     var body: some View {
         Rectangle()
-            .fill([Color.orange, Color.green, Color.blue, Color.red, Color.yellow].randomElement() ?? Color.green)
+            .fill(AppColors.confettiColors.randomElement() ?? AppColors.accent)
             .frame(width: 20, height: 20)
             .onAppear(perform: { animate = true })
             .rotation3DEffect(.degrees(animate ? 360 : 0), axis: (x: 1, y: 0, z: 0))

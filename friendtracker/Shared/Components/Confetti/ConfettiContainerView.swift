@@ -30,5 +30,5 @@ struct ConfettiContainerView: View {
 }
 
 #Preview {
-    ConfettiContainerView(count: 13, yPosition: 7)
+    ConfettiContainerView()
 }
