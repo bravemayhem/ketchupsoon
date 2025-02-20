@@ -31,7 +31,6 @@ struct friendtrackerApp: App {
     init() {
         // Register value transformers first
         EmailArrayValueTransformer.register()
-        ManualAttendeeArrayValueTransformer.register()
         
         PerformanceMonitor.shared.startMeasuring("AppLaunch")
         

@@ -8,68 +8,76 @@ struct ContentView: View {
     @State private var showingContactPicker = false
     @State private var showingDebugAlert = false
     @State private var showingImportOptions = false
+    @State private var showConfetti = false {
+        didSet {
+            print("DEBUG: ContentView - showConfetti changed to \(showConfetti)")
+        }
+    }
     
     var body: some View {
-        TabView(selection: $selectedTab) {
-            NavigationTab(
-                title: "Ketchups",
-                subtitle: "Schedule time with the people who matter",
-                icon: "calendar",
-                subtitleAlwaysVisible: false,
-                showImportOptions: $showingImportOptions,
-                showingDebugAlert: $showingDebugAlert,
-                clearData: clearAllData
-            ) {
-                KetchupsView()
-            }
-            .tag(0)
-            
-            NavigationTab(
-                title: "Wishlist",
-                subtitle: "Keep track of friends you want to see soon",
-                icon: "star",
-                subtitleAlwaysVisible: false,
-                showImportOptions: $showingImportOptions,
-                showingDebugAlert: $showingDebugAlert,
-                clearData: clearAllData
-            ) {
-                WishlistView()
-            }
-            .tag(1)
-            
-            NavigationTab(
-                title: "Friends",
-                subtitle: "Keep track of the details that matter to you",
-                icon: "person.2",
-                subtitleAlwaysVisible: true,
-                showImportOptions: $showingImportOptions,
-                showingDebugAlert: $showingDebugAlert,
-                clearData: clearAllData
-            ) {
-                FriendsListView()
-            }
-            .tag(2)
-        }
-        .sheet(isPresented: $showingImportOptions) {
-            ImportOptionsView(showingContactPicker: $showingContactPicker, showingImportOptions: $showingImportOptions)
-        }
-        .fullScreenCover(isPresented: $onboardingManager.isShowingOnboarding) {
-            OnboardingView()
-        }
-        .sheet(isPresented: $showingContactPicker) {
-            ContactPickerView()
-        }
-        .alert("Debug Mode", isPresented: $showingDebugAlert) {
-            Button("Clear All Data", role: .destructive) {
-                Task { @MainActor in
-                    await clearAllData()
+        ZStack {
+            TabView(selection: $selectedTab) {
+                NavigationTab(
+                    title: "Ketchups",
+                    subtitle: "Schedule time with the people who matter",
+                    icon: "calendar",
+                    subtitleAlwaysVisible: false,
+                    showImportOptions: $showingImportOptions,
+                    showingDebugAlert: $showingDebugAlert,
+                    clearData: clearAllData
+                ) {
+                    KetchupsView(showConfetti: $showConfetti)
                 }
+                .tag(0)
+                
+                NavigationTab(
+                    title: "Wishlist",
+                    subtitle: "Keep track of friends you want to see soon",
+                    icon: "star",
+                    subtitleAlwaysVisible: false,
+                    showImportOptions: $showingImportOptions,
+                    showingDebugAlert: $showingDebugAlert,
+                    clearData: clearAllData
+                ) {
+                    WishlistView(showConfetti: $showConfetti)
+                }
+                .tag(1)
+                
+                NavigationTab(
+                    title: "Friends",
+                    subtitle: "Keep track of the details that matter to you",
+                    icon: "person.2",
+                    subtitleAlwaysVisible: true,
+                    showImportOptions: $showingImportOptions,
+                    showingDebugAlert: $showingDebugAlert,
+                    clearData: clearAllData
+                ) {
+                    FriendsListView()
+                }
+                .tag(2)
             }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("This will delete all friends and hangouts. This action cannot be undone.")
+            .sheet(isPresented: $showingImportOptions) {
+                ImportOptionsView(showingContactPicker: $showingContactPicker, showingImportOptions: $showingImportOptions)
+            }
+            .fullScreenCover(isPresented: $onboardingManager.isShowingOnboarding) {
+                OnboardingView()
+            }
+            .sheet(isPresented: $showingContactPicker) {
+                ContactPickerView()
+            }
+            .alert("Debug Mode", isPresented: $showingDebugAlert) {
+                Button("Clear All Data", role: .destructive) {
+                    Task { @MainActor in
+                        await clearAllData()
+                    }
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This will delete all friends and hangouts. This action cannot be undone.")
+            }
+            .tint(AppColors.accent)
+            .displayConfetti(isActive: $showConfetti)
         }
-        .tint(AppColors.accent)
     }
     
     @MainActor

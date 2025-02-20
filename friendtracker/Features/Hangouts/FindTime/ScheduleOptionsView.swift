@@ -1,14 +1,5 @@
 import SwiftUI
-
-extension Date {
-    var hour: Int {
-        return Calendar.current.component(.hour, from: self)
-    }
-    
-    var minute: Int {
-        return Calendar.current.component(.minute, from: self)
-    }
-}
+import Foundation
 
 enum PollMode {
     case timeSlots
@@ -18,138 +9,6 @@ enum PollMode {
 enum SelectionType {
     case oneOnOne
     case poll
-}
-
-struct TimeRange: Identifiable, Codable {
-    let id: String
-    let start: Date
-    let end: Date
-    
-    var formattedDate: String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .full
-        return formatter.string(from: start)
-    }
-    
-    var formattedTimeRange: String {
-        let formatter = DateFormatter()
-        formatter.timeStyle = .short
-        return "\(formatter.string(from: start)) - \(formatter.string(from: end))"
-    }
-    
-    // Add Codable conformance for Supabase JSON format
-    enum CodingKeys: String, CodingKey {
-        case id
-        case start = "start_time"
-        case end = "end_time"
-    }
-    
-    init(id: String = UUID().uuidString, start: Date, end: Date) {
-        self.id = id
-        self.start = start
-        self.end = end
-    }
-    
-    init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        id = try container.decode(String.self, forKey: .id)
-        
-        let dateFormatter = ISO8601DateFormatter()
-        
-        let startString = try container.decode(String.self, forKey: .start)
-        guard let startDate = dateFormatter.date(from: startString) else {
-            throw DecodingError.dataCorruptedError(forKey: .start, in: container, debugDescription: "Invalid date format")
-        }
-        start = startDate
-        
-        let endString = try container.decode(String.self, forKey: .end)
-        guard let endDate = dateFormatter.date(from: endString) else {
-            throw DecodingError.dataCorruptedError(forKey: .end, in: container, debugDescription: "Invalid date format")
-        }
-        end = endDate
-    }
-    
-    func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(id, forKey: .id)
-        try container.encode(start.ISO8601Format(), forKey: .start)
-        try container.encode(end.ISO8601Format(), forKey: .end)
-    }
-    
-    func splitIntoTimeSlots(duration: TimeInterval) -> [TimeRange] {
-        print("⏰ Splitting range into slots: \(start.hour):\(start.minute) - \(end.hour):\(end.minute)")
-        print("   Duration: \(duration/60) minutes")
-        
-        let calendar = Calendar.current
-        var slots: [TimeRange] = []
-        
-        // Create start date
-        var startComponents = DateComponents()
-        startComponents.year = calendar.component(.year, from: start)
-        startComponents.month = calendar.component(.month, from: start)
-        startComponents.day = calendar.component(.day, from: start)
-        startComponents.hour = calendar.component(.hour, from: start)
-        startComponents.minute = calendar.component(.minute, from: start)
-        
-        // Create end date with the full range
-        var endComponents = startComponents
-        endComponents.hour = calendar.component(.hour, from: end)
-        endComponents.minute = calendar.component(.minute, from: end)
-        
-        // Normalize end time if minutes >= 60
-        if endComponents.minute ?? 0 >= 60 {
-            endComponents.hour = (endComponents.hour ?? 0) + 1
-            endComponents.minute = (endComponents.minute ?? 0) - 60
-        }
-        
-        guard let startDate = calendar.date(from: startComponents),
-              let rangeEndDate = calendar.date(from: endComponents) else {
-            print("❌ Failed to create dates")
-            return []
-        }
-        
-        var currentStartDate = startDate
-        
-        while currentStartDate < rangeEndDate {
-            guard let slotEndDate = calendar.date(byAdding: .minute, value: Int(duration/60), to: currentStartDate) else {
-                print("❌ Failed to create slot end date")
-                break
-            }
-            
-            // For the last slot, make sure we don't exceed the range end
-            let actualEndDate = min(slotEndDate, rangeEndDate)
-            
-            // Only add the slot if it's a full slot
-            if actualEndDate.timeIntervalSince(currentStartDate) >= duration {
-                let startSlot = TimeSlot(
-                    date: currentStartDate,
-                    hour: calendar.component(.hour, from: currentStartDate),
-                    minute: calendar.component(.minute, from: currentStartDate)
-                )
-                
-                let endComponents = calendar.dateComponents([.hour, .minute], from: actualEndDate)
-                let endSlot = TimeSlot(
-                    date: startSlot.date,
-                    hour: endComponents.hour ?? 0,
-                    minute: endComponents.minute ?? 0
-                )
-                
-                slots.append(TimeRange(start: startSlot.date, end: endSlot.date))
-                print("   Created slot: \(startSlot.hour):\(startSlot.minute) - \(endSlot.hour):\(endSlot.minute)")
-            }
-            
-            // For 1-hour slots, slide by 30 minutes. For 30-minute slots, slide by the full duration
-            let slideAmount = duration == 3600 ? 1800.0 : duration
-            guard let nextStartDate = calendar.date(byAdding: .minute, value: Int(slideAmount/60), to: currentStartDate) else {
-                print("❌ Failed to create next start date")
-                break
-            }
-            currentStartDate = nextStartDate
-        }
-        
-        print("📦 Created \(slots.count) slots")
-        return slots
-    }
 }
 
 @MainActor
@@ -162,6 +21,7 @@ class PollOptionsViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var shareURL: URL?
     @Published var error: Error?
+    @Published var pollId: String?
     
     private var originalRanges: [TimeRange] = []
     private var selectedTimeSlots: Set<TimeSlot>
@@ -357,23 +217,28 @@ class PollOptionsViewModel: ObservableObject {
         }
     }
     
-    func createAndSharePoll() async {
+    func saveAndCreatePoll() async {
         isLoading = true
         defer { isLoading = false }
         
         do {
-            // TODO: Implement API call to create poll
-            // let response = try await createPoll(
-            //     eventName: eventName,
-            //     selectionType: selectionType,
-            //     displayMode: pollMode,
-            //     timeSlots: timeRanges
-            // )
-            // shareURL = response.shareURL
+            // Create poll in Supabase
+            let pollId = try await SupabaseManager.shared.createPoll(
+                title: eventName,
+                timeRanges: timeRanges,
+                selectionType: selectionType
+            )
             
-            // For now, simulate API call
-            try await Task.sleep(nanoseconds: 1_000_000_000) // 1 second delay
-            shareURL = URL(string: "https://friendtracker.app/schedule/123")
+            self.pollId = pollId
+            
+            // Get the web URL for the poll
+            let baseUrl = Bundle.main.infoDictionary?["SUPABASE_PROJECT_URL"] as? String ?? "https://friendtracker.app"
+            shareURL = URL(string: "\(baseUrl)/schedule/\(pollId)")
+            
+            if shareURL == nil {
+                throw NSError(domain: "ScheduleOptionsView", code: 500, 
+                    userInfo: [NSLocalizedDescriptionKey: "Failed to create share URL"])
+            }
         } catch {
             self.error = error
         }
@@ -463,7 +328,7 @@ struct ScheduleOptionsView: View {
                         .padding(.bottom, 8)
                 }
                 
-                if viewModel.shareURL != nil {
+                if viewModel.pollId != nil {
                     Section {
                         Button(action: {
                             showingResponses = true
@@ -476,31 +341,40 @@ struct ScheduleOptionsView: View {
                                     .foregroundColor(AppColors.accent)
                             }
                         }
-                    }
-                }
-                
-                Section {
-                    Button(action: {
-                        Task {
-                            await viewModel.createAndSharePoll()
-                            if viewModel.shareURL != nil {
-                                showingShareSheet = true
-                            }
-                        }
-                    }) {
-                        HStack {
-                            Text(viewModel.shareURL == nil ? "Share" : "Share Again")
-                                .foregroundColor(AppColors.accent)
-                            Spacer()
-                            if viewModel.isLoading {
-                                ProgressView()
-                            } else {
+                        
+                        Button(action: {
+                            showingShareSheet = true
+                        }) {
+                            HStack {
+                                Text("Share Poll")
+                                    .foregroundColor(AppColors.accent)
+                                Spacer()
                                 Image(systemName: "square.and.arrow.up")
                                     .foregroundColor(AppColors.accent)
                             }
                         }
                     }
-                    .disabled(viewModel.eventName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || viewModel.isLoading)
+                } else {
+                    Section {
+                        Button(action: {
+                            Task {
+                                await viewModel.saveAndCreatePoll()
+                            }
+                        }) {
+                            HStack {
+                                Text("Save Poll")
+                                    .foregroundColor(AppColors.accent)
+                                Spacer()
+                                if viewModel.isLoading {
+                                    ProgressView()
+                                } else {
+                                    Image(systemName: "checkmark.circle")
+                                        .foregroundColor(AppColors.accent)
+                                }
+                            }
+                        }
+                        .disabled(viewModel.eventName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || viewModel.isLoading)
+                    }
                 }
             }
             .navigationTitle("Schedule Options")
@@ -515,10 +389,7 @@ struct ScheduleOptionsView: View {
             }
             .sheet(isPresented: $showingResponses) {
                 NavigationStack {
-                    PollResponsesView(
-                        eventName: viewModel.eventName,
-                        selectionType: viewModel.selectionType
-                    )
+                    PollResponsesView()
                 }
             }
             .sheet(isPresented: $showingShareSheet) {

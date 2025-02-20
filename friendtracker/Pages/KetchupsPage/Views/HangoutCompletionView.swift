@@ -7,6 +7,7 @@ struct HangoutCompletionView: View {
     let hangout: Hangout
     @State private var showingMissedHangoutOptions = false
     @State private var showingCalendarOverlay = false
+    @Binding var showConfetti: Bool
     
     private var friendNames: String {
         hangout.friends.map(\.name).joined(separator: ", ")
@@ -80,6 +81,7 @@ struct HangoutCompletionView: View {
     }
     
     private func markHangoutComplete() {
+        print("DEBUG: HangoutCompletionView - Marking hangout complete")
         for friend in hangout.friends {
             friend.lastSeen = hangout.date
             friend.needsToConnectFlag = false
@@ -101,6 +103,6 @@ struct HangoutCompletionView: View {
         friends: [friend]
     )
     
-    HangoutCompletionView(hangout: hangout)
+    HangoutCompletionView(hangout: hangout, showConfetti: .constant(false))
         .modelContainer(container)
 }

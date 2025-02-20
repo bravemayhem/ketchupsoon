@@ -80,7 +80,7 @@ struct FindTimeOptionsView: View {
             dismiss()
         }) {
             NavigationStack {
-                PollResponsesView(eventName: "Your Polls", selectionType: .poll)
+                PollResponsesView()
             }
         }
     }

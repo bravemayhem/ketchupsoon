@@ -52,7 +52,7 @@ struct CalendarIntegrationView: View {
                         Button("Sign In") {
                             Task {
                                 do {
-                                    try await calendarManager.requestGoogleAccess()
+                                    try await calendarManager.requestGoogleAccess(from: (UIApplication.shared.connectedScenes.first as? UIWindowScene)?.windows.first?.rootViewController ?? UIViewController())
                                     // Set default to Google Calendar when authorized
                                     if calendarManager.isGoogleAuthorized {
                                         defaultCalendarType = .google

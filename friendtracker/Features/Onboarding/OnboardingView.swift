@@ -97,7 +97,7 @@ struct OnboardingView: View {
                     action: {
                         Task {
                             if !calendarManager.isGoogleAuthorized {
-                                try? await calendarManager.requestGoogleAccess()
+                                try? await calendarManager.requestGoogleAccess(from: (UIApplication.shared.connectedScenes.first as? UIWindowScene)?.windows.first?.rootViewController ?? UIViewController())
                                 if calendarManager.isGoogleAuthorized {
                                     // Set as default calendar when authorized
                                     UserDefaults.standard.set(Friend.CalendarType.google.rawValue, forKey: "defaultCalendarType")

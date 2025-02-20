@@ -32,6 +32,7 @@ private struct TimeLocationView: View {
     
     var body: some View {
         VStack(spacing: 16) {
+            // Time
             HStack(spacing: 16) {
                 Image(systemName: "clock.fill")
                     .foregroundColor(AppColors.accent)
@@ -40,11 +41,17 @@ private struct TimeLocationView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(formatDate(date))
                         .font(.headline)
-                    Text("\(formatTime(date)) - \(formatTime(endDate))")
-                        .foregroundColor(AppColors.secondaryLabel)
+                    if Calendar.current.compare(date, to: endDate, toGranularity: .minute) != .orderedSame {
+                        Text("\(formatTime(date)) - \(formatTime(endDate))")
+                            .foregroundColor(AppColors.secondaryLabel)
+                    } else {
+                        Text(formatTime(date))
+                            .foregroundColor(AppColors.secondaryLabel)
+                    }
                 }
             }
             
+            // Location
             if !location.isEmpty {
                 HStack(spacing: 16) {
                     Image(systemName: "location.fill")
@@ -115,113 +122,76 @@ private struct AttendeesView: View {
 private struct ActionButtonsView: View {
     let hangout: Hangout
     @Binding var showingRescheduleSheet: Bool
+    @Binding var showingDeleteConfirmation: Bool
+    @Environment(\.modelContext) private var modelContext
     
     var body: some View {
         VStack(spacing: 12) {
             if !hangout.isCompleted {
-                Button {
-                    showingRescheduleSheet = true
+                Text("Please make modifications to the event via your default calendar service")
+                    .font(.footnote)
+                    .foregroundColor(AppColors.secondaryLabel)
+                    .multilineTextAlignment(.center)
+                    .padding(.bottom, 8)
+                
+                Button(role: .destructive) {
+                    showingDeleteConfirmation = true
                 } label: {
-                    Label("Reschedule", systemImage: "calendar.badge.clock")
+                    Label("Delete Event", systemImage: "trash")
                         .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.borderedProminent)
-                
-                if let eventLink = hangout.eventLink {
-                    ShareLink(
-                        item: URL(string: eventLink)!,
-                        subject: Text("Join me for \(hangout.title)"),
-                        message: Text("View event details and RSVP: \(eventLink)")
-                    ) {
-                        Label("Share", systemImage: "square.and.arrow.up")
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.bordered)
-                }
+                .buttonStyle(.bordered)
             }
         }
         .padding(.horizontal)
     }
 }
 
-// MARK: - Main View
-struct HangoutDetailView: View {
+// MARK: - Content View
+private struct HangoutContentView: View {
     let hangout: Hangout
-    @Environment(\.dismiss) private var dismiss
-    @Environment(\.modelContext) private var modelContext
-    @State private var showingRescheduleSheet = false
-    @State private var showingFriendPicker = false
-    @State private var selectedFriends: [Friend]
-    @State private var manualAttendees: [ManualAttendee]
-    
-    init(hangout: Hangout) {
-        self.hangout = hangout
-        self._selectedFriends = State(initialValue: hangout.friends)
-        self._manualAttendees = State(initialValue: hangout.manualAttendees)
-    }
+    @Binding var selectedFriends: [Friend]
+    @Binding var attendeeEmails: [String]
+    @Binding var showingRescheduleSheet: Bool
+    @Binding var showingDeleteConfirmation: Bool
+    @Binding var showingFriendPicker: Bool
     
     var body: some View {
-        ScrollView {
-            VStack(spacing: 24) {
-                HangoutHeaderView(title: hangout.title, isRescheduled: hangout.isRescheduled)
-                
-                // Time and Location Section
-                VStack(spacing: 16) {
-                    // Time
-                    HStack(spacing: 16) {
-                        Image(systemName: "clock.fill")
-                            .foregroundColor(AppColors.accent)
-                            .frame(width: 24)
-                        
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(formatDate(hangout.date))
-                                .font(.headline)
-                            if Calendar.current.compare(hangout.date, to: hangout.endDate, toGranularity: .minute) != .orderedSame {
-                                Text("\(formatTime(hangout.date)) - \(formatTime(hangout.endDate))")
-                                    .foregroundColor(AppColors.secondaryLabel)
-                            } else {
-                                Text(formatTime(hangout.date))
-                                    .foregroundColor(AppColors.secondaryLabel)
-                            }
-                        }
-                    }
+        VStack(spacing: 24) {
+            HangoutHeaderView(title: hangout.title, isRescheduled: hangout.isRescheduled)
+            
+            TimeLocationView(
+                date: hangout.date,
+                endDate: hangout.endDate,
+                location: hangout.location
+            )
+            
+            // Attendees Section
+            VStack(alignment: .leading, spacing: 16) {
+                HStack {
+                    Text("Attendees")
+                        .font(.headline)
+                        .foregroundColor(AppColors.label)
                     
-                    // Location
-                    if !hangout.location.isEmpty {
-                        HStack(spacing: 16) {
-                            Image(systemName: "location.fill")
+                    Spacer()
+                    
+                    if !hangout.isCompleted {
+                        Button {
+                            showingFriendPicker = true
+                        } label: {
+                            Label("Add", systemImage: "person.badge.plus")
+                                .labelStyle(.iconOnly)
                                 .foregroundColor(AppColors.accent)
-                                .frame(width: 24)
-                            
-                            Text(hangout.location)
-                                .font(.headline)
                         }
                     }
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal)
                 
-                // Attendees Section with Add Button
-                VStack(alignment: .leading, spacing: 16) {
-                    HStack {
-                        Text("Attendees")
-                            .font(.headline)
-                            .foregroundColor(AppColors.label)
-                        
-                        Spacer()
-                        
-                        if !hangout.isCompleted {
-                            Button {
-                                showingFriendPicker = true
-                            } label: {
-                                Label("Add", systemImage: "person.badge.plus")
-                                    .labelStyle(.iconOnly)
-                                    .foregroundColor(AppColors.accent)
-                            }
-                        }
-                    }
+                // Friends Section
+                if !selectedFriends.isEmpty {
+                    Text("Friends")
+                        .font(.subheadline)
+                        .foregroundColor(AppColors.secondaryLabel)
                     
-                    // Regular Friends
                     ForEach(selectedFriends) { friend in
                         AttendeeRow(
                             name: friend.name,
@@ -233,29 +203,250 @@ struct HangoutDetailView: View {
                             hangout.friends = selectedFriends
                         }
                     }
+                }
+                
+                // Calendar Attendees Section
+                let nonFriendAttendees = attendeeEmails.filter { email in
+                    !selectedFriends.contains { $0.email == email }
+                }
+                
+                if !nonFriendAttendees.isEmpty {
+                    Text("Calendar Attendees")
+                        .font(.subheadline)
+                        .foregroundColor(AppColors.secondaryLabel)
+                        .padding(.top, 8)
                     
-                    // Manual Attendees
-                    ForEach(manualAttendees) { attendee in
+                    ForEach(nonFriendAttendees, id: \.self) { email in
                         AttendeeRow(
-                            name: attendee.name,
-                            email: attendee.email,
-                            initials: String(attendee.name.prefix(2).uppercased()),
-                            canRemove: !hangout.isCompleted
+                            name: email.components(separatedBy: "@").first ?? email,
+                            email: email,
+                            initials: String(email.prefix(2).uppercased()),
+                            canRemove: false
                         ) {
-                            manualAttendees.removeAll { $0.id == attendee.id }
-                            hangout.manualAttendees = manualAttendees
+                            // No removal action for calendar attendees
                         }
                     }
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal)
-                
-                ActionButtonsView(
-                    hangout: hangout,
-                    showingRescheduleSheet: $showingRescheduleSheet
-                )
             }
-            .padding(.vertical)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal)
+            
+            ActionButtonsView(
+                hangout: hangout,
+                showingRescheduleSheet: $showingRescheduleSheet,
+                showingDeleteConfirmation: $showingDeleteConfirmation
+            )
+        }
+        .padding(.vertical)
+    }
+}
+
+// MARK: - Main View
+struct HangoutDetailView: View {
+    let hangout: Hangout
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
+    @StateObject private var calendarManager = CalendarManager.shared
+    @State private var showingRescheduleSheet = false
+    @State private var showingFriendPicker = false
+    @State private var showingDeleteConfirmation = false
+    @State private var selectedFriends: [Friend]
+    @State private var attendeeEmails: [String]
+    @State private var isDeleting = false
+    @State private var errorMessage: String?
+    @State private var isSyncing = false
+    @State private var lastCacheUpdate = Date()
+    
+    private static var currentSyncTask: Task<Void, Never>?
+    
+    init(hangout: Hangout) {
+        self.hangout = hangout
+        self._selectedFriends = State(initialValue: hangout.friends)
+        self._attendeeEmails = State(initialValue: hangout.attendeeEmails)
+    }
+    
+    private func syncAttendees() async {
+        guard let googleEventId = hangout.googleEventId else {
+            print("⚠️ No Google Event ID found for hangout: \(hangout.id)")
+            return
+        }
+        
+        // Cancel any existing sync task
+        Self.currentSyncTask?.cancel()
+        
+        // Create a new sync task
+        Self.currentSyncTask = Task {
+            guard !isSyncing else {
+                print("⚠️ Already syncing attendees, skipping...")
+                return
+            }
+            
+            print("🔄 Starting attendee sync for event ID: \(googleEventId)")
+            isSyncing = true
+            defer { isSyncing = false }
+            
+            do {
+                print("📅 Current friends count: \(hangout.friends.count)")
+                print("📅 Current attendee emails count: \(hangout.attendeeEmails.count)")
+                
+                try await calendarManager.syncGoogleEventAttendees(for: hangout)
+                
+                // Update local state
+                if !Task.isCancelled {
+                    await MainActor.run {
+                        selectedFriends = hangout.friends
+                        attendeeEmails = hangout.attendeeEmails
+                    }
+                    
+                    print("✅ Sync completed successfully")
+                    print("📅 Updated friends count: \(selectedFriends.count)")
+                    print("📅 Updated attendee emails count: \(attendeeEmails.count)")
+                }
+            } catch {
+                print("❌ Sync failed with error: \(error)")
+                print("❌ Error description: \(error.localizedDescription)")
+                if let nsError = error as NSError? {
+                    print("❌ Error domain: \(nsError.domain)")
+                    print("❌ Error code: \(nsError.code)")
+                    print("❌ Error user info: \(nsError.userInfo)")
+                }
+                if !Task.isCancelled {
+                    await MainActor.run {
+                        errorMessage = "Failed to sync attendees: \(error.localizedDescription)"
+                    }
+                }
+            }
+        }
+        
+        // Wait for the sync task to complete
+        await Self.currentSyncTask?.value
+    }
+    
+    private func deleteHangout() async {
+        isDeleting = true
+        defer { isDeleting = false }
+        
+        do {
+            // First try to delete from calendar if it exists
+            if let googleEventId = hangout.googleEventId {
+                // Ensure calendar manager is initialized
+                await calendarManager.ensureInitialized()
+                
+                // If not authorized, try to request access
+                if !calendarManager.isGoogleAuthorized {
+                    if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                       let rootViewController = windowScene.windows.first?.rootViewController {
+                        try? await calendarManager.requestGoogleAccess(from: rootViewController)
+                    }
+                }
+                
+                // Only proceed with deletion if we're authorized
+                if calendarManager.isGoogleAuthorized {
+                    try await calendarManager.deleteEvent(eventId: googleEventId, isGoogleEvent: true)
+                } else {
+                    throw CalendarError.unauthorized
+                }
+            }
+            
+            // Delete from local database
+            modelContext.delete(hangout)
+            dismiss()
+        } catch {
+            errorMessage = "Failed to delete event: \(error.localizedDescription)"
+        }
+    }
+    
+    var body: some View {
+        ScrollView {
+            if isDeleting {
+                ProgressView("Deleting event...")
+                    .padding()
+            } else if isSyncing {
+                ProgressView("Syncing attendees...")
+                    .padding()
+            } else {
+                VStack(spacing: 24) {
+                    HangoutHeaderView(title: hangout.title, isRescheduled: hangout.isRescheduled)
+                    
+                    TimeLocationView(
+                        date: hangout.date,
+                        endDate: hangout.endDate,
+                        location: hangout.location
+                    )
+                    
+                    // Attendees Section
+                    VStack(alignment: .leading, spacing: 16) {
+                        HStack {
+                            Text("Attendees")
+                                .font(.headline)
+                                .foregroundColor(AppColors.label)
+                            
+                            Spacer()
+                            
+                            if !hangout.isCompleted {
+                                Button {
+                                    showingFriendPicker = true
+                                } label: {
+                                    Label("Add", systemImage: "person.badge.plus")
+                                        .labelStyle(.iconOnly)
+                                        .foregroundColor(AppColors.accent)
+                                }
+                            }
+                        }
+                        
+                        // Friends Section
+                        if !selectedFriends.isEmpty {
+                            Text("Friends")
+                                .font(.subheadline)
+                                .foregroundColor(AppColors.secondaryLabel)
+                            
+                            ForEach(selectedFriends) { friend in
+                                AttendeeRow(
+                                    name: friend.name,
+                                    email: friend.email,
+                                    initials: friend.initials,
+                                    canRemove: !hangout.isCompleted
+                                ) {
+                                    selectedFriends.removeAll { $0.id == friend.id }
+                                    hangout.friends = selectedFriends
+                                }
+                            }
+                        }
+                        
+                        // Calendar Attendees Section
+                        let nonFriendAttendees = attendeeEmails.filter { email in
+                            !selectedFriends.contains { $0.email == email }
+                        }
+                        
+                        if !nonFriendAttendees.isEmpty {
+                            Text("Calendar Attendees")
+                                .font(.subheadline)
+                                .foregroundColor(AppColors.secondaryLabel)
+                                .padding(.top, 8)
+                            
+                            ForEach(nonFriendAttendees, id: \.self) { email in
+                                AttendeeRow(
+                                    name: email.components(separatedBy: "@").first ?? email,
+                                    email: email,
+                                    initials: String(email.prefix(2).uppercased()),
+                                    canRemove: false
+                                ) {
+                                    // No removal action for calendar attendees
+                                }
+                            }
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal)
+                    
+                    ActionButtonsView(
+                        hangout: hangout,
+                        showingRescheduleSheet: $showingRescheduleSheet,
+                        showingDeleteConfirmation: $showingDeleteConfirmation
+                    )
+                }
+                .padding(.vertical)
+            }
         }
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -263,6 +454,34 @@ struct HangoutDetailView: View {
                 Button("Done") {
                     dismiss()
                 }
+            }
+        }
+        .task {
+            await syncAttendees()
+        }
+        .onReceive(calendarManager.$eventCache.map { _ in Date() }) { _ in
+            Task {
+                await syncAttendees()
+            }
+        }
+        .alert("Delete Event", isPresented: $showingDeleteConfirmation) {
+            Button("Cancel", role: .cancel) { }
+            Button("Delete", role: .destructive) {
+                Task {
+                    await deleteHangout()
+                }
+            }
+        } message: {
+            Text("Are you sure you want to delete this event? This will remove it from your calendar as well.")
+        }
+        .alert("Error", isPresented: .init(
+            get: { errorMessage != nil },
+            set: { if !$0 { errorMessage = nil } }
+        )) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            if let errorMessage = errorMessage {
+                Text(errorMessage)
             }
         }
         .sheet(isPresented: $showingRescheduleSheet) {
@@ -283,18 +502,6 @@ struct HangoutDetailView: View {
                     }
             }
         }
-    }
-    
-    private func formatDate(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .long
-        return formatter.string(from: date)
-    }
-    
-    private func formatTime(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.timeStyle = .short
-        return formatter.string(from: date)
     }
 }
 

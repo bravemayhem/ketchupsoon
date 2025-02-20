@@ -66,6 +66,19 @@ enum AppColors {
             .background(.ultraThinMaterial)
             .blur(radius: 0.5)
     }
+    
+    // Confetti Colors
+    static let confettiColors: [Color] = [
+        Color(hex: "FF7E45"),  // Soft orange (primary)
+        Color(hex: "5856D6"),  // Soft purple
+        Color(hex: "64D2FF"),  // Sky blue
+        Color(hex: "FF2D55"),  // Pink
+        Color(hex: "5856D6"),  // Purple
+        Color(hex: "FF9500"),  // Orange
+        Color(hex: "4CD964"),  // Green
+        Color(hex: "FFCC00"),  // Yellow
+        Color(hex: "FF3B30")   // Red
+    ]
 }
 
 // Helper extension to create colors from hex values

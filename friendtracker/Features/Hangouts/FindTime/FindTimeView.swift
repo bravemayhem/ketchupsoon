@@ -1,50 +1,11 @@
 import SwiftUI
-
-struct TimeSlot: Identifiable, Hashable {
-    let id = UUID()
-    let date: Date
-    let hour: Int
-    let minute: Int
-    
-    var timeString: String {
-        let calendar = Calendar.current
-        var components = DateComponents()
-        components.year = calendar.component(.year, from: date)
-        components.month = calendar.component(.month, from: date)
-        components.day = calendar.component(.day, from: date)
-        components.hour = hour
-        components.minute = minute
-        
-        guard let date = calendar.date(from: components) else { return "" }
-        let formatter = DateFormatter()
-        formatter.timeStyle = .short
-        return formatter.string(from: date)
-    }
-    
-    static func == (lhs: TimeSlot, rhs: TimeSlot) -> Bool {
-        let calendar = Calendar.current
-        return calendar.component(.year, from: lhs.date) == calendar.component(.year, from: rhs.date) &&
-               calendar.component(.month, from: lhs.date) == calendar.component(.month, from: rhs.date) &&
-               calendar.component(.day, from: lhs.date) == calendar.component(.day, from: rhs.date) &&
-               lhs.hour == rhs.hour &&
-               lhs.minute == rhs.minute
-    }
-    
-    func hash(into hasher: inout Hasher) {
-        let calendar = Calendar.current
-        hasher.combine(calendar.component(.year, from: date))
-        hasher.combine(calendar.component(.month, from: date))
-        hasher.combine(calendar.component(.day, from: date))
-        hasher.combine(hour)
-        hasher.combine(minute)
-    }
-}
+import Foundation
 
 @MainActor
 class FindTimeViewModel: ObservableObject {
     @Published var selectedTimeSlots: Set<TimeSlot> = []
     @Published var currentWeekStart: Date = Date()
-    @Published var calendarEvents: [Date: [CalendarManager.CalendarEvent]] = [:]
+    @Published var calendarEvents: [Date: [CalendarEvent]] = [:]
     @Published var isDragging = false
     @Published var dragStartPoint: CGPoint?
     @Published var gridScrollOffset: CGFloat = 0

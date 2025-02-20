@@ -8,6 +8,12 @@ struct WishlistView: View {
     @State private var showingFriendPicker = false
     @State private var selectedFriends: [Friend] = []
     @State private var wishlistOrder: [UUID] = [] // Store UUIDs instead of Strings
+    @State private var showToast = false
+    @Binding var showConfetti: Bool {
+        didSet {
+            print("DEBUG: WishlistView - showConfetti changed to \(showConfetti)")
+        }
+    }
     
     var wishlistFriends: [Friend] {
         let flaggedFriends = friends.filter { friend in
@@ -27,102 +33,138 @@ struct WishlistView: View {
     }
     
     var body: some View {
-        List {
-            Section {
-                Button {
-                    showingFriendPicker = true
-                } label: {
+        ZStack {
+            List {
+                Section {
+                    Button {
+                        showingFriendPicker = true
+                    } label: {
+                        HStack {
+                            Image(systemName: "plus.circle")
+                            Text("Add to Wishlist")
+                        }
+                        .padding()
+                        .frame(maxWidth: .infinity)
+                        .background(AppColors.accent.opacity(0.1))
+                        .foregroundColor(AppColors.accent)
+                        .cornerRadius(10)
+                    }
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                    .padding(.vertical, 8)
+                }
+                
+                if wishlistFriends.isEmpty {
+                    VStack(spacing: 16) {
+                        Spacer()
+                        Image(systemName: "star")
+                            .font(.custom("Cabin-Regular", size: 40))
+                            .foregroundColor(Color.gray)
+                        Text("Wishlist Empty")
+                            .font(.custom("Cabin-Regular", size: 25))
+                            .foregroundColor(Color.gray)
+                        Spacer()
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                } else {
+                    ForEach(wishlistFriends) { friend in
+                        BetterNavigationLink {
+                            FriendListCard(friend: friend)
+                                .friendCardStyle()
+                        } destination: {
+                            FriendExistingView(friend: friend)
+                        }
+                        .buttonStyle(.plain)
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color.clear)
+                        .tint(.clear)
+                        .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                            Button(role: .destructive) {
+                                friend.needsToConnectFlag = false
+                                wishlistOrder.removeAll { $0 == friend.id }
+                            } label: {
+                                Label("Remove", systemImage: "trash")
+                            }
+                            .tint(.red)
+                        }
+                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                            Button {
+                                print("DEBUG: WishlistView - Completed button tapped")
+                                friend.lastSeen = Date()
+                                friend.needsToConnectFlag = false
+                                wishlistOrder.removeAll { $0 == friend.id }
+                                showToast = true
+                                showConfetti = true
+                                
+                                // Hide toast after 2 seconds
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                                    showToast = false
+                                }
+                            } label: {
+                                Label("Completed", systemImage: "checkmark")
+                            }
+                            .tint(.green)
+                        }
+                    }
+                    .onMove { source, destination in
+                        var updatedFriends = wishlistFriends
+                        updatedFriends.move(fromOffsets: source, toOffset: destination)
+                        wishlistOrder = updatedFriends.map { $0.id }
+                    }
+                }
+            }
+            .listStyle(.plain)
+            .navigationDestination(for: Friend.self) { friend in
+                FriendExistingView(friend: friend)
+            }
+            .friendListStyle()
+            .friendSheetPresenter(selectedFriend: $selectedFriend)
+            .sheet(isPresented: $showingFriendPicker) {
+                NavigationStack {
+                    FriendPickerView(selectedFriends: $selectedFriends, selectedTime: nil)
+                        .toolbar {
+                            ToolbarItem(placement: .navigationBarTrailing) {
+                                Button("Done") {
+                                    for friend in selectedFriends {
+                                        friend.needsToConnectFlag = true
+                                        if !wishlistOrder.contains(friend.id) {
+                                            wishlistOrder.append(friend.id)
+                                        }
+                                    }
+                                    selectedFriends = []
+                                    showingFriendPicker = false
+                                }
+                            }
+                            ToolbarItem(placement: .navigationBarLeading) {
+                                Button("Cancel") {
+                                    selectedFriends = []
+                                    showingFriendPicker = false
+                                }
+                            }
+                        }
+                }
+            }
+            .environment(\.editMode, .constant(.inactive))
+            .scrollContentBackground(.hidden)
+            .overlay(alignment: .bottom) {
+                if showToast {
                     HStack {
-                        Image(systemName: "plus.circle")
-                        Text("Add to Wishlist")
+                        Image(systemName: "party.popper.fill")
+                            .foregroundColor(.yellow)
+                        Text("Great job connecting with your friend!")
+                            .foregroundColor(.white)
                     }
                     .padding()
-                    .frame(maxWidth: .infinity)
-                    .background(AppColors.accent.opacity(0.1))
-                    .foregroundColor(AppColors.accent)
+                    .background(Color.black.opacity(0.7))
                     .cornerRadius(10)
-                }
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-                .padding(.vertical, 8)
-            }
-            
-            if wishlistFriends.isEmpty {
-                VStack(spacing: 16) {
-                    Spacer()
-                    Image(systemName: "star")
-                        .font(.custom("Cabin-Regular", size: 40))
-                        .foregroundColor(Color.gray)
-                    Text("Wishlist Empty")
-                        .font(.custom("Cabin-Regular", size: 25))
-                        .foregroundColor(Color.gray)
-                    Spacer()
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-            } else {
-                ForEach(wishlistFriends) { friend in
-                    BetterNavigationLink {
-                        FriendListCard(friend: friend)
-                            .friendCardStyle()
-                    } destination: {
-                        FriendExistingView(friend: friend)
-                    }
-                    .buttonStyle(.plain)
-                    .listRowSeparator(.hidden)
-                    .listRowBackground(Color.clear)
-                    .tint(.clear)
-                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                        Button(role: .destructive) {
-                            friend.needsToConnectFlag = false
-                            wishlistOrder.removeAll { $0 == friend.id }
-                        } label: {
-                            Label("Remove", systemImage: "trash")
-                        }
-                    }
-                }
-                .onMove { source, destination in
-                    var updatedFriends = wishlistFriends
-                    updatedFriends.move(fromOffsets: source, toOffset: destination)
-                    wishlistOrder = updatedFriends.map { $0.id }
+                    .padding(.bottom, 20)
+                    .transition(.move(edge: .bottom))
                 }
             }
+            .animation(.spring(), value: showToast)
         }
-        .listStyle(.plain)
-        .navigationDestination(for: Friend.self) { friend in
-            FriendExistingView(friend: friend)
-        }
-        .friendListStyle()
-        .friendSheetPresenter(selectedFriend: $selectedFriend)
-        .sheet(isPresented: $showingFriendPicker) {
-            NavigationStack {
-                FriendPickerView(selectedFriends: $selectedFriends, selectedTime: nil)
-                    .toolbar {
-                        ToolbarItem(placement: .navigationBarTrailing) {
-                            Button("Done") {
-                                // Add selected friends to wishlist and update order
-                                for friend in selectedFriends {
-                                    friend.needsToConnectFlag = true
-                                    if !wishlistOrder.contains(friend.id) {
-                                        wishlistOrder.append(friend.id)
-                                    }
-                                }
-                                selectedFriends = []
-                                showingFriendPicker = false
-                            }
-                        }
-                        ToolbarItem(placement: .navigationBarLeading) {
-                            Button("Cancel") {
-                                selectedFriends = []
-                                showingFriendPicker = false
-                            }
-                        }
-                    }
-            }
-        }
-        .environment(\.editMode, .constant(.inactive))
-        .scrollContentBackground(.hidden)
     }
 }
 
@@ -134,6 +176,7 @@ struct FriendsWishlistPreviewContainer: View {
     
     let state: PreviewState
     let container: ModelContainer
+    @State private var showConfetti = false
     
     init(state: PreviewState) {
         self.state = state
@@ -210,7 +253,7 @@ struct FriendsWishlistPreviewContainer: View {
     
     var body: some View {
         NavigationStack {
-            WishlistView()
+            WishlistView(showConfetti: $showConfetti)
         }
         .modelContainer(container)
     }
