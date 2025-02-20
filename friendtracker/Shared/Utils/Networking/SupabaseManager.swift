@@ -1,3 +1,16 @@
+/*
+ Supabase functionality is currently not in use. Commented out to simplify the implementation.
+ This includes:
+ - Event storage and management
+ - Attendee management and RSVPs
+ - Invite system
+ - Phone number verification
+ 
+ If these features are needed in the future, uncomment this file and ensure Supabase
+ configuration is properly set up in Info.plist
+*/
+
+/*
 import Foundation
 import Supabase
 
@@ -57,9 +70,11 @@ struct InviteData: Codable {
     let expires_at: String
 }
 
-// Add phone number formatting utilities
-extension String {
-    // Standardize phone number by removing all non-digit characters and adding US country code if needed
+/*
+ Phone number standardization was used for Supabase functionality (event storage, invites, RSVPs).
+ This is currently not needed but may be useful if we reimplement these features.
+ 
+ extension String {
     func standardizedPhoneNumber() -> String {
         let digitsOnly = self.replacingOccurrences(of: "[^0-9]", with: "", options: .regularExpression)
         
@@ -75,6 +90,7 @@ extension String {
         return digitsOnly
     }
 }
+*/
 
 // Add new structures for phone number verification
 struct PhoneNumberParts {
@@ -758,3 +774,4 @@ class SupabaseManager {
         }
     }
 } 
+*/

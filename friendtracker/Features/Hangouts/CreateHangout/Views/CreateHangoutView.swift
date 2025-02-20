@@ -45,32 +45,6 @@ struct CreateHangoutView: View {
                 }
                 
                 ScheduleButtonSection(viewModel: viewModel)
-                
-                // Test Connection Section
-                Section("Supabase Connection") {
-                    Button(action: {
-                        Task {
-                            await viewModel.testSupabaseConnection()
-                        }
-                    }) {
-                        HStack {
-                            Image(systemName: "network")
-                                .foregroundColor(.blue)
-                            Text("Test Connection")
-                            Spacer()
-                            if viewModel.isTestingConnection {
-                                ProgressView()
-                                    .progressViewStyle(CircularProgressViewStyle())
-                            }
-                        }
-                    }
-                    
-                    if let result = viewModel.connectionTestResult {
-                        Text(result)
-                            .font(.footnote)
-                            .foregroundColor(result.contains("✅") ? .green : .red)
-                    }
-                }
             }
             .navigationTitle("Schedule Hangout")
             .navigationBarTitleDisplayMode(.inline)

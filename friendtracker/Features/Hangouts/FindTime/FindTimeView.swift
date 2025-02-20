@@ -279,9 +279,9 @@ struct FindTimeView: View {
         .onChange(of: scrollOffset) { _, newValue in
             viewModel.gridScrollOffset = newValue
         }
-        .sheet(isPresented: $showingPollOptions) {
+   /*   .sheet(isPresented: $showingPollOptions) {
             ScheduleOptionsView(selectedTimeSlots: viewModel.selectedTimeSlots)
-        }
+        } */
     }
     
     private var titleSection: some View {

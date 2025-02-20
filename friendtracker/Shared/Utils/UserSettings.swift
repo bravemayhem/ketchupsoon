@@ -28,7 +28,7 @@ class UserSettings: ObservableObject {
     }
     
     func updatePhoneNumber(_ newValue: String?) {
-        phoneNumber = newValue?.standardizedPhoneNumber()
+        phoneNumber = newValue
         defaults.set(phoneNumber, forKey: Keys.phoneNumber)
     }
     

@@ -152,7 +152,8 @@ class ContactsManager: ObservableObject {
                 await MainActor.run {
                     // Only update contact-sourced information
                     friend.name = "\(contact.givenName) \(contact.familyName)".trimmingCharacters(in: .whitespaces)
-                    friend.phoneNumber = contact.phoneNumbers.first?.value.stringValue.standardizedPhoneNumber()
+                    // Get the first phone number if available
+                    friend.phoneNumber = contact.phoneNumbers.first?.value.stringValue
                     
                     // Handle email addresses
                     let emailAddresses = contact.emailAddresses.map { $0.value as String }

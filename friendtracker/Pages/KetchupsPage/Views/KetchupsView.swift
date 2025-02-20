@@ -243,10 +243,10 @@ struct KetchupsView: View {
             .sheet(isPresented: $showingAllCompleted) {
                 HangoutListView(title: "Completed", hangouts: completedHangouts, maxItems: 10, showConfetti: $showConfetti)
             }
-            .sheet(isPresented: $showingFindTime) {
+        /* .sheet(isPresented: $showingFindTime) {
                 NavigationStack {
                     FindTimeOptionsView()
-                }
+                } */
             }
             .onChange(of: selectedFriend) { _, newValue in
                 if newValue == nil {
@@ -282,7 +282,7 @@ struct KetchupsView: View {
             }
         }
     }
-}
+
 
 #Preview {
     KetchupsView(showConfetti: .constant(false))

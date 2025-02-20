@@ -1,3 +1,4 @@
+/*
 import SwiftUI
 import Foundation
 
@@ -315,3 +316,4 @@ struct PollDetailsView: View {
         PollResponsesView()
     }
 } 
+*/

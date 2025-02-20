@@ -240,12 +240,12 @@ struct ContactPickerView: View {
             
             let city = contact.postalAddresses.first?.value.city
             let friend = Friend(
-                name: "\(contact.givenName) \(contact.familyName)",
+                name: "\(contact.givenName) \(contact.familyName)".trimmingCharacters(in: .whitespaces),
                 location: city,
                 contactIdentifier: contact.identifier,
-                phoneNumber: contact.phoneNumbers.first?.value.stringValue.standardizedPhoneNumber(),
+                phoneNumber: contact.phoneNumbers.first?.value.stringValue,
                 email: contact.emailAddresses.first?.value as String?,
-                photoData: contact.thumbnailImageData
+                photoData: contact.imageData
             )
             modelContext.insert(friend)
         }

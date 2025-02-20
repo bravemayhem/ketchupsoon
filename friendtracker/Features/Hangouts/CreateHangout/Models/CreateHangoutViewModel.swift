@@ -121,10 +121,6 @@ class CreateHangoutViewModel: ObservableObject {
     
     private var pendingEventLink: String?
     
-    @Published var isTestingConnection = false
-    @Published var connectionTestResult: String?
-    
-    
     init(modelContext: ModelContext, initialDate: Date? = nil, initialLocation: String? = nil, initialTitle: String? = nil, initialSelectedFriends: [Friend]? = nil) {
         self.modelContext = modelContext
         self.selectedDate = initialDate ?? Date().addingTimeInterval(3600)
@@ -166,17 +162,6 @@ class CreateHangoutViewModel: ObservableObject {
             print("📍 Location: \(selectedLocation)")
             print("⏱ Duration: \(selectedDuration?.description ?? "default (1 hour)")")
             
-            // Test Supabase connection first
-            do {
-                print("🔄 Testing Supabase connection...")
-                _ = try await SupabaseManager.shared.testConnection()
-                print("✅ Supabase connection successful")
-            } catch {
-                print("❌ Supabase connection failed: \(error)")
-                errorMessage = "Unable to connect to server: \(error.localizedDescription)"
-                return
-            }
-            
             print("📦 Creating local hangout...")
             let hangout = Hangout(
                 date: selectedDate,
@@ -204,29 +189,16 @@ class CreateHangoutViewModel: ObservableObject {
             print("✅ Calendar event created with ID: \(calendarResult.eventId)")
             
             // Store Google Calendar specific information
-            var googleEventLink: String? = nil
             if calendarResult.isGoogleEvent {
-                googleEventLink = calendarResult.htmlLink
-                print("🔗 Google Calendar event link: \(googleEventLink ?? "nil")")
                 hangout.googleEventId = calendarResult.googleEventId
-                hangout.googleEventLink = googleEventLink
+                hangout.googleEventLink = calendarResult.htmlLink
+                print("🔗 Google Calendar event link: \(calendarResult.htmlLink ?? "nil")")
             }
             
-            // Save to Supabase and get web link
-            print("☁️ Saving to Supabase...")
-            if let result = try await SupabaseManager.shared.createEvent(hangout) {
-                print("✅ Saved to Supabase with ID: \(result.eventId)")
-                webLink = SupabaseManager.shared.getWebLink(for: result.eventId, withToken: result.token)
-                print("🔗 Generated web link: \(webLink ?? "nil")")
-                
-                // Store the event link and token with the hangout
-                hangout.eventLink = webLink
-                hangout.eventToken = result.token
-                
-                // Save the updated hangout with all links
-                try modelContext.save()
-                print("✅ Saved hangout with all event links")
-            }
+            // Save the final state
+            try modelContext.save()
+            print("✅ Final save completed")
+            
         } catch {
             print("❌ Error in createHangout: \(error)")
             errorMessage = "Failed to create event: \(error.localizedDescription)"
@@ -306,20 +278,6 @@ class CreateHangoutViewModel: ObservableObject {
         } else {
             return "\(hours)h \(minutes)m"
         }
-    }
-    
-    func testSupabaseConnection() async {
-        isTestingConnection = true
-        connectionTestResult = nil
-        
-        do {
-            _ = try await SupabaseManager.shared.testConnection()
-            connectionTestResult = "✅ Successfully connected to Supabase!"
-        } catch {
-            connectionTestResult = "❌ Connection failed: \(error.localizedDescription)"
-        }
-        
-        isTestingConnection = false
     }
     
     // Update the model context
