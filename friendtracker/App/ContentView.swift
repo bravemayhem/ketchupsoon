@@ -26,7 +26,7 @@ struct ContentView: View {
                     showingDebugAlert: $showingDebugAlert,
                     clearData: clearAllData
                 ) {
-                    KetchupsView()
+                    KetchupsView(showConfetti: $showConfetti)
                 }
                 .tag(0)
                 

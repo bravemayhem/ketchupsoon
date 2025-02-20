@@ -5,12 +5,13 @@ struct HangoutListView: View {
     let title: String
     let hangouts: [Hangout]
     let maxItems: Int
+    @Binding var showConfetti: Bool
     
     var body: some View {
         NavigationStack {
             List {
                 ForEach(hangouts.prefix(maxItems)) { hangout in
-                    HangoutCard(hangout: hangout)
+                    HangoutCard(hangout: hangout, showConfetti: $showConfetti)
                 }
             }
             .navigationTitle(title)
@@ -39,6 +40,6 @@ struct HangoutListView: View {
         )
     ]
     
-    HangoutListView(title: "Upcoming", hangouts: hangouts, maxItems: 10)
+    HangoutListView(title: "Upcoming", hangouts: hangouts, maxItems: 10, showConfetti: .constant(false))
         .modelContainer(for: [Friend.self, Hangout.self], inMemory: true)
 } 

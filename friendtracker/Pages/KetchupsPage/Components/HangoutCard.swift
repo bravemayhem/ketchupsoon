@@ -8,6 +8,7 @@ struct HangoutCard: View {
     @State private var selectedFriend: Friend?
     @State private var showingCompletionPrompt = false
     @State private var showingEventDetails = false
+    @Binding var showConfetti: Bool
     
     
     var statusColor: Color {
@@ -98,7 +99,7 @@ struct HangoutCard: View {
         }
         .friendSheetPresenter(selectedFriend: $selectedFriend)
         .sheet(isPresented: $showingCompletionPrompt) {
-            HangoutCompletionView(hangout: hangout)
+            HangoutCompletionView(hangout: hangout, showConfetti: $showConfetti)
         }
         .sheet(isPresented: $showingEventDetails) {
             NavigationStack {
@@ -119,6 +120,6 @@ struct HangoutCard: View {
         friends: [friend1, friend2]
     )
     
-    return HangoutCard(hangout: hangout)
+    return HangoutCard(hangout: hangout, showConfetti: .constant(false))
         .padding()
 } 
