@@ -69,16 +69,16 @@ struct KetchupsView: View {
     
     var upcomingHangouts: [Hangout] {
         hangouts.filter { hangout in
-            hangout.isScheduled && 
-            hangout.date > Date() && 
+            hangout.isScheduled &&
+            hangout.date > Date() &&
             !hangout.needsReschedule
         }
     }
     
     var pastHangouts: [Hangout] {
         hangouts.filter { hangout in
-            hangout.isScheduled && 
-            hangout.date <= Date() && 
+            hangout.isScheduled &&
+            hangout.date <= Date() &&
             !hangout.isCompleted
         }
     }
@@ -243,11 +243,11 @@ struct KetchupsView: View {
             .sheet(isPresented: $showingAllCompleted) {
                 HangoutListView(title: "Completed", hangouts: completedHangouts, maxItems: 10, showConfetti: $showConfetti)
             }
-        /* .sheet(isPresented: $showingFindTime) {
-                NavigationStack {
-                    FindTimeOptionsView()
-                } */
-            }
+            /* .sheet(isPresented: $showingFindTime) {
+             NavigationStack {
+             FindTimeOptionsView()
+             }
+             }*/
             .onChange(of: selectedFriend) { _, newValue in
                 if newValue == nil {
                     showingScheduler = false
@@ -262,7 +262,7 @@ struct KetchupsView: View {
                 }
                 lastCompletedCount = newCount
             }
-
+            
             if showToast {
                 VStack {
                     Spacer()
@@ -282,7 +282,7 @@ struct KetchupsView: View {
             }
         }
     }
-
+}
 
 #Preview {
     KetchupsView(showConfetti: .constant(false))
