@@ -10,7 +10,7 @@ The friend details section had inconsistent text colors for unset values ("Not s
 - Enhanced user experience by making the interaction state more clear
 
 ## Files Modified
-- `friendtracker/Features/FriendDetail/Components/Atomic/FriendDetailComponents.swift`
+- `ketchupsoon/Features/FriendDetail/Components/Atomic/FriendDetailComponents.swift`
 
 ## Visual Impact
 - More consistent appearance across all friend detail fields

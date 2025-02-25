@@ -1,7 +1,7 @@
 # Notifications Implementation
 
 ## Overview
-Implementation of local notifications system for FriendTracker, supporting both hangout reminders and catch-up frequency notifications.
+Implementation of local notifications system for ketchupsoon, supporting both hangout reminders and catch-up frequency notifications.
 
 ## Components
 

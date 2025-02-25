@@ -1,7 +1,7 @@
 # Tag Selection State Management
 
 ## Overview
-This document describes the implementation of tag selection state management in the FriendTracker app, specifically how we handle tag selection for both existing friends and new friends during onboarding.
+This document describes the implementation of tag selection state management in the ketchupsoon app, specifically how we handle tag selection for both existing friends and new friends during onboarding.
 
 ## Problem
 Initially, the tag selection UI didn't provide proper visual feedback when selecting tags for new friends during onboarding. This was because the tag selection logic was primarily built around existing friends and their tag relationships, but needed to handle a temporary selection state for new friends before they're created.

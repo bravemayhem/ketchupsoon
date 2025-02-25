@@ -11,8 +11,8 @@ The friend details section in both existing friend views and onboarding views ha
 - Improved visual hierarchy with secondary colors for values and placeholders
 
 ## Files Modified
-- `friendtracker/Shared/Components/CitySearchField.swift`
-- `friendtracker/Features/FriendDetail/Components/Atomic/FriendDetailComponents.swift`
+- `ketchupsoon/Shared/Components/CitySearchField.swift`
+- `ketchupsoon/Features/FriendDetail/Components/Atomic/FriendDetailComponents.swift`
 
 ## Visual Impact
 - More professional and polished appearance

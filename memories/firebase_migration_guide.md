@@ -42,7 +42,7 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 
 // If using SwiftUI
 @main
-struct FriendTrackerApp: App {
+struct ketchupsoonApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
     
     var body: some Scene {

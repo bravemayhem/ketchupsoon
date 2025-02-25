@@ -1,0 +1,764 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A54A6A9A2D6D0CF600DC34A4 /* FirebaseInAppMessaging-Beta in Frameworks */ = {isa = PBXBuildFile; productRef = A54A6A992D6D0CF600DC34A4 /* FirebaseInAppMessaging-Beta */; };
+		A54A6A9C2D6D0CF600DC34A4 /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = A54A6A9B2D6D0CF600DC34A4 /* FirebaseMessaging */; };
+		F44347392D5AE4BA00D52D7A /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = F44347382D5AE4BA00D52D7A /* Auth */; };
+		F443473B2D5AE4BA00D52D7A /* Functions in Frameworks */ = {isa = PBXBuildFile; productRef = F443473A2D5AE4BA00D52D7A /* Functions */; };
+		F443473D2D5AE4BA00D52D7A /* PostgREST in Frameworks */ = {isa = PBXBuildFile; productRef = F443473C2D5AE4BA00D52D7A /* PostgREST */; };
+		F443473F2D5AE4BA00D52D7A /* Realtime in Frameworks */ = {isa = PBXBuildFile; productRef = F443473E2D5AE4BA00D52D7A /* Realtime */; };
+		F44347412D5AE4BA00D52D7A /* Storage in Frameworks */ = {isa = PBXBuildFile; productRef = F44347402D5AE4BA00D52D7A /* Storage */; };
+		F443474C2D5AEBE100D52D7A /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = F443474B2D5AEBE100D52D7A /* Supabase */; };
+		F44D7B992D1D24E0008C00CC /* ViewInspector in Frameworks */ = {isa = PBXBuildFile; productRef = F44D7B982D1D24E0008C00CC /* ViewInspector */; };
+		F486A1D52D139CE00011CC59 /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = F486A1D42D139CE00011CC59 /* GoogleSignInSwift */; };
+		F486A1D82D139D710011CC59 /* GoogleAPIClientForREST_Calendar in Frameworks */ = {isa = PBXBuildFile; productRef = F486A1D72D139D710011CC59 /* GoogleAPIClientForREST_Calendar */; };
+		F4F741092D5D921B00217CB6 /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = F4F741082D5D921B00217CB6 /* FirebaseAnalytics */; };
+		F4F7410B2D5D921B00217CB6 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = F4F7410A2D5D921B00217CB6 /* FirebaseAuth */; };
+		F4F7410D2D5D921B00217CB6 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = F4F7410C2D5D921B00217CB6 /* FirebaseFirestore */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		F4070A392D0A184000B11C0B /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = F4070A202D0A183C00B11C0B /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = F4070A272D0A183C00B11C0B;
+			remoteInfo = ketchupsoon;
+		};
+		F4070A432D0A184000B11C0B /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = F4070A202D0A183C00B11C0B /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = F4070A272D0A183C00B11C0B;
+			remoteInfo = ketchupsoon;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		F4070A282D0A183C00B11C0B /* ketchupsoon.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ketchupsoon.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		F4070A382D0A184000B11C0B /* ketchupsoonTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ketchupsoonTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		F4070A422D0A184000B11C0B /* ketchupsoonUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ketchupsoonUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		A58C6E372D6D9062000DDBDD /* Exceptions for "ketchupsoon" folder in "ketchupsoon" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Config.xcconfig,
+				Info.plist,
+			);
+			target = F4070A272D0A183C00B11C0B /* ketchupsoon */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		F4070A2A2D0A183C00B11C0B /* ketchupsoon */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				A58C6E372D6D9062000DDBDD /* Exceptions for "ketchupsoon" folder in "ketchupsoon" target */,
+			);
+			path = ketchupsoon;
+			sourceTree = "<group>";
+		};
+		F4070A3B2D0A184000B11C0B /* ketchupsoonTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = ketchupsoonTests;
+			sourceTree = "<group>";
+		};
+		F4070A452D0A184000B11C0B /* ketchupsoonUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = ketchupsoonUITests;
+			sourceTree = "<group>";
+		};
+		F4C7CEE02D1506BD00716B4C /* Cabin */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Cabin;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		F4070A252D0A183C00B11C0B /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F486A1D52D139CE00011CC59 /* GoogleSignInSwift in Frameworks */,
+				F4F7410B2D5D921B00217CB6 /* FirebaseAuth in Frameworks */,
+				F486A1D82D139D710011CC59 /* GoogleAPIClientForREST_Calendar in Frameworks */,
+				F44347412D5AE4BA00D52D7A /* Storage in Frameworks */,
+				F443473B2D5AE4BA00D52D7A /* Functions in Frameworks */,
+				F443474C2D5AEBE100D52D7A /* Supabase in Frameworks */,
+				F443473F2D5AE4BA00D52D7A /* Realtime in Frameworks */,
+				F44347392D5AE4BA00D52D7A /* Auth in Frameworks */,
+				A54A6A9C2D6D0CF600DC34A4 /* FirebaseMessaging in Frameworks */,
+				F443473D2D5AE4BA00D52D7A /* PostgREST in Frameworks */,
+				F4F7410D2D5D921B00217CB6 /* FirebaseFirestore in Frameworks */,
+				F4F741092D5D921B00217CB6 /* FirebaseAnalytics in Frameworks */,
+				A54A6A9A2D6D0CF600DC34A4 /* FirebaseInAppMessaging-Beta in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F4070A352D0A184000B11C0B /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F44D7B992D1D24E0008C00CC /* ViewInspector in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F4070A3F2D0A184000B11C0B /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		F4070A1F2D0A183C00B11C0B = {
+			isa = PBXGroup;
+			children = (
+				F4070A2A2D0A183C00B11C0B /* ketchupsoon */,
+				F4070A3B2D0A184000B11C0B /* ketchupsoonTests */,
+				F4070A452D0A184000B11C0B /* ketchupsoonUITests */,
+				F4070A292D0A183C00B11C0B /* Products */,
+				F4C7CEE02D1506BD00716B4C /* Cabin */,
+			);
+			sourceTree = "<group>";
+		};
+		F4070A292D0A183C00B11C0B /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				F4070A282D0A183C00B11C0B /* ketchupsoon.app */,
+				F4070A382D0A184000B11C0B /* ketchupsoonTests.xctest */,
+				F4070A422D0A184000B11C0B /* ketchupsoonUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		F4070A272D0A183C00B11C0B /* ketchupsoon */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F4070A4C2D0A184000B11C0B /* Build configuration list for PBXNativeTarget "ketchupsoon" */;
+			buildPhases = (
+				F4070A242D0A183C00B11C0B /* Sources */,
+				F4070A252D0A183C00B11C0B /* Frameworks */,
+				F4070A262D0A183C00B11C0B /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				F4070A2A2D0A183C00B11C0B /* ketchupsoon */,
+				F4C7CEE02D1506BD00716B4C /* Cabin */,
+			);
+			name = ketchupsoon;
+			packageProductDependencies = (
+				F486A1D42D139CE00011CC59 /* GoogleSignInSwift */,
+				F486A1D72D139D710011CC59 /* GoogleAPIClientForREST_Calendar */,
+				F44347382D5AE4BA00D52D7A /* Auth */,
+				F443473A2D5AE4BA00D52D7A /* Functions */,
+				F443473C2D5AE4BA00D52D7A /* PostgREST */,
+				F443473E2D5AE4BA00D52D7A /* Realtime */,
+				F44347402D5AE4BA00D52D7A /* Storage */,
+				F443474B2D5AEBE100D52D7A /* Supabase */,
+				F4F741082D5D921B00217CB6 /* FirebaseAnalytics */,
+				F4F7410A2D5D921B00217CB6 /* FirebaseAuth */,
+				F4F7410C2D5D921B00217CB6 /* FirebaseFirestore */,
+				A54A6A992D6D0CF600DC34A4 /* FirebaseInAppMessaging-Beta */,
+				A54A6A9B2D6D0CF600DC34A4 /* FirebaseMessaging */,
+			);
+			productName = ketchupsoon;
+			productReference = F4070A282D0A183C00B11C0B /* ketchupsoon.app */;
+			productType = "com.apple.product-type.application";
+		};
+		F4070A372D0A184000B11C0B /* ketchupsoonTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F4070A4F2D0A184000B11C0B /* Build configuration list for PBXNativeTarget "ketchupsoonTests" */;
+			buildPhases = (
+				F4070A342D0A184000B11C0B /* Sources */,
+				F4070A352D0A184000B11C0B /* Frameworks */,
+				F4070A362D0A184000B11C0B /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				F4070A3A2D0A184000B11C0B /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				F4070A3B2D0A184000B11C0B /* ketchupsoonTests */,
+			);
+			name = ketchupsoonTests;
+			packageProductDependencies = (
+				F44D7B982D1D24E0008C00CC /* ViewInspector */,
+			);
+			productName = ketchupsoonketchupsoonTests;
+			productReference = F4070A382D0A184000B11C0B /* ketchupsoonTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		F4070A412D0A184000B11C0B /* ketchupsoonUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F4070A522D0A184000B11C0B /* Build configuration list for PBXNativeTarget "ketchupsoonUITests" */;
+			buildPhases = (
+				F4070A3E2D0A184000B11C0B /* Sources */,
+				F4070A3F2D0A184000B11C0B /* Frameworks */,
+				F4070A402D0A184000B11C0B /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				F4070A442D0A184000B11C0B /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				F4070A452D0A184000B11C0B /* ketchupsoonUITests */,
+			);
+			name = ketchupsoonUITests;
+			packageProductDependencies = (
+			);
+			productName = ketchupsoonUITests;
+			productReference = F4070A422D0A184000B11C0B /* ketchupsoonUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		F4070A202D0A183C00B11C0B /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1610;
+				LastUpgradeCheck = 1620;
+				TargetAttributes = {
+					F4070A272D0A183C00B11C0B = {
+						CreatedOnToolsVersion = 16.1;
+					};
+					F4070A372D0A184000B11C0B = {
+						CreatedOnToolsVersion = 16.1;
+						TestTargetID = F4070A272D0A183C00B11C0B;
+					};
+					F4070A412D0A184000B11C0B = {
+						CreatedOnToolsVersion = 16.1;
+						TestTargetID = F4070A272D0A183C00B11C0B;
+					};
+				};
+			};
+			buildConfigurationList = F4070A232D0A183C00B11C0B /* Build configuration list for PBXProject "ketchupsoon" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = F4070A1F2D0A183C00B11C0B;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				F486A1D32D139CE00011CC59 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
+				F486A1D62D139D710011CC59 /* XCRemoteSwiftPackageReference "google-api-objectivec-client-for-rest" */,
+				F44D7B972D1D24E0008C00CC /* XCRemoteSwiftPackageReference "ViewInspector" */,
+				F44347372D5AE4BA00D52D7A /* XCRemoteSwiftPackageReference "supabase-swift" */,
+				F4F741072D5D921B00217CB6 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = F4070A292D0A183C00B11C0B /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				F4070A272D0A183C00B11C0B /* ketchupsoon */,
+				F4070A372D0A184000B11C0B /* ketchupsoonTests */,
+				F4070A412D0A184000B11C0B /* ketchupsoonUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		F4070A262D0A183C00B11C0B /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F4070A362D0A184000B11C0B /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F4070A402D0A184000B11C0B /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		F4070A242D0A183C00B11C0B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F4070A342D0A184000B11C0B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F4070A3E2D0A184000B11C0B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		F4070A3A2D0A184000B11C0B /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = F4070A272D0A183C00B11C0B /* ketchupsoon */;
+			targetProxy = F4070A392D0A184000B11C0B /* PBXContainerItemProxy */;
+		};
+		F4070A442D0A184000B11C0B /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = F4070A272D0A183C00B11C0B /* ketchupsoon */;
+			targetProxy = F4070A432D0A184000B11C0B /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		F4070A4A2D0A184000B11C0B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.1;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		F4070A4B2D0A184000B11C0B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.1;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		F4070A4D2D0A184000B11C0B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = ketchupsoon/ketchupsoon.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"ketchupsoon/Preview Content\"";
+				DEVELOPMENT_TEAM = 7R3ARUF74Q;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ketchupsoon/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Ketchup Soon";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.social-networking";
+				INFOPLIST_KEY_NSCalendarsUsageDescription = "ketchupsoon needs access to your calendar to sync your hangouts and help you stay connected with friends.";
+				INFOPLIST_KEY_NSContactsUsageDescription = "ketchupsoon needs access to your contacts to help you manage and stay in touch with your friends.";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.bravenite.ketchupsoon;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		F4070A4E2D0A184000B11C0B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = ketchupsoon/ketchupsoon.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"ketchupsoon/Preview Content\"";
+				DEVELOPMENT_TEAM = 7R3ARUF74Q;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ketchupsoon/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Ketchup Soon";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.social-networking";
+				INFOPLIST_KEY_NSCalendarsUsageDescription = "ketchupsoon needs access to your calendar to sync your hangouts and help you stay connected with friends.";
+				INFOPLIST_KEY_NSContactsUsageDescription = "ketchupsoon needs access to your contacts to help you manage and stay in touch with your friends.";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.bravenite.ketchupsoon;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		F4070A502D0A184000B11C0B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 29BFDAU9TF;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.1;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "Brooklyn-Beltran.ketchupsoonTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/ketchupsoon.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/ketchupsoon";
+			};
+			name = Debug;
+		};
+		F4070A512D0A184000B11C0B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 29BFDAU9TF;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.1;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "Brooklyn-Beltran.ketchupsoonTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/ketchupsoon.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/ketchupsoon";
+			};
+			name = Release;
+		};
+		F4070A532D0A184000B11C0B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 29BFDAU9TF;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "Brooklyn-Beltran.ketchupsoonUITests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = ketchupsoon;
+			};
+			name = Debug;
+		};
+		F4070A542D0A184000B11C0B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 29BFDAU9TF;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "Brooklyn-Beltran.ketchupsoonUITests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = ketchupsoon;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		F4070A232D0A183C00B11C0B /* Build configuration list for PBXProject "ketchupsoon" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F4070A4A2D0A184000B11C0B /* Debug */,
+				F4070A4B2D0A184000B11C0B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		F4070A4C2D0A184000B11C0B /* Build configuration list for PBXNativeTarget "ketchupsoon" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F4070A4D2D0A184000B11C0B /* Debug */,
+				F4070A4E2D0A184000B11C0B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		F4070A4F2D0A184000B11C0B /* Build configuration list for PBXNativeTarget "ketchupsoonTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F4070A502D0A184000B11C0B /* Debug */,
+				F4070A512D0A184000B11C0B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		F4070A522D0A184000B11C0B /* Build configuration list for PBXNativeTarget "ketchupsoonUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F4070A532D0A184000B11C0B /* Debug */,
+				F4070A542D0A184000B11C0B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		F44347372D5AE4BA00D52D7A /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/supabase-community/supabase-swift.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.5.1;
+			};
+		};
+		F44D7B972D1D24E0008C00CC /* XCRemoteSwiftPackageReference "ViewInspector" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/nalexn/ViewInspector";
+			requirement = {
+				kind = upToNextMinorVersion;
+				minimumVersion = 0.10.1;
+			};
+		};
+		F486A1D32D139CE00011CC59 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/google/GoogleSignIn-iOS.git";
+			requirement = {
+				kind = upToNextMinorVersion;
+				minimumVersion = 8.0.0;
+			};
+		};
+		F486A1D62D139D710011CC59 /* XCRemoteSwiftPackageReference "google-api-objectivec-client-for-rest" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/google/google-api-objectivec-client-for-rest.git";
+			requirement = {
+				kind = upToNextMinorVersion;
+				minimumVersion = 4.0.0;
+			};
+		};
+		F4F741072D5D921B00217CB6 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 11.8.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		A54A6A992D6D0CF600DC34A4 /* FirebaseInAppMessaging-Beta */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F4F741072D5D921B00217CB6 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = "FirebaseInAppMessaging-Beta";
+		};
+		A54A6A9B2D6D0CF600DC34A4 /* FirebaseMessaging */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F4F741072D5D921B00217CB6 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseMessaging;
+		};
+		F44347382D5AE4BA00D52D7A /* Auth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F44347372D5AE4BA00D52D7A /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Auth;
+		};
+		F443473A2D5AE4BA00D52D7A /* Functions */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F44347372D5AE4BA00D52D7A /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Functions;
+		};
+		F443473C2D5AE4BA00D52D7A /* PostgREST */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F44347372D5AE4BA00D52D7A /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = PostgREST;
+		};
+		F443473E2D5AE4BA00D52D7A /* Realtime */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F44347372D5AE4BA00D52D7A /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Realtime;
+		};
+		F44347402D5AE4BA00D52D7A /* Storage */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F44347372D5AE4BA00D52D7A /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Storage;
+		};
+		F443474B2D5AEBE100D52D7A /* Supabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F44347372D5AE4BA00D52D7A /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Supabase;
+		};
+		F44D7B982D1D24E0008C00CC /* ViewInspector */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F44D7B972D1D24E0008C00CC /* XCRemoteSwiftPackageReference "ViewInspector" */;
+			productName = ViewInspector;
+		};
+		F486A1D42D139CE00011CC59 /* GoogleSignInSwift */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F486A1D32D139CE00011CC59 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignInSwift;
+		};
+		F486A1D72D139D710011CC59 /* GoogleAPIClientForREST_Calendar */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F486A1D62D139D710011CC59 /* XCRemoteSwiftPackageReference "google-api-objectivec-client-for-rest" */;
+			productName = GoogleAPIClientForREST_Calendar;
+		};
+		F4F741082D5D921B00217CB6 /* FirebaseAnalytics */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F4F741072D5D921B00217CB6 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAnalytics;
+		};
+		F4F7410A2D5D921B00217CB6 /* FirebaseAuth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F4F741072D5D921B00217CB6 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAuth;
+		};
+		F4F7410C2D5D921B00217CB6 /* FirebaseFirestore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F4F741072D5D921B00217CB6 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFirestore;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = F4070A202D0A183C00B11C0B /* Project object */;
+}

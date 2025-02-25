@@ -12,7 +12,7 @@ The friend management system needed a way to store and display email addresses f
 - Used same styling conventions as other contact fields (accent color for imported contacts, standard color for manual entries)
 
 ## Files Modified
-- `friendtracker/Features/FriendDetail/Components/Atomic/FriendDetailComponents.swift`
+- `ketchupsoon/Features/FriendDetail/Components/Atomic/FriendDetailComponents.swift`
 
 ## Technical Details
 - Email field follows same pattern as phone number field
