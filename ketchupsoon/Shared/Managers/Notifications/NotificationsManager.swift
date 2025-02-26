@@ -47,9 +47,60 @@ class NotificationsManager: ObservableObject {
     }
     
     private func saveTokenToBackend(token: String) {
-        // TODO: Implement API call to your backend to store the user's FCM token
-        // This is important for sending targeted notifications to specific devices
-        print("FCM token should be saved to backend: \(token)")
+        // Implementation to send the FCM token to your backend server
+        guard let url = URL(string: "https://api.ketchupsoon.com/users/register-device") else {
+            print("Invalid API URL")
+            return
+        }
+        
+        // Get the user identifier if logged in
+        let userId = AuthManager.shared.currentUser?.uid ?? "anonymous"
+        
+        // Prepare request body with token and user info
+        let requestBody: [String: Any] = [
+            "token": token,
+            "userId": userId,
+            "deviceType": "ios",
+            "appVersion": Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "unknown"
+        ]
+        
+        // Convert body to JSON data
+        guard let jsonData = try? JSONSerialization.data(withJSONObject: requestBody) else {
+            print("Failed to serialize request body")
+            return
+        }
+        
+        // Create the request
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = jsonData
+        
+        // Send the request without auth header for now
+        // We can add auth header later when needed
+        
+        let task = URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                print("Error sending FCM token to backend: \(error)")
+                return
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse else {
+                print("Invalid response from server")
+                return
+            }
+            
+            if httpResponse.statusCode == 200 || httpResponse.statusCode == 201 {
+                print("FCM token successfully registered with backend")
+            } else {
+                print("Failed to register FCM token with backend: HTTP \(httpResponse.statusCode)")
+                if let data = data, let responseString = String(data: data, encoding: .utf8) {
+                    print("Response: \(responseString)")
+                }
+            }
+        }
+        
+        task.resume()
     }
     
     func requestAuthorization() async throws {
@@ -58,17 +109,30 @@ class NotificationsManager: ObservableObject {
         
         do {
             let granted = try await center.requestAuthorization(options: options)
+            print("🔔 Notification authorization request result: \(granted ? "granted" : "denied")")
+            
+            // Always update status after request
             await updateAuthorizationStatus()
+            print("🔔 Updated authorization status: \(authorizationStatus.rawValue)")
             
             if granted {
                 await MainActor.run {
                     UIApplication.shared.registerForRemoteNotifications()
+                    print("🔔 Registered for remote notifications")
                 }
             }
         } catch {
-            print("Error requesting notification authorization: \(error)")
+            print("🔔 Error requesting notification authorization: \(error)")
+            // Still update status even after error
+            await updateAuthorizationStatus()
             throw error
         }
+    }
+    
+    // Add a debug method to manually refresh status
+    func refreshAuthorizationStatus() async {
+        await updateAuthorizationStatus()
+        print("🔔 Manually refreshed authorization status: \(authorizationStatus.rawValue)")
     }
     
     // MARK: - Firebase Topics

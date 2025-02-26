@@ -7,20 +7,56 @@ struct NotificationSettingsView: View {
     @AppStorage("catchUpNotificationsEnabled") private var catchUpNotificationsEnabled = true
     @State private var customNotificationMessage: String = ""
     @State private var customNotificationTitle: String = "🔔 Test Notification"
-    @State private var showingError = false
-    @State private var errorMessage = ""
+    @State private var showingError: Bool = false
+    @State private var errorMessage: String = ""
+    @State private var showingDebugInfo: Bool = false
     
     private let reminderTimeOptions = [15, 30, 60, 120, 240] // minutes
     
     var body: some View {
         Form {
-            authorizationSection
-            
             if notificationsManager.authorizationStatus == .authorized {
-                catchUpSection
-                hangoutSection
+                notificationSettingsSection
                 testNotificationSection
                 clearNotificationsSection
+            } else {
+                permissionRequestSection
+            }
+            
+            // Add debug section
+            Section("Debug Information") {
+                Button("Show Notification Status") {
+                    Task {
+                        // Force refresh the authorization status
+                        await notificationsManager.refreshAuthorizationStatus()
+                        
+                        await MainActor.run {
+                            showingDebugInfo = true
+                        }
+                        
+                        // Log current status to console
+                        let status = notificationsManager.authorizationStatus
+                        let statusString: String
+                        switch status {
+                        case .notDetermined: statusString = "notDetermined"
+                        case .denied: statusString = "denied"
+                        case .authorized: statusString = "authorized"
+                        case .provisional: statusString = "provisional"
+                        case .ephemeral: statusString = "ephemeral"
+                        @unknown default: statusString = "unknown (\(status.rawValue))"
+                        }
+                        print("🔔 Current notification status: \(statusString)")
+                        
+                        // Also print the FCM token
+                        if let token = notificationsManager.fcmToken {
+                            print("🔔 FCM Token: \(token)")
+                        } else {
+                            print("🔔 FCM Token: Not available")
+                        }
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .frame(maxWidth: .infinity)
             }
         }
         .navigationTitle("Notifications")
@@ -29,44 +65,115 @@ struct NotificationSettingsView: View {
         } message: {
             Text(errorMessage)
         }
+        .alert("Notification Status", isPresented: $showingDebugInfo) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            // Get status string outside of view builder
+            let statusText = {
+                let status = notificationsManager.authorizationStatus
+                let statusString: String
+                switch status {
+                case .notDetermined: statusString = "Not Determined"
+                case .denied: statusString = "Denied"
+                case .authorized: statusString = "Authorized"
+                case .provisional: statusString = "Provisional"
+                case .ephemeral: statusString = "Ephemeral"
+                @unknown default: statusString = "Unknown"
+                }
+                return "Current status: \(statusString)\n\nFCM Token: \(notificationsManager.fcmToken ?? "Not available")"
+            }()
+            
+            Text(statusText)
+        }
     }
     
-    private var authorizationSection: some View {
+    private var permissionRequestSection: some View {
         Section {
-            HStack {
+            VStack(alignment: .leading, spacing: 12) {
                 Label("Push Notifications", systemImage: "bell.badge")
-                Spacer()
-                authorizationStatusView
+                    .font(.headline)
+                
+                Divider()
+                
+                Text("NOTIFICATION SETTINGS")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                Text("Enable push notifications to receive reminders about upcoming hangouts.")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                
+                Button(action: {
+                    requestNotificationPermission()
+                }) {
+                    Text("Enable Push Notifications")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .padding(.top, 8)
+                
+                switch notificationsManager.authorizationStatus {
+                case .denied:
+                    Button("Open Settings") {
+                        if let url = URL(string: UIApplication.openSettingsURLString) {
+                            UIApplication.shared.open(url)
+                        }
+                    }
+                    .font(.caption)
+                    .padding(.top, 4)
+                default:
+                    EmptyView()
+                }
             }
+            .padding(.vertical, 8)
+        }
+    }
+    
+    // Improved permission request function
+    private func requestNotificationPermission() {
+        print("🔔 Request button tapped, current status: \(notificationsManager.authorizationStatus.rawValue)")
+        
+        Task {
+            do {
+                switch notificationsManager.authorizationStatus {
+                case .notDetermined:
+                    // First time request
+                    print("🔔 Requesting permissions for first time...")
+                    try await notificationsManager.requestAuthorization()
+                    print("🔔 Permission request completed, new status: \(notificationsManager.authorizationStatus.rawValue)")
+                    
+                case .denied:
+                    // User previously denied, direct to settings
+                    print("🔔 Status is denied, opening settings...")
+                    if let url = URL(string: UIApplication.openSettingsURLString) {
+                        await MainActor.run {
+                            UIApplication.shared.open(url)
+                        }
+                    }
+                    
+                default:
+                    // Try requesting again (though it likely won't show a dialog)
+                    print("🔔 Status is \(notificationsManager.authorizationStatus.rawValue), attempting request...")
+                    try await notificationsManager.requestAuthorization()
+                    print("🔔 Permission request completed, new status: \(notificationsManager.authorizationStatus.rawValue)")
+                }
+            } catch {
+                print("🔔 Error requesting notification permission: \(error)")
+                await MainActor.run {
+                    errorMessage = "Failed to request notification permission: \(error.localizedDescription)"
+                    showingError = true
+                }
+            }
+        }
+    }
+    
+    private var notificationSettingsSection: some View {
+        Section {
+            catchUpSection
+            hangoutSection
         } header: {
             Text("NOTIFICATION SETTINGS")
         } footer: {
             Text("Enable push notifications to receive reminders about upcoming hangouts.")
-        }
-    }
-    
-    @ViewBuilder
-    private var authorizationStatusView: some View {
-        switch notificationsManager.authorizationStatus {
-        case .authorized:
-            Image(systemName: "checkmark.circle.fill")
-                .foregroundColor(.green)
-        case .denied:
-            Button("Enable in Settings") {
-                if let url = URL(string: UIApplication.openSettingsURLString) {
-                    UIApplication.shared.open(url)
-                }
-            }
-            .foregroundColor(AppColors.accent)
-        case .notDetermined:
-            Button("Enable") {
-                Task {
-                    try? await notificationsManager.requestAuthorization()
-                }
-            }
-            .foregroundColor(AppColors.accent)
-        default:
-            EmptyView()
         }
     }
     
