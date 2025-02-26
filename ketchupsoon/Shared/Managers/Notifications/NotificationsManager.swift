@@ -1,19 +1,19 @@
 import UserNotifications
 import SwiftUI
-import FirebaseMessaging
+// import FirebaseMessaging  // Temporarily commented out for testing
 
 @MainActor
 class NotificationsManager: ObservableObject {
     static let shared = NotificationsManager()
     
     @Published var authorizationStatus: UNAuthorizationStatus = .notDetermined
-    @Published var fcmToken: String?
+    // @Published var fcmToken: String?  // Temporarily commented out for testing
     @AppStorage("catchUpNotificationsEnabled") private var catchUpNotificationsEnabled = true
     
     private init() {
         Task {
             await updateAuthorizationStatus()
-            setupTokenMonitoring()
+            // setupTokenMonitoring()  // Temporarily commented out for testing
         }
     }
     
@@ -22,6 +22,7 @@ class NotificationsManager: ObservableObject {
         self.authorizationStatus = await center.notificationSettings().authorizationStatus
     }
     
+    /* Temporarily commented out for testing
     private func setupTokenMonitoring() {
         // Add observer for FCM token updates
         NotificationCenter.default.addObserver(
@@ -102,6 +103,7 @@ class NotificationsManager: ObservableObject {
         
         task.resume()
     }
+    */
     
     func requestAuthorization() async throws {
         let center = UNUserNotificationCenter.current()
@@ -135,6 +137,7 @@ class NotificationsManager: ObservableObject {
         print("🔔 Manually refreshed authorization status: \(authorizationStatus.rawValue)")
     }
     
+    /* Temporarily commented out for testing
     // MARK: - Firebase Topics
 
     func subscribeToTopic(_ topic: String) {
@@ -156,6 +159,7 @@ class NotificationsManager: ObservableObject {
             }
         }
     }
+    */
     
     // MARK: - Local Notifications
     
@@ -300,6 +304,7 @@ class NotificationsManager: ObservableObject {
             // Schedule notification
             try await center.add(request)
             print("Successfully scheduled test notification with ID: \(identifier)")
+            print("🔔🔔 LOCAL NOTIFICATION SENT (No Firebase required!)")
             
             // Print detailed notification settings for debugging
             print("""
@@ -315,6 +320,31 @@ class NotificationsManager: ObservableObject {
         } catch {
             print("Failed to schedule test notification: \(error)")
             throw error
+        }
+    }
+    
+    // MARK: - Debug Helpers
+    
+    // Add this function to help debug what notifications are pending
+    func listPendingNotifications() async {
+        let center = UNUserNotificationCenter.current()
+        let requests = await center.pendingNotificationRequests()
+        
+        if requests.isEmpty {
+            print("No pending notifications")
+        } else {
+            print("📋 PENDING NOTIFICATIONS (\(requests.count)):")
+            for (index, request) in requests.enumerated() {
+                print("  \(index + 1). ID: \(request.identifier)")
+                print("     Title: \(request.content.title)")
+                print("     Body: \(request.content.body)")
+                if let date = (request.trigger as? UNCalendarNotificationTrigger)?.nextTriggerDate() {
+                    print("     Trigger date: \(date)")
+                } else if let interval = (request.trigger as? UNTimeIntervalNotificationTrigger)?.timeInterval {
+                    print("     Trigger interval: \(interval) seconds")
+                }
+                print("")
+            }
         }
     }
 } 

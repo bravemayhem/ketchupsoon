@@ -8,17 +8,17 @@
 import SwiftUI
 import SwiftData
 import Foundation
-import FirebaseCore
-import FirebaseMessaging
+// import FirebaseCore       // Temporarily commented out for testing
+// import FirebaseMessaging  // Temporarily commented out for testing
 
-class AppDelegate: NSObject, UIApplicationDelegate, MessagingDelegate, UNUserNotificationCenterDelegate {
+class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate { // Removed MessagingDelegate
     func application(_ application: UIApplication,
                     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
         // Configure Firebase
-        FirebaseApp.configure()
+        // FirebaseApp.configure()  // Temporarily commented out for testing
         
         // Configure Firebase Messaging
-        Messaging.messaging().delegate = self
+        // Messaging.messaging().delegate = self  // Temporarily commented out for testing
         
         // Set UNUserNotificationCenter delegate
         UNUserNotificationCenter.current().delegate = self
@@ -27,25 +27,14 @@ class AppDelegate: NSObject, UIApplicationDelegate, MessagingDelegate, UNUserNot
     }
     
     // MARK: - Firebase Cloud Messaging
-    
-    func messaging(_ messaging: Messaging, didReceiveRegistrationToken fcmToken: String?) {
-        print("Firebase registration token: \(String(describing: fcmToken))")
-        
-        // Store this token to your server for sending notifications to this device
-        let dataDict: [String: String] = ["token": fcmToken ?? ""]
-        NotificationCenter.default.post(
-            name: Notification.Name("FCMToken"),
-            object: nil,
-            userInfo: dataDict
-        )
-    }
+    // Temporarily commenting out Firebase-related methods but keeping local notification methods
     
     // MARK: - Remote Notifications
     
     func application(_ application: UIApplication, 
                      didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
         // Pass device token to Firebase Messaging
-        Messaging.messaging().apnsToken = deviceToken
+        // Messaging.messaging().apnsToken = deviceToken
     }
     
     func application(_ application: UIApplication,

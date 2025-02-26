@@ -48,14 +48,24 @@ struct NotificationSettingsView: View {
                         print("🔔 Current notification status: \(statusString)")
                         
                         // Also print the FCM token
+                        /* FCM token display temporarily commented out for testing
                         if let token = notificationsManager.fcmToken {
                             print("🔔 FCM Token: \(token)")
                         } else {
                             print("🔔 FCM Token: Not available")
                         }
+                        */
                     }
                 }
                 .buttonStyle(.borderedProminent)
+                .frame(maxWidth: .infinity)
+                
+                Button("List Pending Notifications") {
+                    Task {
+                        await notificationsManager.listPendingNotifications()
+                    }
+                }
+                .buttonStyle(.bordered)
                 .frame(maxWidth: .infinity)
             }
         }
@@ -80,7 +90,7 @@ struct NotificationSettingsView: View {
                 case .ephemeral: statusString = "Ephemeral"
                 @unknown default: statusString = "Unknown"
                 }
-                return "Current status: \(statusString)\n\nFCM Token: \(notificationsManager.fcmToken ?? "Not available")"
+                return "Current status: \(statusString)"
             }()
             
             Text(statusText)

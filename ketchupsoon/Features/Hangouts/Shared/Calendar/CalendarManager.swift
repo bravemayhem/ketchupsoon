@@ -77,11 +77,22 @@ class CalendarManager: ObservableObject, AppleCalendarServiceDelegate, GoogleCal
     private func initialize() async {
         guard !isInitialized else { return }
         
+        // Add observer for calendar store changes
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleEventStoreChanged),
+            name: .EKEventStoreChanged,
+            object: nil
+        )
+        
         if selectedCalendarType == .apple {
-            await appleAuth.requestAccess()
+            // Check authorization status without requesting access
+            await appleAuth.checkAuthorizationStatus()
             isAuthorized = await appleAuth.isAuthorized
             appleUserEmail = await appleAuth.userEmail
-            await appleMonitoring.startEventMonitoring()
+            if isAuthorized {
+                await appleMonitoring.startEventMonitoring()
+            }
         }
         
         if selectedCalendarType == .google {
@@ -89,7 +100,9 @@ class CalendarManager: ObservableObject, AppleCalendarServiceDelegate, GoogleCal
                 try await googleAuth.setup()
                 isGoogleAuthorized = await googleAuth.isAuthorized
                 googleUserEmail = await googleAuth.userEmail
-                await googleMonitoring.startEventMonitoring()
+                if isGoogleAuthorized {
+                    await googleMonitoring.startEventMonitoring()
+                }
             } catch {
                 print("❌ Failed to setup Google Calendar: \(error)")
                 isGoogleAuthorized = false
@@ -99,6 +112,18 @@ class CalendarManager: ObservableObject, AppleCalendarServiceDelegate, GoogleCal
         
         await loadConnectedCalendars()
         isInitialized = true
+    }
+    
+    @objc private func handleEventStoreChanged() {
+        Task { @MainActor in
+            print("📅 CalendarManager: Calendar database changed externally")
+            await refreshAuthorizationStatus()
+            await refreshTodaysEvents()
+        }
+    }
+    
+    deinit {
+        NotificationCenter.default.removeObserver(self)
     }
     
     func ensureInitialized() async {
@@ -127,12 +152,19 @@ class CalendarManager: ObservableObject, AppleCalendarServiceDelegate, GoogleCal
     // MARK: - Calendar Authorization
     
     func requestAccess() async {
-        if selectedCalendarType == .apple {
-            await appleAuth.requestAccess()
-            isAuthorized = await appleAuth.isAuthorized
-            appleUserEmail = await appleAuth.userEmail
+        print("📅 CalendarManager: requestAccess called - current type: \(selectedCalendarType)")
+        // Always request Apple Calendar access regardless of the current calendar type
+        print("📅 CalendarManager: Requesting Apple Calendar access...")
+        await appleAuth.requestAccess()
+        isAuthorized = await appleAuth.isAuthorized
+        appleUserEmail = await appleAuth.userEmail
+        print("📅 CalendarManager: After request - isAuthorized: \(isAuthorized)")
+        
+        if isAuthorized {
+            print("📅 CalendarManager: Starting Apple Calendar monitoring")
             await appleMonitoring.startEventMonitoring()
         }
+        
         await loadConnectedCalendars()
     }
     
@@ -378,6 +410,19 @@ class CalendarManager: ObservableObject, AppleCalendarServiceDelegate, GoogleCal
         await MainActor.run {
             self.connectedCalendars = calendars
         }
+    }
+    
+    // Add method to refresh the authorization status without requesting access
+    func refreshAuthorizationStatus() async {
+        // Refresh sources from remote if necessary
+        eventStore.refreshSourcesIfNecessary()
+        
+        await appleAuth.checkAuthorizationStatus()
+        isAuthorized = await appleAuth.isAuthorized
+        appleUserEmail = await appleAuth.userEmail
+        
+        isGoogleAuthorized = await googleAuth.isAuthorized
+        googleUserEmail = await googleAuth.userEmail
     }
 }
 

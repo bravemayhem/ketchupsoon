@@ -16,6 +16,7 @@ protocol AppleCalendarEventsProtocol: Actor {
 protocol AppleCalendarAuthProtocol: Actor {
     var isAuthorized: Bool { get }
     var userEmail: String? { get }
+    func checkAuthorizationStatus() async
     func requestAccess() async
 }
 

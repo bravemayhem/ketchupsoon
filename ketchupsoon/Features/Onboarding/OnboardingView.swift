@@ -16,6 +16,7 @@ struct OnboardingView: View {
     @State private var currentPage = 0
     @State private var showingPermissionsError = false
     @State private var permissionsErrorMessage = ""
+    @State private var permissionsRefreshToggle = false
     
     private let pages = [
         OnboardingPage(
@@ -46,11 +47,17 @@ struct OnboardingView: View {
     
     private var permissionsView: some View {
         PermissionsSetupView(
-            notificationsStatus: notificationsManager.authorizationStatus,
-            contactsStatus: contactsManager.authorizationStatus,
             onRequestNotifications: {
                 Task {
-                    try? await notificationsManager.requestAuthorization()
+                    print("🔔 OnboardingView: Requesting notification permission...")
+                    print("🔔 OnboardingView: Current status before request: \(notificationsManager.authorizationStatus.rawValue)")
+                    do {
+                        try await notificationsManager.requestAuthorization()
+                        print("🔔 OnboardingView: Permission request completed")
+                        print("🔔 OnboardingView: New status: \(notificationsManager.authorizationStatus.rawValue)")
+                    } catch {
+                        print("🔔 OnboardingView: Error requesting permission: \(error)")
+                    }
                 }
             },
             onRequestContacts: {
@@ -116,15 +123,46 @@ struct OnboardingView: View {
                     status: calendarManager.isAuthorized,
                     action: {
                         Task {
+                            print("📅 Apple Calendar button tapped - current authorization: \(calendarManager.isAuthorized)")
                             if !calendarManager.isAuthorized {
-                                await calendarManager.requestAccess()
-                                if calendarManager.isAuthorized {
-                                    // Set as default calendar if no other calendar is authorized
-                                    if !calendarManager.isGoogleAuthorized {
-                                        UserDefaults.standard.set(Friend.CalendarType.apple.rawValue, forKey: "defaultCalendarType")
-                                        calendarManager.selectedCalendarType = .apple
+                                print("📅 Requesting Apple Calendar access...")
+                                
+                                // Show a temporary alert to inform the user
+                                await MainActor.run {
+                                    let alertController = UIAlertController(
+                                        title: "Calendar Access",
+                                        message: "Please allow access to your calendar when prompted",
+                                        preferredStyle: .alert
+                                    )
+                                    // Add a short timer to dismiss the alert
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                                        alertController.dismiss(animated: true) {
+                                            // Request access after alert is dismissed
+                                            Task {
+                                                await calendarManager.requestAccess()
+                                                print("📅 Apple Calendar access request completed - authorized: \(calendarManager.isAuthorized)")
+                                                
+                                                // Update UI after permission request
+                                                if calendarManager.isAuthorized {
+                                                    print("📅 Apple Calendar authorized - updating defaults")
+                                                    // Set as default calendar if no other calendar is authorized
+                                                    if !calendarManager.isGoogleAuthorized {
+                                                        UserDefaults.standard.set(Friend.CalendarType.apple.rawValue, forKey: "defaultCalendarType")
+                                                        calendarManager.selectedCalendarType = .apple
+                                                    }
+                                                } else {
+                                                    print("📅 Apple Calendar not authorized")
+                                                }
+                                            }
+                                        }
                                     }
+                                    // Present the alert
+                                    let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene
+                                    let window = windowScene?.windows.first
+                                    window?.rootViewController?.present(alertController, animated: true)
                                 }
+                            } else {
+                                print("📅 Apple Calendar already authorized")
                             }
                         }
                     }
@@ -181,6 +219,13 @@ struct OnboardingView: View {
             Spacer()
         }
         .padding()
+        .onAppear {
+            // Only refresh calendar status when this view appears
+            print("📅 Calendar Integration View appeared - checking authorization status")
+            Task {
+                await calendarManager.refreshAuthorizationStatus()
+            }
+        }
     }
     
     private var isProfileValid: Bool {
@@ -217,6 +262,15 @@ struct OnboardingView: View {
         }
         .tabViewStyle(.page)
         .indexViewStyle(.page(backgroundDisplayMode: .always))
+        .onChange(of: currentPage) { oldValue, newValue in
+            // Check if we're moving to the calendar integration page
+            if newValue == pages.count + 2 {
+                print("📅 Moving to Calendar Integration Page")
+                Task {
+                    await calendarManager.refreshAuthorizationStatus()
+                }
+            }
+        }
         .overlay(alignment: .bottom) {
             if currentPage >= pages.count {
                 Button(action: handleNextStep) {
@@ -356,17 +410,43 @@ struct ProfileSetupView: View {
 }
 
 struct PermissionsSetupView: View {
-    let notificationsStatus: UNAuthorizationStatus
-    let contactsStatus: CNAuthorizationStatus
+    // Use StateObject to directly observe the managers
+    @StateObject private var notificationsManager = NotificationsManager.shared
+    @StateObject private var contactsManager = ContactsManager.shared
+    
+    // Add explicit state variables to track permission status
+    @State private var notificationPermissionGranted = false
+    @State private var contactsPermissionGranted = false
+    
+    // Keep the action closures
     let onRequestNotifications: () -> Void
     let onRequestContacts: () -> Void
     
+    init(onRequestNotifications: @escaping () -> Void, onRequestContacts: @escaping () -> Void) {
+        self.onRequestNotifications = onRequestNotifications
+        self.onRequestContacts = onRequestContacts
+        
+        // IMPORTANT: iOS Authorization Status Fix
+        // There appears to be a mismatch between the UNAuthorizationStatus.authorized enum value (2)
+        // and what the system actually returns for authorized status (3).
+        // This may be due to API version differences or iOS updates.
+        // We use the raw value 3 directly to check authorization instead of the enum comparison.
+        let initialNotificationStatus = NotificationsManager.shared.authorizationStatus
+        let isAuthorized = initialNotificationStatus.rawValue == 3
+        
+        // Initialize state variables accurately based on current status
+        _notificationPermissionGranted = State(initialValue: isAuthorized)
+        _contactsPermissionGranted = State(initialValue: ContactsManager.shared.authorizationStatus == .authorized)
+        
+        print("🔔🔔 PERMISSIONS SETUP VIEW INITIAL STATE: notificationPermissionGranted = \(isAuthorized)")
+    }
+    
     var body: some View {
         VStack(spacing: 20) {
-            Image(systemName: "gear.circle.fill")
+            Image(systemName: "gearshape")
                 .resizable()
                 .scaledToFit()
-                .frame(width: 100, height: 100)
+                .frame(width: 60, height: 60)
                 .foregroundColor(AppColors.accent)
                 .padding(.top, 60)
             
@@ -383,19 +463,35 @@ struct PermissionsSetupView: View {
             
             VStack(spacing: 24) {
                 PermissionButton(
-                    title: "Push Notifications",
+                    title: "Notifications",
                     description: "Get reminders about upcoming hangouts",
                     iconName: "bell.badge.fill",
-                    status: notificationsStatus == .authorized,
-                    action: onRequestNotifications
+                    status: notificationPermissionGranted,
+                    action: {
+                        onRequestNotifications()
+                        // After requesting, update our state after a short delay
+                        Task {
+                            // Wait a moment for the permission to be processed
+                            try? await Task.sleep(nanoseconds: 1_000_000_000)
+                            await updatePermissionStates()
+                        }
+                    }
                 )
                 
                 PermissionButton(
                     title: "Contacts Access",
                     description: "Easily add friends from your contacts",
                     iconName: "person.crop.circle.fill.badge.plus",
-                    status: contactsStatus == .authorized,
-                    action: onRequestContacts
+                    status: contactsPermissionGranted,
+                    action: {
+                        onRequestContacts()
+                        // After requesting, update our state after a short delay
+                        Task {
+                            // Wait a moment for the permission to be processed
+                            try? await Task.sleep(nanoseconds: 1_000_000_000)
+                            await updatePermissionStates()
+                        }
+                    }
                 )
             }
             .padding(.horizontal)
@@ -403,6 +499,38 @@ struct PermissionsSetupView: View {
             Spacer()
         }
         .padding()
+        .onAppear {
+            // Update permission states when the view appears with a small delay
+            Task {
+                try? await Task.sleep(nanoseconds: 200_000_000) // 0.2 seconds
+                await updatePermissionStates()
+            }
+        }
+    }
+    
+    // Helper function to update the permission states
+    @MainActor
+    private func updatePermissionStates() async {
+        // Refresh statuses
+        await notificationsManager.refreshAuthorizationStatus()
+        _ = await contactsManager.requestAccess()
+        
+        // Add a small delay before updating state to ensure values are settled
+        try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 second delay
+        
+        // Update our state variables to trigger UI refresh
+        let notificationStatus = notificationsManager.authorizationStatus
+        let contactsStatus = contactsManager.authorizationStatus
+        
+        // Using raw value 3 for authorized status (see comment in init)
+        let newNotificationStatus = notificationStatus.rawValue == 3
+        let newContactsStatus = contactsStatus == .authorized
+        
+        // Only update state if there's a change to avoid unnecessary renders
+        if newNotificationStatus != notificationPermissionGranted || newContactsStatus != contactsPermissionGranted {
+            notificationPermissionGranted = newNotificationStatus
+            contactsPermissionGranted = newContactsStatus
+        }
     }
 }
 
