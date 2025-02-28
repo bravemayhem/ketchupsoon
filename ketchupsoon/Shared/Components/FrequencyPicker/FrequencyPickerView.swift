@@ -20,7 +20,7 @@ struct FrequencyPickerView: View {
                 Text("Manual Mode")
                     .foregroundColor(AppColors.secondaryLabel)
             } footer: {
-                Text("You'll only be reminded to connect when you manually add this friend to the To Connect list.")
+                Text("You'll only be reminded to connect when you manually add this friend to the wishlist.")
                     .foregroundColor(AppColors.secondaryLabel)
             }
             
@@ -45,7 +45,7 @@ struct FrequencyPickerView: View {
                 Text("Automatic Reminders")
                     .foregroundColor(AppColors.secondaryLabel)
             } footer: {
-                Text("You'll be automatically reminded to connect 3 weeks before the next catch-up is due.")
+                Text("You'll be automatically reminded to connect when the next catch up is due.")
                     .foregroundColor(AppColors.secondaryLabel)
             }
         }
