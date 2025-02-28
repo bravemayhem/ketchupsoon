@@ -56,6 +56,7 @@ final class Friend: Identifiable {
     var email: String?  // Primary email
     var photoData: Data?
     var catchUpFrequency: CatchUpFrequency?
+    var birthday: Date? // Birthday property
     
     /// Additional email addresses for manually added friends.
     /// For friends linked to system contacts (contactIdentifier != nil),
@@ -106,6 +107,7 @@ final class Friend: Identifiable {
          additionalEmails: [String] = [],
          photoData: Data? = nil,
          catchUpFrequency: CatchUpFrequency? = nil,
+         birthday: Date? = nil,
          calendarIntegrationEnabled: Bool = false,
          calendarVisibilityPreference: CalendarVisibilityPreference = .none,
          createdAt: Date = Date()) {
@@ -126,6 +128,7 @@ final class Friend: Identifiable {
         self.email = email
         self.photoData = photoData
         self.catchUpFrequency = catchUpFrequency
+        self.birthday = birthday
         
         // Initialize arrays with empty defaults
         self.additionalEmails = additionalEmails
@@ -170,6 +173,46 @@ final class Friend: Identifiable {
         // Use lastSeen if available, otherwise use createdAt
         let baseDate = lastSeen ?? createdAt
         return Calendar.current.date(byAdding: .day, value: frequency.days, to: baseDate)
+    }
+    
+    // Function to get the number of days until the next birthday
+    var daysUntilNextBirthday: Int? {
+        guard let birthday = birthday else { return nil }
+        
+        let calendar = Calendar.current
+        
+        // Get today's date with time components stripped
+        let today = calendar.startOfDay(for: Date())
+        
+        // Get components for the birthday
+        let birthdayComponents = calendar.dateComponents([.month, .day], from: birthday)
+        
+        // Create a date for this year's birthday
+        var nextBirthdayComponents = DateComponents()
+        nextBirthdayComponents.year = calendar.component(.year, from: today)
+        nextBirthdayComponents.month = birthdayComponents.month
+        nextBirthdayComponents.day = birthdayComponents.day
+        
+        guard let nextBirthday = calendar.date(from: nextBirthdayComponents) else { return nil }
+        
+        // If this year's birthday has passed, use next year's birthday
+        let nextBirthdayDate = nextBirthday < today 
+            ? calendar.date(byAdding: .year, value: 1, to: nextBirthday) ?? nextBirthday
+            : nextBirthday
+        
+        // Calculate days between today and the next birthday
+        let days = calendar.dateComponents([.day], from: today, to: nextBirthdayDate).day
+        return days
+    }
+    
+    // Helper to format birthday for display
+    var formattedBirthday: String? {
+        guard let birthday = birthday else { return nil }
+        
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
+        return formatter.string(from: birthday)
     }
     
     func updateLastSeen(to date: Date? = nil) {

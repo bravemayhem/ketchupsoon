@@ -8,10 +8,11 @@ struct FriendOnboardingView: View {
     @State private var viewModel: FriendDetail.OnboardingViewModel
     @State private var showingTagsSheet = false
     @State private var showingDatePicker = false
+    @State private var showingBirthdayPicker = false
     @State private var cityService = CitySearchService()
     @State private var error: FriendDetail.FriendError?
     @State private var showingError = false
-    @Query(sort: [SortDescriptor<Tag>(\.name)]) private var allTags: [Tag]
+    @Query(sort: [SortDescriptor<Tag>(\.name)], animation: .default) private var allTags: [Tag]
     
     var onComplete: ((Friend?) -> Void)?
     
@@ -57,6 +58,39 @@ struct FriendOnboardingView: View {
                     wantToConnectSoon: $viewModel.wantToConnectSoon
                 )
                 
+                // Birthday Section
+                Section {
+                    Toggle("Has Birthday", isOn: $viewModel.hasBirthday)
+                        .foregroundColor(AppColors.label)
+                    
+                    if viewModel.hasBirthday {
+                        Button(action: {
+                            showingBirthdayPicker = true
+                        }) {
+                            HStack {
+                                Text("Birthday")
+                                    .foregroundColor(AppColors.label)
+                                
+                                Spacer()
+                                
+                                if let birthday = viewModel.birthday {
+                                    Text(birthdayFormatter.string(from: birthday))
+                                        .foregroundColor(AppColors.secondaryLabel)
+                                } else {
+                                    Text("Select a date")
+                                        .foregroundColor(AppColors.secondaryLabel)
+                                }
+                                
+                                Image(systemName: "chevron.right")
+                                    .font(.footnote)
+                                    .foregroundColor(AppColors.tertiaryLabel)
+                            }
+                        }
+                    }
+                } header: {
+                    Text("Personal Info")
+                }
+                
                 FriendCatchUpSection(
                     hasCatchUpFrequency: $viewModel.hasCatchUpFrequency,
                     selectedFrequency: $viewModel.selectedFrequency
@@ -87,6 +121,40 @@ struct FriendOnboardingView: View {
             }
             .sheet(isPresented: $showingDatePicker) {
                 DatePickerView(date: $viewModel.lastSeenDate, isPresented: $showingDatePicker)
+            }
+            .sheet(isPresented: $showingBirthdayPicker) {
+                NavigationStack {
+                    VStack {
+                        DatePicker(
+                            "Birthday",
+                            selection: Binding(
+                                get: { viewModel.birthday ?? Date() },
+                                set: { viewModel.birthday = $0 }
+                            ),
+                            displayedComponents: [.date]
+                        )
+                        .datePickerStyle(.graphical)
+                        .padding()
+                    }
+                    .navigationTitle("Select Birthday")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Cancel") {
+                                showingBirthdayPicker = false
+                            }
+                        }
+                        
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Save") {
+                                if viewModel.birthday == nil {
+                                    viewModel.birthday = Date()
+                                }
+                                showingBirthdayPicker = false
+                            }
+                        }
+                    }
+                }
             }
             .alert("Cannot Add Friend", isPresented: $showingError, presenting: error) { _ in
                 Button("OK", role: .cancel) { }
@@ -122,6 +190,14 @@ struct FriendOnboardingView: View {
             dismiss()
         }
     }
+}
+
+// Date formatter for displaying birthdays
+private var birthdayFormatter: DateFormatter {
+    let formatter = DateFormatter()
+    formatter.dateStyle = .medium
+    formatter.timeStyle = .none
+    return formatter
 }
 
 #Preview("From Contacts") {

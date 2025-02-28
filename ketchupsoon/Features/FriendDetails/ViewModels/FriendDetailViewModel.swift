@@ -114,6 +114,8 @@ enum FriendDetail {
         var selectedFrequency: CatchUpFrequency = .monthly
         var wantToConnectSoon = false
         var selectedTags: Set<Tag> = []
+        var birthday: Date? = nil
+        var hasBirthday = false
         let input: NewFriendInput?
         
         // Sheet states
@@ -144,28 +146,40 @@ enum FriendDetail {
         }
         
         private func checkForDuplicates(in modelContext: ModelContext) throws {
-            // Check for duplicate contact if importing from contacts
-            if let identifier = input?.identifier {
-                let contactDescriptor = FetchDescriptor<Friend>(
-                    predicate: #Predicate<Friend> { friend in
-                        friend.contactIdentifier == identifier
+            // For manual entry, check for duplicate names
+            if !isFromContacts && !friendName.isEmpty {
+                let descriptors = [SortDescriptor(\Friend.name)]
+                let predicate = #Predicate<Friend> { $0.name == friendName }
+                let fetchDescriptor = FetchDescriptor<Friend>(predicate: predicate, sortBy: descriptors)
+                
+                do {
+                    let duplicates = try modelContext.fetch(fetchDescriptor)
+                    if !duplicates.isEmpty {
+                        throw FriendError.duplicateName
                     }
-                )
-                if let _ = try modelContext.fetch(contactDescriptor).first {
-                    throw FriendError.duplicateContact
+                } catch let fetchError as FriendError {
+                    throw fetchError
+                } catch {
+                    print("Error checking for duplicate names: \(error)")
                 }
             }
             
-            // Check for duplicate name
-            let name = displayName.trimmingCharacters(in: .whitespacesAndNewlines)
-            let allFriendsDescriptor = FetchDescriptor<Friend>()
-            let existingFriends = try modelContext.fetch(allFriendsDescriptor)
-            
-            // Check for case-insensitive name match in memory
-            if existingFriends.contains(where: { friend in
-                friend.name.localizedCaseInsensitiveCompare(name) == .orderedSame
-            }) {
-                throw FriendError.duplicateName
+            // For contacts import, check for duplicate contacts
+            if let identifier = input?.identifier {
+                let descriptors = [SortDescriptor(\Friend.name)]
+                let predicate = #Predicate<Friend> { $0.contactIdentifier == identifier }
+                let fetchDescriptor = FetchDescriptor<Friend>(predicate: predicate, sortBy: descriptors)
+                
+                do {
+                    let duplicates = try modelContext.fetch(fetchDescriptor)
+                    if !duplicates.isEmpty {
+                        throw FriendError.duplicateContact
+                    }
+                } catch let fetchError as FriendError {
+                    throw fetchError
+                } catch {
+                    print("Error checking for duplicate contacts: \(error)")
+                }
             }
         }
         
@@ -182,6 +196,7 @@ enum FriendDetail {
                 email: isFromContacts ? input?.email : (email.isEmpty ? nil : email),
                 photoData: input?.imageData,
                 catchUpFrequency: hasCatchUpFrequency ? selectedFrequency : nil,
+                birthday: hasBirthday ? birthday : nil,
                 calendarIntegrationEnabled: false,
                 calendarVisibilityPreference: .none
             )

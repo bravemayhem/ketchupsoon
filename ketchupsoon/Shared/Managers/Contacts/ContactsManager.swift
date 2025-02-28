@@ -25,7 +25,8 @@ class ContactsManager: ObservableObject {
         CNContactImageDataKey as CNKeyDescriptor,
         CNContactThumbnailImageDataKey as CNKeyDescriptor,
         CNContactPostalAddressesKey as CNKeyDescriptor,
-        CNContactIdentifierKey as CNKeyDescriptor
+        CNContactIdentifierKey as CNKeyDescriptor,
+        CNContactBirthdayKey as CNKeyDescriptor
     ]
     
     private let keysToFetch: [CNKeyDescriptor] = baseKeys
@@ -166,6 +167,18 @@ class ContactsManager: ObservableObject {
                     
                     friend.location = contact.postalAddresses.first?.value.city
                     friend.photoData = contact.thumbnailImageData
+                    
+                    // Get birthday if available
+                    if let birthdayComponents = contact.birthday {
+                        // Create a date from the birthday components
+                        // Note: We set year to current year if not provided to create a valid date
+                        let calendar = Calendar.current
+                        var components = birthdayComponents
+                        if components.year == nil {
+                            components.year = calendar.component(.year, from: Date())
+                        }
+                        friend.birthday = calendar.date(from: components)
+                    }
                     
                     // Do not modify user preferences during sync
                     // friend.needsToConnectFlag = false  // Removed

@@ -20,11 +20,13 @@ struct FriendInfoExistingSection: View {
     private enum ActiveSheet: Identifiable {
         case contact
         case addEmail
+        case birthday
         
         var id: Int {
             switch self {
             case .contact: return 1
             case .addEmail: return 2
+            case .birthday: return 3
             }
         }
     }
@@ -105,6 +107,27 @@ struct FriendInfoExistingSection: View {
                 manualEmailView
             }
             
+            // Birthday
+            Button {
+                activeSheet = .birthday
+            } label: {
+                HStack {
+                    Text("Birthday")
+                        .foregroundColor(AppColors.label)
+                    Spacer()
+                    if let birthday = friend.birthday {
+                        Text(formatBirthday(birthday))
+                            .foregroundColor(AppColors.secondaryLabel)
+                    } else {
+                        Text("Not set")
+                            .foregroundColor(AppColors.tertiaryLabel)
+                    }
+                    Image(systemName: "chevron.right")
+                        .font(.footnote)
+                        .foregroundColor(AppColors.tertiaryLabel)
+                }
+            }
+            
             // City
             CitySearchField(service: cityService)
         }
@@ -160,6 +183,44 @@ struct FriendInfoExistingSection: View {
                     }
                 }
                 .presentationDetents([.medium])
+            case .birthday:
+                NavigationStack {
+                    VStack {
+                        DatePicker(
+                            "Birthday",
+                            selection: Binding(
+                                get: { friend.birthday ?? Date() },
+                                set: { friend.birthday = $0 }
+                            ),
+                            displayedComponents: [.date]
+                        )
+                        .datePickerStyle(.graphical)
+                        .padding()
+                    }
+                    .navigationTitle("Select Birthday")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Cancel") {
+                                activeSheet = nil
+                            }
+                        }
+                        
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Save") {
+                                activeSheet = nil
+                            }
+                        }
+                        
+                        ToolbarItem(placement: .destructiveAction) {
+                            Button("Clear") {
+                                friend.birthday = nil
+                                activeSheet = nil
+                            }
+                            .foregroundColor(.red)
+                        }
+                    }
+                }
             }
         }
         .alert("Error", isPresented: $showingError) {
@@ -365,6 +426,13 @@ struct FriendInfoExistingSection: View {
         await MainActor.run {
             isUpdatingContact = false
         }
+    }
+    
+    private func formatBirthday(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
+        return formatter.string(from: date)
     }
 }
 
