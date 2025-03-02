@@ -1,0 +1,3 @@
+[submodule "ketchupsoon-web"]
+	path = ketchupsoon-web
+	url = git@github.com:bravemayhem/friendtracker-web.git
