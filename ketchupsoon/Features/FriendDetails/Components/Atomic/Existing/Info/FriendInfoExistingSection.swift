@@ -122,9 +122,6 @@ struct FriendInfoExistingSection: View {
                         Text("Not set")
                             .foregroundColor(AppColors.tertiaryLabel)
                     }
-                    Image(systemName: "chevron.right")
-                        .font(.footnote)
-                        .foregroundColor(AppColors.tertiaryLabel)
                 }
             }
             

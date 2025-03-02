@@ -58,39 +58,6 @@ struct FriendOnboardingView: View {
                     wantToConnectSoon: $viewModel.wantToConnectSoon
                 )
                 
-                // Birthday Section
-                Section {
-                    Toggle("Has Birthday", isOn: $viewModel.hasBirthday)
-                        .foregroundColor(AppColors.label)
-                    
-                    if viewModel.hasBirthday {
-                        Button(action: {
-                            showingBirthdayPicker = true
-                        }) {
-                            HStack {
-                                Text("Birthday")
-                                    .foregroundColor(AppColors.label)
-                                
-                                Spacer()
-                                
-                                if let birthday = viewModel.birthday {
-                                    Text(birthdayFormatter.string(from: birthday))
-                                        .foregroundColor(AppColors.secondaryLabel)
-                                } else {
-                                    Text("Select a date")
-                                        .foregroundColor(AppColors.secondaryLabel)
-                                }
-                                
-                                Image(systemName: "chevron.right")
-                                    .font(.footnote)
-                                    .foregroundColor(AppColors.tertiaryLabel)
-                            }
-                        }
-                    }
-                } header: {
-                    Text("Personal Info")
-                }
-                
                 FriendCatchUpSection(
                     hasCatchUpFrequency: $viewModel.hasCatchUpFrequency,
                     selectedFrequency: $viewModel.selectedFrequency
