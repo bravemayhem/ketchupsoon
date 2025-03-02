@@ -32,5 +32,9 @@
 	<string>Ketchup Soon</string>
 	<key>GIDClientID</key>
 	<string>558448152377-448mdad95e743dnankqcrevjs1oruf8g.apps.googleusercontent.com</string>
+	<key>NSContactsUsageDescription</key>
+	<string>Ketchup Soon needs access to your contacts to help you add friends to the app.</string>
+	<key>NSUserNotificationsUsageDescription</key>
+	<string>Ketchup Soon sends you notifications about upcoming hangouts with friends.</string>
 </dict>
 </plist>

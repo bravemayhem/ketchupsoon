@@ -77,10 +77,34 @@ class NotificationsManager: ObservableObject {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = jsonData
         
-        // Send the request without auth header for now
-        // We can add auth header later when needed
+        // Add authentication header if user is logged in
+        if let user = AuthManager.shared.currentUser {
+            Task {
+                do {
+                    let idToken = try await user.getIDToken()
+                    request.setValue("Bearer \(idToken)", forHTTPHeaderField: "Authorization")
+                    
+                    // Send request with auth token
+                    sendTokenRequest(request)
+                } catch {
+                    print("Error getting auth token: \(error)")
+                    // Send request without auth token as fallback
+                    sendTokenRequest(request)
+                }
+            }
+        } else {
+            // Send request without auth token
+            sendTokenRequest(request)
+        }
+    }
+    
+    private func sendTokenRequest(_ request: URLRequest) {
+        // Configure a secure session
+        let configuration = URLSessionConfiguration.default
+        configuration.timeoutIntervalForRequest = 30
+        let session = URLSession(configuration: configuration)
         
-        let task = URLSession.shared.dataTask(with: request) { data, response, error in
+        let task = session.dataTask(with: request) { data, response, error in
             if let error = error {
                 print("Error sending FCM token to backend: \(error)")
                 return

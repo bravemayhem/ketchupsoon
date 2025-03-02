@@ -94,3 +94,8 @@ yarn-error.log*
 # MCP Server Scripts
 start-mcp.sh
 start-supabase-mcp.sh
+
+# Security documentation (private)
+Security_README.md
+iOS_Security_Checklist.md
+generate_firebase_dsyms.sh
