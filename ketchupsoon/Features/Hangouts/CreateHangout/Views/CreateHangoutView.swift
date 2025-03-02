@@ -7,6 +7,9 @@ struct CreateHangoutView: View {
     @Environment(\.modelContext) private var modelContext
     @StateObject private var viewModel: CreateHangoutViewModel
     @State private var showingFriendPicker = false
+    @State private var localTitle: String = ""
+    @FocusState private var isEditingTitle: Bool
+    @State private var isViewLoaded = false
     let onEventCreated: (() -> Void)?
     
     init(initialDate: Date? = nil, initialLocation: String? = nil, initialTitle: String? = nil, initialSelectedFriends: [Friend]? = nil, onEventCreated: (() -> Void)? = nil) {
@@ -23,6 +26,9 @@ struct CreateHangoutView: View {
         
         self.onEventCreated = onEventCreated
         
+        // Initialize localTitle in init to avoid delays in onAppear
+        _localTitle = State(initialValue: initialTitle ?? "")
+        
         // Configure UIDatePicker to snap to 5-minute intervals
         UIDatePicker.appearance().minuteInterval = 5
     }
@@ -31,7 +37,27 @@ struct CreateHangoutView: View {
         NavigationStack {
             Form {
                 Section("Hangout Title") {
-                    TextField("Enter title", text: $viewModel.hangoutTitle)
+                    // Use a local state variable for the text field to optimize updates
+                    TextField("Enter title", text: $localTitle)
+                        .onAppear {
+                            // Only set this once when the view appears
+                            if !isViewLoaded {
+                                localTitle = viewModel.hangoutTitle
+                                isViewLoaded = true
+                            }
+                        }
+                        .onChange(of: localTitle) { oldValue, newValue in
+                            // Only update viewModel when editing is finished or after a short delay
+                            if !isEditingTitle {
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                    viewModel.hangoutTitle = newValue
+                                }
+                            }
+                        }
+                        .onSubmit {
+                            viewModel.hangoutTitle = localTitle
+                        }
+                        .focused($isEditingTitle)
                 }
                 
                 FriendsSection(viewModel: viewModel, showingFriendPicker: $showingFriendPicker)
@@ -41,7 +67,16 @@ struct CreateHangoutView: View {
                 DateTimeSection(viewModel: viewModel)
                 
                 Section("Location") {
-                    TextField("Enter location", text: $viewModel.selectedLocation)
+                    // Let's also optimize the location text field
+                    TextField("Enter location", text: Binding(
+                        get: { viewModel.selectedLocation },
+                        set: { newValue in
+                            // Debounce updates to reduce layout recalculations
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                viewModel.selectedLocation = newValue
+                            }
+                        }
+                    ))
                 }
                 
                 ScheduleButtonSection(viewModel: viewModel)
