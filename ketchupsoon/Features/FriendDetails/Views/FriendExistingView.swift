@@ -16,8 +16,6 @@ struct FriendExistingView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var viewModel: FriendDetail.ViewModel
     @State private var cityService = CitySearchService()
-    @State private var showingBirthdayPicker = false
-    @State private var selectedBirthday: Date?
     
     init(friend: Friend) {
         self._viewModel = State(initialValue: FriendDetail.ViewModel(friend: friend))
@@ -28,7 +26,6 @@ struct FriendExistingView: View {
             service.selectedCity = location
         }
         self._cityService = State(initialValue: service)
-        self._selectedBirthday = State(initialValue: friend.birthday)
     }
     
     var body: some View {
@@ -54,34 +51,6 @@ struct FriendExistingView: View {
                             viewModel.showingFrequencyPicker = true
                         }
                     )
-                    
-                    // Birthday Section
-                    Section {
-                        Button(action: {
-                            showingBirthdayPicker = true
-                        }) {
-                            HStack {
-                                Text("Birthday")
-                                    .foregroundColor(AppColors.label)
-                                
-                                Spacer()
-                                
-                                if let birthday = viewModel.friend.birthday {
-                                    Text(birthdayFormatter.string(from: birthday))
-                                        .foregroundColor(AppColors.secondaryLabel)
-                                } else {
-                                    Text("Not set")
-                                        .foregroundColor(AppColors.secondaryLabel)
-                                }
-                                
-                                Image(systemName: "chevron.right")
-                                    .font(.footnote)
-                                    .foregroundColor(AppColors.tertiaryLabel)
-                            }
-                        }
-                    } header: {
-                        Text("Personal")
-                    }
                 }
                 
                 if config.showsTags {
@@ -120,47 +89,6 @@ struct FriendExistingView: View {
             date: $viewModel.lastSeenDate,
             onSave: viewModel.updateLastSeenDate
         )
-        .sheet(isPresented: $showingBirthdayPicker) {
-            NavigationStack {
-                VStack {
-                    DatePicker(
-                        "Birthday",
-                        selection: Binding(
-                            get: { selectedBirthday ?? Date() },
-                            set: { selectedBirthday = $0 }
-                        ),
-                        displayedComponents: [.date]
-                    )
-                    .datePickerStyle(.graphical)
-                    .padding()
-                }
-                .navigationTitle("Select Birthday")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button("Cancel") {
-                            showingBirthdayPicker = false
-                        }
-                    }
-                    
-                    ToolbarItem(placement: .confirmationAction) {
-                        Button("Save") {
-                            viewModel.friend.birthday = selectedBirthday
-                            showingBirthdayPicker = false
-                        }
-                    }
-                    
-                    ToolbarItem(placement: .destructiveAction) {
-                        Button("Clear") {
-                            selectedBirthday = nil
-                            viewModel.friend.birthday = nil
-                            showingBirthdayPicker = false
-                        }
-                        .foregroundColor(.red)
-                    }
-                }
-            }
-        }
         .sheet(isPresented: $viewModel.showingFrequencyPicker) {
             NavigationStack {
                 FrequencyPickerView(friend: viewModel.friend)
@@ -189,14 +117,6 @@ struct FriendExistingView: View {
         .onChange(of: cityService.selectedCity) { _, newCity in
             viewModel.friend.location = newCity
         }
-    }
-    
-    // Date formatter specifically for displaying birthdays
-    private var birthdayFormatter: DateFormatter {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .none
-        return formatter
     }
 }
 
