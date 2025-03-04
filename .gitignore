@@ -73,7 +73,7 @@ fastlane/test_output
 # After new code Injection tools there's a generated folder /iOSInjectionProject
 # https://github.com/johnno1962/injectionforxcode
 
-iOSInjectionProject/ friendtracker.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved
+iOSInjectionProject/ ketchupsoon.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved
 
 # Node.js
 node_modules/
@@ -95,8 +95,5 @@ yarn-error.log*
 start-mcp.sh
 start-supabase-mcp.sh
 
-# Security documentation (private)
-Security_README.md
-iOS_Security_Checklist.md
-generate_firebase_dsyms.sh
-ketchupsoon-web-backup/
+# IDE specific files
+.cursor/
