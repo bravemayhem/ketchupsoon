@@ -97,3 +97,9 @@ start-supabase-mcp.sh
 
 # IDE specific files
 .cursor/
+
+# Security documentation (private)
+Security_README.md
+iOS_Security_Checklist.md
+generate_firebase_dsyms.sh
+ketchupsoon-web-backup/
