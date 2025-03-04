@@ -5,8 +5,8 @@ struct NotificationSettingsView: View {
     @StateObject private var notificationsManager = NotificationsManager.shared
     @AppStorage("defaultReminderTime") private var defaultReminderTime: Int = 60 // minutes
     @AppStorage("catchUpNotificationsEnabled") private var catchUpNotificationsEnabled = true
-    @State private var customNotificationMessage: String = ""
-    @State private var customNotificationTitle: String = "🔔 Test Notification"
+    @AppStorage("birthdayNotificationsEnabled") private var birthdayNotificationsEnabled = true
+    @AppStorage("birthdayReminderDays") private var birthdayReminderDays: Int = 0 // days (0 = day of)
     @State private var showingError: Bool = false
     @State private var errorMessage: String = ""
     @State private var showingDebugInfo: Bool = false
@@ -15,15 +15,75 @@ struct NotificationSettingsView: View {
     
     var body: some View {
         Form {
-            if notificationsManager.authorizationStatus == .authorized {
-                notificationSettingsSection
-                testNotificationSection
-                clearNotificationsSection
+            if notificationsManager.authorizationStatus == .authorized || notificationsManager.authorizationStatus == .provisional {
+                // Catch-up reminders section
+                Section {
+                    Toggle("Catch-up Reminders", isOn: $catchUpNotificationsEnabled)
+                        .onChange(of: catchUpNotificationsEnabled) { _, newValue in
+                            notificationsManager.toggleCatchUpNotifications(newValue)
+                        }
+                } header: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "arrow.triangle.2.circlepath")
+                            .foregroundColor(AppColors.accent)
+                        Text("CATCH-UP NOTIFICATIONS")
+                    }
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                } footer: {
+                    Text("Receive reminders when it's time to catch up with friends based on their preferred frequency.")
+                }
+                
+                // Hangout reminders section
+                Section {
+                    Picker("Default Reminder Time", selection: $defaultReminderTime) {
+                        ForEach(reminderTimeOptions, id: \.self) { minutes in
+                            Text(formatMinutes(minutes)).tag(minutes)
+                        }
+                    }
+                } header: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "calendar")
+                            .foregroundColor(AppColors.accent)
+                        Text("HANGOUT REMINDERS")
+                    }
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                } footer: {
+                    Text("Choose how long before a hangout you'd like to receive a reminder notification.")
+                }
+                
+                // Birthday reminders section
+                Section {
+                    Toggle("Birthday Reminders", isOn: $birthdayNotificationsEnabled)
+                } header: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "gift")
+                            .foregroundColor(AppColors.accent)
+                        Text("BIRTHDAY REMINDERS")
+                    }
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                } footer: {
+                    Text("Get notified on your friends' birthdays so you can wish them a happy birthday.")
+                }
+                
+                // Clear notifications section
+                Section {
+                    Button(role: .destructive) {
+                        Task {
+                            await notificationsManager.cancelAllNotifications()
+                        }
+                    } label: {
+                        Label("Clear All Notifications", systemImage: "bell.slash")
+                    }
+                }
             } else {
                 permissionRequestSection
             }
             
-            // Add debug section
+            // Debug section (only visible during development)
+            #if DEBUG
             Section("Debug Information") {
                 Button("Show Notification Status") {
                     Task {
@@ -46,15 +106,6 @@ struct NotificationSettingsView: View {
                         @unknown default: statusString = "unknown (\(status.rawValue))"
                         }
                         print("🔔 Current notification status: \(statusString)")
-                        
-                        // Also print the FCM token
-                        /* FCM token display temporarily commented out for testing
-                        if let token = notificationsManager.fcmToken {
-                            print("🔔 FCM Token: \(token)")
-                        } else {
-                            print("🔔 FCM Token: Not available")
-                        }
-                        */
                     }
                 }
                 .buttonStyle(.borderedProminent)
@@ -68,6 +119,7 @@ struct NotificationSettingsView: View {
                 .buttonStyle(.bordered)
                 .frame(maxWidth: .infinity)
             }
+            #endif
         }
         .navigationTitle("Notifications")
         .alert("Notification Error", isPresented: $showingError) {
@@ -86,7 +138,8 @@ struct NotificationSettingsView: View {
                 case .notDetermined: statusString = "Not Determined"
                 case .denied: statusString = "Denied"
                 case .authorized: statusString = "Authorized"
-                case .provisional: statusString = "Provisional"
+                case .provisional: 
+                    return "Current status: Provisional\n\nProvisional status means notifications are enabled but delivered quietly. This is why the button appears not to work - notifications are actually already enabled, but in provisional mode."
                 case .ephemeral: statusString = "Ephemeral"
                 @unknown default: statusString = "Unknown"
                 }
@@ -105,21 +158,20 @@ struct NotificationSettingsView: View {
                 
                 Divider()
                 
-                Text("NOTIFICATION SETTINGS")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
                 Text("Enable push notifications to receive reminders about upcoming hangouts.")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
+                    .padding(.vertical, 4)
                 
                 Button(action: {
                     requestNotificationPermission()
                 }) {
-                    Text("Enable Push Notifications")
+                    Text(notificationsManager.authorizationStatus == .provisional ? "Notifications Already Enabled" : "Enable Push Notifications")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
                 .padding(.top, 8)
+                .disabled(notificationsManager.authorizationStatus == .provisional)
                 
                 switch notificationsManager.authorizationStatus {
                 case .denied:
@@ -130,6 +182,11 @@ struct NotificationSettingsView: View {
                     }
                     .font(.caption)
                     .padding(.top, 4)
+                case .provisional:
+                    Text("Notifications are enabled in provisional mode. You can upgrade to full notification permissions in device settings.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .padding(.top, 4)
                 default:
                     EmptyView()
                 }
@@ -176,95 +233,6 @@ struct NotificationSettingsView: View {
         }
     }
     
-    private var notificationSettingsSection: some View {
-        Section {
-            catchUpSection
-            hangoutSection
-        } header: {
-            Text("NOTIFICATION SETTINGS")
-        } footer: {
-            Text("Enable push notifications to receive reminders about upcoming hangouts.")
-        }
-    }
-    
-    private var catchUpSection: some View {
-        Section {
-            Toggle("Catch-up Reminders", isOn: $catchUpNotificationsEnabled)
-                .onChange(of: catchUpNotificationsEnabled) { _, newValue in
-                    notificationsManager.toggleCatchUpNotifications(newValue)
-                }
-        } header: {
-            Text("CATCH-UP NOTIFICATIONS")
-        } footer: {
-            Text("Receive reminders when it's time to catch up with friends based on their preferred frequency.")
-        }
-    }
-    
-    private var hangoutSection: some View {
-        Section {
-            Picker("Default Reminder Time", selection: $defaultReminderTime) {
-                ForEach(reminderTimeOptions, id: \.self) { minutes in
-                    Text(formatMinutes(minutes)).tag(minutes)
-                }
-            }
-        } header: {
-            Text("HANGOUT REMINDERS")
-        } footer: {
-            Text("Choose how long before a hangout you'd like to receive a reminder notification.")
-        }
-    }
-    
-    private var testNotificationSection: some View {
-        Section {
-            TextField("Custom Title", text: $customNotificationTitle)
-            TextField("Custom Message (Optional)", text: $customNotificationMessage)
-            
-            ForEach(CatchUpFrequency.allCases, id: \.self) { frequency in
-                Button(action: {
-                    Task {
-                        do {
-                            try await notificationsManager.sendTestNotification(
-                                for: frequency,
-                                title: customNotificationTitle,
-                                customMessage: customNotificationMessage.isEmpty ? nil : customNotificationMessage
-                            )
-                            print("Test notification sent successfully for \(frequency.displayText)")
-                        } catch {
-                            await MainActor.run {
-                                errorMessage = "Failed to send notification: \(error.localizedDescription)"
-                                showingError = true
-                            }
-                            print("Failed to send test notification: \(error)")
-                        }
-                    }
-                }) {
-                    HStack {
-                        Text("Test \(frequency.displayText) Notification")
-                        Spacer()
-                        Image(systemName: "bell.badge")
-                            .foregroundColor(AppColors.accent)
-                    }
-                }
-            }
-        } header: {
-            Text("TEST NOTIFICATIONS")
-        } footer: {
-            Text("Send test notifications immediately to verify your notification settings. Customize the message if desired.")
-        }
-    }
-    
-    private var clearNotificationsSection: some View {
-        Section {
-            Button(role: .destructive) {
-                Task {
-                    await notificationsManager.cancelAllNotifications()
-                }
-            } label: {
-                Label("Clear All Notifications", systemImage: "bell.slash")
-            }
-        }
-    }
-    
     private func formatMinutes(_ minutes: Int) -> String {
         if minutes >= 60 {
             let hours = minutes / 60
@@ -272,4 +240,10 @@ struct NotificationSettingsView: View {
         }
         return "\(minutes) minutes before"
     }
-} 
+}
+
+#Preview {
+    NavigationStack {
+        NotificationSettingsView()
+    }
+}
