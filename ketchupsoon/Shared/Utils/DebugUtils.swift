@@ -50,3 +50,14 @@ extension View {
     }
 }
 #endif 
+
+// Simple app environment detection
+extension Bundle {
+    var isDebug: Bool {
+        #if DEBUG
+        return true
+        #else
+        return false
+        #endif
+    }
+} 

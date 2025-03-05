@@ -48,6 +48,8 @@ struct SettingsView: View {
                     }
                 }
                 
+                // Only show Data section in debug builds, not in TestFlight or production
+                #if DEBUG
                 Section("Data") {
                     Button(role: .destructive) {
                         showingClearDataAlert = true
@@ -60,6 +62,7 @@ struct SettingsView: View {
                         Label("Delete Data Store", systemImage: "trash.slash")
                     }
                 }
+                #endif
             }
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.large)

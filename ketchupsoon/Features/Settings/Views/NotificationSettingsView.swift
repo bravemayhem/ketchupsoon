@@ -7,6 +7,7 @@ struct NotificationSettingsView: View {
     @AppStorage("catchUpNotificationsEnabled") private var catchUpNotificationsEnabled = true
     @AppStorage("birthdayNotificationsEnabled") private var birthdayNotificationsEnabled = true
     @AppStorage("birthdayReminderDays") private var birthdayReminderDays: Int = 0 // days (0 = day of)
+    @AppStorage("allNotificationsEnabled") private var allNotificationsEnabled = true
     @State private var showingError: Bool = false
     @State private var errorMessage: String = ""
     @State private var showingDebugInfo: Bool = false
@@ -16,12 +17,40 @@ struct NotificationSettingsView: View {
     var body: some View {
         Form {
             if notificationsManager.authorizationStatus == .authorized || notificationsManager.authorizationStatus == .provisional {
+                // Master toggle for all notifications
+                Section {
+                    Toggle("All Notifications", isOn: $allNotificationsEnabled)
+                        .onChange(of: allNotificationsEnabled) { _, newValue in
+                            if !newValue {
+                                // When turning off all notifications, disable catch-up notifications
+                                // but preserve the state of individual toggles
+                                notificationsManager.toggleCatchUpNotifications(false)
+                            } else if catchUpNotificationsEnabled {
+                                // Only re-enable catch-up notifications if they were on before
+                                notificationsManager.toggleCatchUpNotifications(true)
+                            }
+                        }
+                } header: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "bell")
+                            .foregroundColor(AppColors.accent)
+                        Text("NOTIFICATION SETTINGS")
+                    }
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                } footer: {
+                    Text("Master switch for notifications. When off, all notifications are disabled. When on, use the toggles below to choose which types of notifications you want to receive.")
+                }
+                
                 // Catch-up reminders section
                 Section {
                     Toggle("Catch-up Reminders", isOn: $catchUpNotificationsEnabled)
                         .onChange(of: catchUpNotificationsEnabled) { _, newValue in
-                            notificationsManager.toggleCatchUpNotifications(newValue)
+                            if allNotificationsEnabled {
+                                notificationsManager.toggleCatchUpNotifications(newValue)
+                            }
                         }
+                        .disabled(!allNotificationsEnabled)
                 } header: {
                     HStack(spacing: 8) {
                         Image(systemName: "arrow.triangle.2.circlepath")
@@ -41,6 +70,7 @@ struct NotificationSettingsView: View {
                             Text(formatMinutes(minutes)).tag(minutes)
                         }
                     }
+                    .disabled(!allNotificationsEnabled)
                 } header: {
                     HStack(spacing: 8) {
                         Image(systemName: "calendar")
@@ -56,6 +86,7 @@ struct NotificationSettingsView: View {
                 // Birthday reminders section
                 Section {
                     Toggle("Birthday Reminders", isOn: $birthdayNotificationsEnabled)
+                        .disabled(!allNotificationsEnabled)
                 } header: {
                     HStack(spacing: 8) {
                         Image(systemName: "gift")
@@ -66,17 +97,6 @@ struct NotificationSettingsView: View {
                     .foregroundColor(.secondary)
                 } footer: {
                     Text("Get notified on your friends' birthdays so you can wish them a happy birthday.")
-                }
-                
-                // Clear notifications section
-                Section {
-                    Button(role: .destructive) {
-                        Task {
-                            await notificationsManager.cancelAllNotifications()
-                        }
-                    } label: {
-                        Label("Clear All Notifications", systemImage: "bell.slash")
-                    }
                 }
             } else {
                 permissionRequestSection
