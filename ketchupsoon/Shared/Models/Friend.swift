@@ -48,6 +48,7 @@ final class Friend: Identifiable {
     var lastSeen: Date?
     var location: String?
     var contactIdentifier: String?
+    var firebaseUserId: String? // Firebase user ID for linked Ketchupsoon users
     private var _phoneNumber: String?
     var phoneNumber: String? {
         get { _phoneNumber }
@@ -110,6 +111,7 @@ final class Friend: Identifiable {
          birthday: Date? = nil,
          calendarIntegrationEnabled: Bool = false,
          calendarVisibilityPreference: CalendarVisibilityPreference = .none,
+         firebaseUserId: String? = nil,
          createdAt: Date = Date()) {
         
         // Initialize required properties
@@ -129,6 +131,7 @@ final class Friend: Identifiable {
         self.photoData = photoData
         self.catchUpFrequency = catchUpFrequency
         self.birthday = birthday
+        self.firebaseUserId = firebaseUserId
         
         // Initialize arrays with empty defaults
         self.additionalEmails = additionalEmails

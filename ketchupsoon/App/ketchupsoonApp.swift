@@ -8,14 +8,16 @@
 import SwiftUI
 import SwiftData
 import Foundation
-// import FirebaseCore       // Temporarily commented out for testing
+import FirebaseAuth
+import FirebaseCore
+import FirebaseFirestore       // Add this line to import Firestore
 // import FirebaseMessaging  // Temporarily commented out for testing
 
 class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate { // Removed MessagingDelegate
     func application(_ application: UIApplication,
                     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
         // Configure Firebase
-        // FirebaseApp.configure()  // Temporarily commented out for testing
+        FirebaseApp.configure()  // Uncomment to enable Firebase
         
         // Configure Firebase Messaging
         // Messaging.messaging().delegate = self  // Temporarily commented out for testing
@@ -23,7 +25,28 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         // Set UNUserNotificationCenter delegate
         UNUserNotificationCenter.current().delegate = self
         
+        // Schedule Firebase user lookup for existing friends
+        DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) {
+            Task {
+                await self.checkForFirebaseUsersInContacts()
+            }
+        }
+        
         return true
+    }
+    
+    // MARK: - Firebase User Lookup
+    
+    func checkForFirebaseUsersInContacts() async {
+        // Get model context
+        let sharedModelContainer = try? ModelContainer(for: Friend.self)
+        guard let context = sharedModelContainer?.mainContext else {
+            print("⚠️ Failed to get SwiftData context")
+            return
+        }
+        
+        // Search for existing users in Firebase
+        await FirebaseUserSearchService.shared.checkExistingFriendsForFirebaseUsers(in: context)
     }
     
     // MARK: - Firebase Cloud Messaging
@@ -76,6 +99,7 @@ struct ketchupsoonApp: App {
     let container: ModelContainer
     @StateObject private var colorSchemeManager = ColorSchemeManager.shared
     @StateObject private var calendarManager = CalendarManager.shared
+    @StateObject private var profileManager = UserProfileManager.shared  // Initialize UserProfileManager
     @Environment(\.scenePhase) private var scenePhase
     
     init() {

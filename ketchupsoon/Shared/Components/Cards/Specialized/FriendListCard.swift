@@ -50,6 +50,27 @@ struct FriendListCard: View {
                                 .cardSecondaryText()
                         }
                     }
+                    
+                    // Ketchupsoon user badge
+                    if friend.firebaseUserId != nil {
+                        HStack(spacing: 4) {
+                            Image(systemName: "person.crop.circle.badge.checkmark")
+                                .font(AppTheme.captionFont)
+                                .foregroundColor(.green)
+                                .frame(width: 15, alignment: .center)
+                            Text("Ketchupsoon User")
+                                .foregroundColor(.green)
+                                .cardSecondaryText()
+                        }
+                    }
+                }
+            }
+            .overlay(alignment: .topTrailing) {
+                if friend.firebaseUserId != nil {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundColor(.green)
+                        .background(Circle().fill(Color.white))
+                        .offset(x: 6, y: -6)
                 }
             }
         }
@@ -78,6 +99,14 @@ struct FriendListCard: View {
         FriendListCard(friend: Friend(
             name: "Basic Friend",
             phoneNumber: "123-456-7890"
+        ))
+        
+        // Friend with Firebase ID (Ketchupsoon user)
+        FriendListCard(friend: Friend(
+            name: "Ketchupsoon User",
+            location: "Online",
+            phoneNumber: "123-456-7890",
+            firebaseUserId: "firebase-id-123"
         ))
     }
     .padding()

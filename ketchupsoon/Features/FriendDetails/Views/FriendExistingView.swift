@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import FirebaseFirestore
 #if canImport(MessageUI)
 import MessageUI
 #endif
@@ -16,6 +17,9 @@ struct FriendExistingView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var viewModel: FriendDetail.ViewModel
     @State private var cityService = CitySearchService()
+    @State private var showingFirebaseProfile = false
+    @State private var firebaseProfile: UserProfile?
+    @State private var isLoadingFirebaseProfile = false
     
     init(friend: Friend) {
         self._viewModel = State(initialValue: FriendDetail.ViewModel(friend: friend))
@@ -31,6 +35,29 @@ struct FriendExistingView: View {
     var body: some View {
         BaseFriendForm(configuration: FormConfiguration.existing) { config in
             Group {
+                // Ketchupsoon account badge
+                if viewModel.friend.firebaseUserId != nil {
+                    Section {
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                Image(systemName: "person.crop.circle.badge.checkmark")
+                                    .foregroundColor(.green)
+                                Text("Ketchupsoon User")
+                                    .font(.headline)
+                                    .foregroundColor(.green)
+                                Spacer()
+                                Button("View Profile") {
+                                    loadFirebaseProfile()
+                                }
+                                .font(.subheadline)
+                                .foregroundColor(AppColors.accent)
+                            }
+                        }
+                        .padding(.vertical, 4)
+                    }
+                    .listRowBackground(Color.green.opacity(0.1))
+                }
+                
                 if config.showsLocation || config.showsLastSeen || config.showsName || config.showsCatchUpFrequency {
                     FriendInfoExistingSection(
                         friend: viewModel.friend,
@@ -114,8 +141,140 @@ struct FriendExistingView: View {
                 )
             }
         }
+        .sheet(isPresented: $showingFirebaseProfile) {
+            if let profile = firebaseProfile {
+                FirebaseUserProfileSheet(profile: profile)
+            } else if isLoadingFirebaseProfile {
+                VStack {
+                    ProgressView()
+                    Text("Loading profile...")
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(AppColors.systemBackground)
+            }
+        }
         .onChange(of: cityService.selectedCity) { _, newCity in
             viewModel.friend.location = newCity
+        }
+        // Check for Firebase profile updates if needed
+        .task {
+            if let firebaseId = viewModel.friend.firebaseUserId {
+                checkForFirebaseProfileUpdates(userId: firebaseId)
+            }
+        }
+    }
+    
+    private func loadFirebaseProfile() {
+        guard let firebaseId = viewModel.friend.firebaseUserId else { return }
+        
+        isLoadingFirebaseProfile = true
+        showingFirebaseProfile = true
+        
+        Task {
+            do {
+                // Fetch from Firestore
+                let db = Firestore.firestore()
+                let docRef = db.collection("users").document(firebaseId)
+                let document = try await docRef.getDocument()
+                
+                if let data = document.data(), let userId = data["id"] as? String {
+                    // Convert Firestore data to UserProfile
+                    let name = data["name"] as? String
+                    let email = data["email"] as? String
+                    let phoneNumber = data["phoneNumber"] as? String
+                    let bio = data["bio"] as? String
+                    let profileImageURL = data["profileImageURL"] as? String
+                    
+                    var createdAt = Date()
+                    if let createdTimestamp = data["createdAt"] as? TimeInterval {
+                        createdAt = Date(timeIntervalSince1970: createdTimestamp)
+                    }
+                    
+                    var updatedAt = Date() 
+                    if let updatedTimestamp = data["updatedAt"] as? TimeInterval {
+                        updatedAt = Date(timeIntervalSince1970: updatedTimestamp)
+                    }
+                    
+                    let profile = UserProfile(
+                        id: userId,
+                        name: name,
+                        email: email,
+                        phoneNumber: phoneNumber,
+                        bio: bio,
+                        profileImageURL: profileImageURL,
+                        createdAt: createdAt,
+                        updatedAt: updatedAt
+                    )
+                    
+                    await MainActor.run {
+                        firebaseProfile = profile
+                        isLoadingFirebaseProfile = false
+                    }
+                } else {
+                    await MainActor.run {
+                        isLoadingFirebaseProfile = false
+                    }
+                }
+            } catch {
+                print("Error loading Firebase profile: \(error)")
+                await MainActor.run {
+                    isLoadingFirebaseProfile = false
+                }
+            }
+        }
+    }
+    
+    private func checkForFirebaseProfileUpdates(userId: String) {
+        Task {
+            do {
+                // Fetch user profile
+                let db = Firestore.firestore()
+                let docRef = db.collection("users").document(userId)
+                let document = try await docRef.getDocument()
+                
+                guard let data = document.data() else { return }
+                
+                // Check if local data is up-to-date
+                var needsUpdate = false
+                let friend = viewModel.friend
+                
+                // Compare name
+                if let name = data["name"] as? String, name != friend.name {
+                    friend.name = name
+                    needsUpdate = true
+                }
+                
+                // Compare email
+                if let email = data["email"] as? String, email != friend.email {
+                    friend.email = email
+                    needsUpdate = true
+                }
+                
+                // Compare phone number
+                if let phoneNumber = data["phoneNumber"] as? String, phoneNumber != friend.phoneNumber {
+                    // Only update if the friend wasn't from contacts (to avoid overwriting contact info)
+                    if friend.contactIdentifier == nil {
+                        friend.phoneNumber = phoneNumber
+                        needsUpdate = true
+                    }
+                }
+                
+                // Handle profile image
+                if let profileImageURL = data["profileImageURL"] as? String, 
+                   let url = URL(string: profileImageURL) {
+                    // Only download if we don't have an image already
+                    if friend.photoData == nil {
+                        // This is a placeholder - you'd implement actual image loading
+                        print("Profile image available at: \(url)")
+                    }
+                }
+                
+                if needsUpdate {
+                    print("Updated friend with Firebase profile data")
+                }
+            } catch {
+                print("Error checking Firebase profile updates: \(error)")
+            }
         }
     }
 }

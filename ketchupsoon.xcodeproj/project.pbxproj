@@ -55,6 +55,20 @@
 			);
 			target = F4070A272D0A183C00B11C0B /* ketchupsoon */;
 		};
+		A58C6FEF2D78D91D000DDBDD /* Exceptions for "ketchupsoon" folder in "ketchupsoonTests" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				"GoogleService-Info.plist",
+			);
+			target = F4070A372D0A184000B11C0B /* ketchupsoonTests */;
+		};
+		A58C6FF02D78D91D000DDBDD /* Exceptions for "ketchupsoon" folder in "ketchupsoonUITests" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				"GoogleService-Info.plist",
+			);
+			target = F4070A412D0A184000B11C0B /* ketchupsoonUITests */;
+		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -62,6 +76,8 @@
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				A58C6E372D6D9062000DDBDD /* Exceptions for "ketchupsoon" folder in "ketchupsoon" target */,
+				A58C6FEF2D78D91D000DDBDD /* Exceptions for "ketchupsoon" folder in "ketchupsoonTests" target */,
+				A58C6FF02D78D91D000DDBDD /* Exceptions for "ketchupsoon" folder in "ketchupsoonUITests" target */,
 			);
 			path = ketchupsoon;
 			sourceTree = "<group>";
@@ -469,7 +485,7 @@
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = ketchupsoon/ketchupsoon.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1.1;
+				CURRENT_PROJECT_VERSION = 1.2;
 				DEVELOPMENT_ASSET_PATHS = "\"ketchupsoon/Preview Content\"";
 				DEVELOPMENT_TEAM = 7R3ARUF74Q;
 				ENABLE_PREVIEWS = YES;
@@ -505,7 +521,7 @@
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = ketchupsoon/ketchupsoon.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1.1;
+				CURRENT_PROJECT_VERSION = 1.2;
 				DEVELOPMENT_ASSET_PATHS = "\"ketchupsoon/Preview Content\"";
 				DEVELOPMENT_TEAM = 7R3ARUF74Q;
 				ENABLE_PREVIEWS = YES;

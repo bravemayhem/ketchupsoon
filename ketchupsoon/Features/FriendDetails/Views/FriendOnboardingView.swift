@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import FirebaseFirestore
 
 // MARK: - Updated FriendOnboardingView
 struct FriendOnboardingView: View {
@@ -12,6 +13,9 @@ struct FriendOnboardingView: View {
     @State private var cityService = CitySearchService()
     @State private var error: FriendDetail.FriendError?
     @State private var showingError = false
+    @State private var foundFirebaseUser: UserProfile?
+    @State private var isCheckingFirebase = false
+    @State private var showFirebaseUserInfoSheet = false
     @Query(sort: [SortDescriptor<Tag>(\.name)], animation: .default) private var allTags: [Tag]
     
     var onComplete: ((Friend?) -> Void)?
@@ -40,6 +44,43 @@ struct FriendOnboardingView: View {
     var body: some View {
         NavigationStack {
             Form {
+                // Firebase profile status section
+                if foundFirebaseUser != nil {
+                    Section {
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundColor(.green)
+                                Text("Ketchupsoon User Found")
+                                    .font(.headline)
+                                    .foregroundColor(.green)
+                                Spacer()
+                                Button("View Profile") {
+                                    showFirebaseUserInfoSheet = true
+                                }
+                                .font(.subheadline)
+                                .foregroundColor(AppColors.accent)
+                            }
+                            
+                            Text("This person has a Ketchupsoon account. Their profile information will be used.")
+                                .font(.subheadline)
+                                .foregroundColor(AppColors.secondaryLabel)
+                        }
+                        .padding(.vertical, 4)
+                    }
+                    .listRowBackground(Color.green.opacity(0.1))
+                } else if isCheckingFirebase {
+                    Section {
+                        HStack {
+                            ProgressView()
+                                .scaleEffect(0.8)
+                            Text("Checking for Ketchupsoon account...")
+                                .font(.subheadline)
+                                .foregroundColor(AppColors.secondaryLabel)
+                        }
+                    }
+                }
+                
                 FriendOnboardingDetailsSection(
                     isFromContacts: viewModel.isFromContacts,
                     contact: viewModel.input,
@@ -123,12 +164,55 @@ struct FriendOnboardingView: View {
                     }
                 }
             }
+            .sheet(isPresented: $showFirebaseUserInfoSheet) {
+                if let profile = foundFirebaseUser {
+                    FirebaseUserProfileSheet(profile: profile)
+                }
+            }
             .alert("Cannot Add Friend", isPresented: $showingError, presenting: error) { _ in
                 Button("OK", role: .cancel) { }
             } message: { error in
                 Text(error.message)
             }
+            .task {
+                await checkForFirebaseUser()
+            }
         }
+    }
+    
+    private func checkForFirebaseUser() async {
+        // Only check if we have an email or phone number
+        guard let input = viewModel.input,
+              (input.email != nil && !input.email!.isEmpty) || 
+              (input.phoneNumber != nil && !input.phoneNumber!.isEmpty) else {
+            return
+        }
+        
+        isCheckingFirebase = true
+        
+        let firebaseService = FirebaseUserSearchService.shared
+        
+        // Try email first
+        if let email = input.email, !email.isEmpty {
+            let foundUser = await firebaseService.searchUsers(byEmailOrPhone: email)
+            if foundUser && !firebaseService.searchResults.isEmpty {
+                foundFirebaseUser = firebaseService.searchResults.first
+                isCheckingFirebase = false
+                return
+            }
+        }
+        
+        // Try phone if email didn't match
+        if let phone = input.phoneNumber, !phone.isEmpty {
+            let foundUser = await firebaseService.searchUsers(byEmailOrPhone: phone)
+            if foundUser && !firebaseService.searchResults.isEmpty {
+                foundFirebaseUser = firebaseService.searchResults.first
+                isCheckingFirebase = false
+                return
+            }
+        }
+        
+        isCheckingFirebase = false
     }
     
     private func handleCancel() {
@@ -138,6 +222,36 @@ struct FriendOnboardingView: View {
     
     private func handleAdd() {
         viewModel.selectedCity = cityService.selectedCity
+        
+        // If we found a Firebase user, create Friend with that connection
+        if let firebaseUser = foundFirebaseUser {
+            let friend = FirebaseUserSearchService.shared.createFriendFromFirebaseUser(
+                firebaseUser, 
+                in: modelContext
+            )
+            
+            // Apply any additional settings from the form
+            friend.location = cityService.selectedCity
+            friend.needsToConnectFlag = viewModel.wantToConnectSoon
+            
+            if viewModel.hasCatchUpFrequency {
+                friend.catchUpFrequency = viewModel.selectedFrequency
+            }
+            
+            if viewModel.hasLastSeen {
+                friend.lastSeen = viewModel.lastSeenDate
+            }
+            
+            // Apply tags
+            friend.tags = Array(viewModel.selectedTags)
+            
+            // Handle completion
+            onComplete?(friend)
+            dismiss()
+            return
+        }
+        
+        // Otherwise, create a regular friend
         do {
             let friend = try viewModel.createFriend(in: modelContext)
             onComplete?(friend)
@@ -156,6 +270,114 @@ struct FriendOnboardingView: View {
             onComplete?(nil)
             dismiss()
         }
+    }
+}
+
+// Firebase user profile sheet to show more details
+struct FirebaseUserProfileSheet: View {
+    let profile: UserProfile
+    @Environment(\.dismiss) private var dismiss
+    
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    // Profile image
+                    HStack {
+                        Spacer()
+                        if let photoURL = profile.profileImageURL,
+                           !photoURL.isEmpty,
+                           let url = URL(string: photoURL) {
+                            AsyncImage(url: url) { image in
+                                image
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fill)
+                            } placeholder: {
+                                Circle()
+                                    .fill(Color.gray.opacity(0.2))
+                            }
+                            .frame(width: 100, height: 100)
+                            .clipShape(Circle())
+                            .padding(.vertical, 8)
+                        } else {
+                            Circle()
+                                .fill(AppColors.avatarColor(for: profile.name ?? "User"))
+                                .frame(width: 100, height: 100)
+                                .overlay(
+                                    Text(getInitials(from: profile.name ?? "User"))
+                                        .font(.system(size: 30, weight: .medium))
+                                        .foregroundColor(.white)
+                                )
+                                .padding(.vertical, 8)
+                        }
+                        Spacer()
+                    }
+                    
+                    if let name = profile.name {
+                        HStack {
+                            Text("Name")
+                                .foregroundColor(AppColors.label)
+                            Spacer()
+                            Text(name)
+                                .foregroundColor(AppColors.secondaryLabel)
+                        }
+                    }
+                    
+                    if let email = profile.email {
+                        HStack {
+                            Text("Email")
+                                .foregroundColor(AppColors.label)
+                            Spacer()
+                            Text(email)
+                                .foregroundColor(AppColors.secondaryLabel)
+                        }
+                    }
+                    
+                    if let phone = profile.phoneNumber {
+                        HStack {
+                            Text("Phone")
+                                .foregroundColor(AppColors.label)
+                            Spacer()
+                            Text(phone)
+                                .foregroundColor(AppColors.secondaryLabel)
+                        }
+                    }
+                    
+                    if let bio = profile.bio, !bio.isEmpty {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Bio")
+                                .foregroundColor(AppColors.label)
+                            Text(bio)
+                                .foregroundColor(AppColors.secondaryLabel)
+                                .padding(.top, 4)
+                        }
+                    }
+                }
+                
+                Section {
+                    Text("This person has a Ketchupsoon account. When you add them as a friend, their profile information will be used and updated automatically.")
+                        .font(.caption)
+                        .foregroundColor(AppColors.secondaryLabel)
+                }
+            }
+            .navigationTitle("Ketchupsoon User")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                }
+            }
+        }
+    }
+    
+    private func getInitials(from name: String) -> String {
+        name.components(separatedBy: " ")
+            .compactMap { $0.first }
+            .prefix(2)
+            .map(String.init)
+            .joined()
     }
 }
 

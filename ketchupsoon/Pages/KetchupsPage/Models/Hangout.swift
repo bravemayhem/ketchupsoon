@@ -17,6 +17,8 @@ final class Hangout: Identifiable {
     var googleEventId: String?  // Store the Google Calendar event ID
     var googleEventLink: String?  // Store the Google Calendar event link
     @Relationship(deleteRule: .cascade) var friends: [Friend]
+    
+    @Attribute(.transformable(by: EmailArrayValueTransformer.self))
     var attendeeEmails: [String] = []  // Store all attendee emails from calendar events
     
     init(date: Date, title: String, location: String, isScheduled: Bool, friends: [Friend], duration: TimeInterval = 3600) {
