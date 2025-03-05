@@ -8,6 +8,7 @@ struct SettingsView: View {
     @StateObject private var profileManager = UserProfileManager.shared
     @State private var showingClearDataAlert = false
     @State private var showingDeleteStoreAlert = false
+    @StateObject private var socialAuthManager = SocialAuthManager.shared
     
     var body: some View {
         NavigationStack {
@@ -38,7 +39,7 @@ struct SettingsView: View {
                     }
                     .overlay(
                         Group {
-                            if let profile = profileManager.currentUserProfile, profile.isSocialProfileActive {
+                            if socialAuthManager.isAuthenticated {
                                 Text("Active")
                                     .font(.caption2)
                                     .fontWeight(.medium)

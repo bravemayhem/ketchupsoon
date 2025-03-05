@@ -130,6 +130,18 @@ class UserProfileManager: ObservableObject {
                 updatedProfile.profileImageURL = profileImageURL
             }
             
+            // Add handling for social profile fields
+            if let isSocialProfileActive = updates["isSocialProfileActive"] as? Bool {
+                updatedProfile.isSocialProfileActive = isSocialProfileActive
+            }
+            
+            if let socialAuthProvider = updates["socialAuthProvider"] as? String {
+                updatedProfile.socialAuthProvider = socialAuthProvider
+            } else if updates["socialAuthProvider"] is NSNull {
+                // Handle case when socialAuthProvider is set to null
+                updatedProfile.socialAuthProvider = nil
+            }
+            
             updatedProfile.updatedAt = Date()
             self.currentUserProfile = updatedProfile
             

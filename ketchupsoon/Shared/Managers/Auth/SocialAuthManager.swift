@@ -176,6 +176,12 @@ class SocialAuthManager: NSObject, ObservableObject {
     
     func signOut() async throws {
         do {
+            // First update profile to mark social profile as inactive
+            try await profileManager.updateUserProfile(updates: [
+                "isSocialProfileActive": false,
+                "socialAuthProvider": NSNull()
+            ])
+            
             // Sign out from Firebase
             try Auth.auth().signOut()
             
@@ -193,6 +199,9 @@ class SocialAuthManager: NSObject, ObservableObject {
     // MARK: - Profile Management
     
     private func updateSocialProfileStatus(for user: User) async throws {
+        // First determine and set the auth provider
+        determineAuthProvider(for: user)
+        
         // Update the user's profile to mark social profile as active
         try await profileManager.updateUserProfile(updates: [
             "isSocialProfileActive": true
@@ -206,15 +215,14 @@ class SocialAuthManager: NSObject, ObservableObject {
         }
     }
     
+    // This function is no longer needed as we're handling deactivation in signOut
+    // This wrapper is kept for backward compatibility
     func deactivateSocialProfile() async throws {
         // Update the user's profile to mark social profile as inactive
         try await profileManager.updateUserProfile(updates: [
             "isSocialProfileActive": false,
             "socialAuthProvider": NSNull()
         ])
-        
-        // Note: We're not signing out the user here, just deactivating the social profile
-        // This allows them to keep their authentication but turn off social features
     }
 }
 

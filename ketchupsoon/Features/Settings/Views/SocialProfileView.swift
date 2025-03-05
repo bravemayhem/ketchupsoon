@@ -5,8 +5,6 @@ struct SocialProfileView: View {
     @StateObject private var profileManager = UserProfileManager.shared
     @StateObject private var socialAuthManager = SocialAuthManager.shared
     
-    @State private var isSocialProfileActive: Bool = false
-    @State private var showActivationSheet = false
     @State private var showAuthMethodsSheet = false
     @State private var isUpdating = false
     @State private var showAlert = false
@@ -16,58 +14,38 @@ struct SocialProfileView: View {
     var body: some View {
         Form {
             Section {
-                Toggle("Enable Social Profile", isOn: $isSocialProfileActive)
-                    .onChange(of: isSocialProfileActive) { oldValue, newValue in
-                        if newValue && !oldValue {
-                            // User toggled social profile on
-                            if socialAuthManager.isAuthenticated {
-                                // Already authenticated, show activation info
-                                showActivationSheet = true
-                            } else {
-                                // Need to authenticate first
-                                showAuthMethodsSheet = true
-                            }
-                        } else if !newValue && oldValue {
-                            // User toggled social profile off
-                            Task {
-                                do {
-                                    try await socialAuthManager.deactivateSocialProfile()
-                                    // We're just deactivating, not signing out
-                                } catch {
-                                    await MainActor.run {
-                                        alertMessage = "Error deactivating profile: \(error.localizedDescription)"
-                                        showAlert = true
-                                        // Revert toggle if deactivation failed
-                                        isSocialProfileActive = true
-                                    }
+                if socialAuthManager.isAuthenticated {
+                    // When authenticated, show the provider and status
+                    if let authProvider = socialAuthManager.authProvider {
+                        HStack {
+                            Image(systemName: authProvider.iconName)
+                                .foregroundColor(AppColors.accent)
+                                .font(.title3)
+                            
+                            VStack(alignment: .leading) {
+                                Text("Signed in with \(authProvider.displayName)")
+                                    .font(.subheadline)
+                                
+                                if let email = socialAuthManager.currentUser?.email {
+                                    Text(email)
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
                                 }
                             }
-                        }
-                    }
-            } footer: {
-                Text("Activating the social profile will allow Ketchup Soon to suggest hangouts with friends who also have social profiles.")
-            }
-            
-            if isSocialProfileActive, let authProvider = socialAuthManager.authProvider {
-                Section("Authentication") {
-                    HStack {
-                        Image(systemName: authProvider.iconName)
-                            .foregroundColor(AppColors.accent)
-                        
-                        VStack(alignment: .leading) {
-                            Text("Signed in with \(authProvider.displayName)")
-                                .font(.subheadline)
                             
-                            if let email = socialAuthManager.currentUser?.email {
-                                Text(email)
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
+                            Spacer()
+                            
+                            Text("Active")
+                                .font(.caption2)
+                                .fontWeight(.medium)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 3)
+                                .background(AppColors.accent.opacity(0.2))
+                                .foregroundColor(AppColors.accent)
+                                .cornerRadius(8)
                         }
-                        
-                        Spacer()
+                        .padding(.vertical, 4)
                     }
-                    .padding(.vertical, 4)
                     
                     Button(role: .destructive) {
                         showSignOutConfirm = true
@@ -79,54 +57,43 @@ struct SocialProfileView: View {
                             Spacer()
                         }
                     }
-                }
-            }
-            
-            if isSocialProfileActive {
-                Section {
-                    Button(action: saveProfile) {
+                } else {
+                    // When not authenticated, show a button to sign in
+                    Button {
+                        showAuthMethodsSheet = true
+                    } label: {
                         HStack {
                             Spacer()
-                            if isUpdating {
-                                ProgressView()
-                            } else {
-                                Text("Save Social Profile")
-                                    .fontWeight(.semibold)
-                            }
+                            Image(systemName: "person.fill.badge.plus")
+                            Text("Sign In to Activate Social Profile")
+                                .fontWeight(.semibold)
                             Spacer()
                         }
                     }
-                    .disabled(isUpdating)
                 }
+            } footer: {
+                Text("The social profile enables Ketchup Soon to suggest hangouts with friends who also have social profiles. Your information is only shared with friends you explicitly connect with.")
             }
         }
         .navigationTitle("Social Profile")
         .navigationBarTitleDisplayMode(.large)
         .onAppear {
-            loadProfileData()
-        }
-        .sheet(isPresented: $showActivationSheet) {
-            SocialProfileActivationView(onActivate: {
-                showActivationSheet = false
-                saveProfile()
-            }, onCancel: {
-                isSocialProfileActive = false
-                showActivationSheet = false
-            })
-        }
-        .sheet(isPresented: $showAuthMethodsSheet, onDismiss: {
-            // If sheet is dismissed without success, revert the toggle
-            if !socialAuthManager.isAuthenticated {
-                isSocialProfileActive = false
-            } else {
-                // Show activation info after authentication
-                showActivationSheet = true
+            // Check if we have the latest data
+            if let userId = socialAuthManager.currentUser?.uid {
+                Task {
+                    await profileManager.fetchUserProfile(userId: userId)
+                }
             }
-        }) {
+        }
+        .sheet(isPresented: $showAuthMethodsSheet) {
             AuthMethodSelectionView(onCompletion: {
                 showAuthMethodsSheet = false
+                
+                // After authentication, update profile
+                if socialAuthManager.isAuthenticated {
+                    updateProfileAfterSignIn()
+                }
             }, onCancel: {
-                isSocialProfileActive = false
                 showAuthMethodsSheet = false
             })
         }
@@ -145,38 +112,23 @@ struct SocialProfileView: View {
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("You will be signed out from your social profile. Your profile will be deactivated until you sign in again.")
+            Text("You will be signed out from your social profile. Your social profile will be deactivated until you sign in again.")
         }
     }
     
-    private func loadProfileData() {
-        guard let profile = profileManager.currentUserProfile else { return }
-        isSocialProfileActive = profile.isSocialProfileActive
-    }
-    
-    private func saveProfile() {
+    private func updateProfileAfterSignIn() {
         isUpdating = true
         
-        // Build updates dictionary with just the social profile flag
-        let updates: [String: Any] = [
-            "isSocialProfileActive": isSocialProfileActive
-        ]
-        
-        // Update profile in Firestore
         Task {
-            do {
-                try await profileManager.updateUserProfile(updates: updates)
-                await MainActor.run {
-                    isUpdating = false
-                    alertMessage = "Social profile updated successfully"
-                    showAlert = true
-                }
-            } catch {
-                await MainActor.run {
-                    isUpdating = false
-                    alertMessage = "Error updating profile: \(error.localizedDescription)"
-                    showAlert = true
-                }
+            // Refresh the profile data to ensure everything is in sync
+            if let userId = socialAuthManager.currentUser?.uid {
+                await profileManager.fetchUserProfile(userId: userId)
+            }
+            
+            await MainActor.run {
+                isUpdating = false
+                alertMessage = "Social profile activated successfully"
+                showAlert = true
             }
         }
     }
@@ -184,14 +136,9 @@ struct SocialProfileView: View {
     private func signOut() {
         Task {
             do {
-                // First deactivate the profile
-                try await socialAuthManager.deactivateSocialProfile()
-                
-                // Then sign out
                 try await socialAuthManager.signOut()
                 
                 await MainActor.run {
-                    isSocialProfileActive = false
                     alertMessage = "Signed out successfully"
                     showAlert = true
                 }
@@ -205,95 +152,9 @@ struct SocialProfileView: View {
     }
 }
 
-struct SocialProfileActivationView: View {
-    var onActivate: () -> Void
-    var onCancel: () -> Void
-    
-    var body: some View {
-        NavigationStack {
-            VStack(spacing: 20) {
-                Image(systemName: "person.2.fill")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 120, height: 120)
-                    .foregroundColor(AppColors.accent)
-                    .padding()
-                
-                Text("Activate Social Profile")
-                    .font(.title)
-                    .fontWeight(.bold)
-                
-                Text("Creating a social profile will unlock enhanced features:")
-                    .font(.headline)
-                    .multilineTextAlignment(.center)
-                    .padding(.bottom, 5)
-                
-                VStack(alignment: .leading, spacing: 12) {
-                    FeatureRow(icon: "person.3.fill", text: "Connect with friends more easily")
-                    FeatureRow(icon: "bell", text: "Smart reminders for staying in touch")
-                }
-                .padding(.horizontal)
-                
-                Text("Your information is only shared with friends you explicitly connect with.")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding()
-                
-                HStack(spacing: 20) {
-                    Button(action: onCancel) {
-                        Text("Not Now")
-                            .fontWeight(.medium)
-                            .padding()
-                            .frame(maxWidth: .infinity)
-                            .background(Color.gray.opacity(0.2))
-                            .cornerRadius(10)
-                    }
-                    
-                    Button(action: onActivate) {
-                        Text("Activate")
-                            .fontWeight(.bold)
-                            .foregroundColor(.white)
-                            .padding()
-                            .frame(maxWidth: .infinity)
-                            .background(AppColors.accent)
-                            .cornerRadius(10)
-                    }
-                }
-                .padding(.horizontal)
-            }
-            .padding()
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        onCancel()
-                    }
-                }
-            }
-        }
-    }
-}
-
-struct FeatureRow: View {
-    let icon: String
-    let text: String
-    
-    var body: some View {
-        HStack(spacing: 15) {
-            Image(systemName: icon)
-                .font(.title3)
-                .foregroundColor(AppColors.accent)
-                .frame(width: 30)
-            
-            Text(text)
-                .font(.body)
-        }
-    }
-}
-
 #Preview {
     NavigationStack {
         SocialProfileView()
     }
 } 
+
