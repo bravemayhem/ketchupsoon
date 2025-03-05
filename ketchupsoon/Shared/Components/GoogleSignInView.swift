@@ -86,14 +86,7 @@ struct GoogleSignInView: View {
     }
 }
 
-// Helper extension to get the root view controller
-extension UIApplication {
-    var rootController: UIViewController? {
-        let scenes = UIApplication.shared.connectedScenes
-        let windowScene = scenes.first as? UIWindowScene
-        return windowScene?.windows.first?.rootViewController
-    }
-}
+// Helper extension moved to UIExtensions.swift in Shared/Utils
 
 #Preview {
     GoogleSignInView()

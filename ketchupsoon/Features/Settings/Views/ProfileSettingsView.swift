@@ -80,6 +80,49 @@ struct ProfileSettingsView: View {
             }
             
             Section {
+                NavigationLink {
+                    SocialProfileView()
+                } label: {
+                    HStack {
+                        Image(systemName: "person.2.fill")
+                            .foregroundColor(AppColors.accent)
+                            .font(.title3)
+                            .frame(width: 24, height: 24)
+                        
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Social Profile")
+                                .font(.headline)
+                            
+                            Text("Enable additional features")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        
+                        Spacer()
+                        
+                        if let profile = profileManager.currentUserProfile, profile.isSocialProfileActive {
+                            Text("Active")
+                                .font(.caption2)
+                                .fontWeight(.medium)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 3)
+                                .background(AppColors.accent.opacity(0.2))
+                                .foregroundColor(AppColors.accent)
+                                .cornerRadius(8)
+                        } else {
+                            Image(systemName: "chevron.right")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                }
+            } header: {
+                Text("SOCIAL FEATURES")
+            } footer: {
+                Text("Create a social profile to unlock features like finding mutual free times and activity suggestions.")
+            }
+            
+            Section {
                 Button(action: saveProfile) {
                     HStack {
                         Spacer()

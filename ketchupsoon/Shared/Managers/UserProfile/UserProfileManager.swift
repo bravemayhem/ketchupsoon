@@ -151,6 +151,7 @@ class UserProfileManager: ObservableObject {
         let phoneNumber = data["phoneNumber"] as? String
         let bio = data["bio"] as? String
         let profileImageURL = data["profileImageURL"] as? String
+        let isSocialProfileActive = data["isSocialProfileActive"] as? Bool ?? false
         
         // Handle timestamps
         var createdAt = Date()
@@ -171,7 +172,8 @@ class UserProfileManager: ObservableObject {
             bio: bio,
             profileImageURL: profileImageURL,
             createdAt: createdAt,
-            updatedAt: updatedAt
+            updatedAt: updatedAt,
+            isSocialProfileActive: isSocialProfileActive
         )
     }
     
@@ -219,4 +221,23 @@ class UserProfileManager: ObservableObject {
             }
         }
     }
+    
+    // MARK: - Social Profile Features
+    
+    /// Checks if a user has an active social profile
+    /// - Parameter userId: The user ID to check
+    /// - Returns: Boolean indicating if the user has an active social profile
+    func checkHasSocialProfile(userId: String) async -> Bool {
+        do {
+            let document = try await db.collection(usersCollection).document(userId).getDocument()
+            if document.exists, let data = document.data() {
+                return data["isSocialProfileActive"] as? Bool ?? false
+            }
+        } catch {
+            self.logger.error("Error checking social profile status: \(error.localizedDescription)")
+        }
+        
+        return false
+    }
 } 
+

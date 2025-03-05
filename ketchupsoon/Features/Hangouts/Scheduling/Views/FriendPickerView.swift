@@ -1,6 +1,8 @@
 import SwiftUI
 import SwiftData
 import Contacts
+import Firebase
+import FirebaseFirestore
 
 // Represents either a Friend or a Contact
 enum PersonItem: Identifiable {
@@ -47,9 +49,12 @@ struct FriendPickerView: View {
     @Environment(\.modelContext) private var modelContext
     @Binding var selectedFriends: [Friend]
     @Query(sort: [SortDescriptor(\Friend.name)]) private var friends: [Friend]
+    @StateObject private var profileManager = UserProfileManager.shared
     @State private var searchText = ""
     @State private var personItems: [PersonItem] = []
     @State private var isLoadingContacts = false
+    @State private var friendsWithSocialProfiles: [String: Bool] = [:]
+    @State private var isCheckingSocialProfiles = false
     let selectedTime: Date?
     
     var filteredItems: [PersonItem] {
@@ -66,46 +71,78 @@ struct FriendPickerView: View {
     
     var body: some View {
         NavigationStack {
-            List {
-                if !selectedFriends.isEmpty {
-                    Section {
-                        ForEach(selectedFriends) { friend in
-                            PersonRow(item: .friend(friend), isSelected: true)
+            ZStack {
+                List {
+                    if !selectedFriends.isEmpty {
+                        Section {
+                            ForEach(selectedFriends) { friend in
+                                PersonRow(
+                                    item: .friend(friend),
+                                    isSelected: true,
+                                    hasSocialProfile: friendsWithSocialProfiles[friend.firebaseUserId ?? ""] == true
+                                )
                                 .onTapGesture {
                                     selectedFriends.removeAll(where: { $0.id == friend.id })
                                 }
+                            }
+                        } header: {
+                            Text("Selected")
+                        } footer: {
+                            let missingEmails = selectedFriends.filter { $0.email?.isEmpty ?? true }.count
+                            if missingEmails > 0 {
+                                Text("\(missingEmails) person\(missingEmails > 1 ? "s" : "") missing email address\(missingEmails > 1 ? "es" : "") - they won't receive calendar invites")
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                    
+                    Section {
+                        if isLoadingContacts {
+                            ProgressView("Loading contacts...")
+                        } else {
+                            ForEach(filteredItems) { item in
+                                PersonRow(
+                                    item: item, 
+                                    isSelected: isSelected(item),
+                                    hasSocialProfile: item.isAlreadyFriend ? 
+                                        (friendsWithSocialProfiles[getFriendId(from: item)] == true) : false
+                                )
+                                .onTapGesture {
+                                    handleSelection(item)
+                                }
+                            }
                         }
                     } header: {
-                        Text("Selected")
-                    } footer: {
-                        let missingEmails = selectedFriends.filter { $0.email?.isEmpty ?? true }.count
-                        if missingEmails > 0 {
-                            Text("\(missingEmails) person\(missingEmails > 1 ? "s" : "") missing email address\(missingEmails > 1 ? "es" : "") - they won't receive calendar invites")
-                                .foregroundStyle(.secondary)
+                        Text(selectedFriends.isEmpty ? "People" : "Add More")
+                    }
+                }
+                .searchable(text: $searchText, prompt: "Search people")
+                .navigationTitle(selectionTitle)
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Done") {
+                            dismiss()
+                        }
+                    }
+                }
+                .task {
+                    await loadContacts()
+                }
+                .onChange(of: selectedFriends) { _, newValue in
+                    // Check for social profiles when selection changes
+                    if !newValue.isEmpty {
+                        Task {
+                            await checkForSocialProfiles(friends: newValue)
                         }
                     }
                 }
                 
-                Section {
-                    if isLoadingContacts {
-                        ProgressView("Loading contacts...")
-                    } else {
-                        ForEach(filteredItems) { item in
-                            PersonRow(item: item, isSelected: isSelected(item))
-                                .onTapGesture {
-                                    handleSelection(item)
-                                }
-                        }
-                    }
-                } header: {
-                    Text(selectedFriends.isEmpty ? "People" : "Add More")
+                if isCheckingSocialProfiles {
+                    Color.black.opacity(0.1)
+                        .ignoresSafeArea()
+                    ProgressView("Checking profiles...")
                 }
-            }
-            .searchable(text: $searchText, prompt: "Search people")
-            .navigationTitle(selectionTitle)
-            .navigationBarTitleDisplayMode(.inline)
-            .task {
-                await loadContacts()
             }
         }
     }
@@ -132,6 +169,12 @@ struct FriendPickerView: View {
         // Sort all items by name
         items.sort { $0.name < $1.name }
         personItems = items
+        
+        // Check social profiles for existing friends
+        let existingFriendIds = friends.compactMap { $0.firebaseUserId }
+        if !existingFriendIds.isEmpty {
+            await checkForSocialProfiles(friendIds: existingFriendIds)
+        }
     }
     
     private func isSelected(_ item: PersonItem) -> Bool {
@@ -186,11 +229,47 @@ struct FriendPickerView: View {
             }
         }
     }
+    
+    private func getFriendId(from item: PersonItem) -> String {
+        switch item {
+        case .friend(let friend):
+            return friend.firebaseUserId ?? ""
+        case .contact:
+            return ""
+        }
+    }
+    
+    private func checkForSocialProfiles(friends: [Friend]) async {
+        let friendIds = friends.compactMap { $0.firebaseUserId }
+        if !friendIds.isEmpty {
+            await checkForSocialProfiles(friendIds: friendIds)
+        }
+    }
+    
+    private func checkForSocialProfiles(friendIds: [String]) async {
+        guard !friendIds.isEmpty else { return }
+        
+        isCheckingSocialProfiles = true
+        defer { isCheckingSocialProfiles = false }
+        
+        for userId in friendIds {
+            // Skip if we already checked this user
+            if friendsWithSocialProfiles[userId] != nil {
+                continue
+            }
+            
+            let hasSocialProfile = await profileManager.checkHasSocialProfile(userId: userId)
+            await MainActor.run {
+                friendsWithSocialProfiles[userId] = hasSocialProfile
+            }
+        }
+    }
 }
 
 private struct PersonRow: View {
     let item: PersonItem
     let isSelected: Bool
+    let hasSocialProfile: Bool
     
     var body: some View {
         HStack {
@@ -209,7 +288,7 @@ private struct PersonRow: View {
             
             Spacer()
             
-            HStack {
+            HStack(spacing: 8) {
                 if !item.isAlreadyFriend {
                     Text("From Contacts")
                         .font(.caption)
@@ -218,6 +297,12 @@ private struct PersonRow: View {
                         .padding(.vertical, 4)
                         .background(Color.secondary.opacity(0.1))
                         .clipShape(Capsule())
+                }
+                
+                if hasSocialProfile {
+                    Image(systemName: "person.2.fill")
+                        .foregroundColor(AppColors.accent)
+                        .font(.caption)
                 }
                 
                 if isSelected {

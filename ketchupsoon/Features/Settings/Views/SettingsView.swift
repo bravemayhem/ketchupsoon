@@ -5,6 +5,7 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     @StateObject private var colorSchemeManager = ColorSchemeManager.shared
+    @StateObject private var profileManager = UserProfileManager.shared
     @State private var showingClearDataAlert = false
     @State private var showingDeleteStoreAlert = false
     
@@ -23,6 +24,33 @@ struct SettingsView: View {
                                 .foregroundColor(AppColors.accent)
                         }
                     }
+                    
+                    NavigationLink {
+                        SocialProfileView()
+                    } label: {
+                        Label {
+                            Text("Social Profile")
+                                .foregroundColor(.primary)
+                        } icon: {
+                            Image(systemName: "person.2.fill")
+                                .foregroundColor(AppColors.accent)
+                        }
+                    }
+                    .overlay(
+                        Group {
+                            if let profile = profileManager.currentUserProfile, profile.isSocialProfileActive {
+                                Text("Active")
+                                    .font(.caption2)
+                                    .fontWeight(.medium)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 3)
+                                    .background(AppColors.accent.opacity(0.2))
+                                    .foregroundColor(AppColors.accent)
+                                    .cornerRadius(8)
+                            }
+                        },
+                        alignment: .trailing
+                    )
                 }
                 
                 Section("App Settings") {
