@@ -17,6 +17,20 @@ struct ContentView: View {
     var body: some View {
         ZStack {
             TabView(selection: $selectedTab) {
+                // Home Tab
+                NavigationTab(
+                    title: "Home",
+                    subtitle: "Welcome to Ketchup Soon",
+                    icon: "house",
+                    subtitleAlwaysVisible: false,
+                    showImportOptions: $showingImportOptions,
+                    showingDebugAlert: $showingDebugAlert,
+                    clearData: clearAllData
+                ) {
+                    HomeView()
+                }
+                .tag(0)
+                
                 NavigationTab(
                     title: "Ketchups",
                     subtitle: "Schedule time with the people who matter",
@@ -28,7 +42,7 @@ struct ContentView: View {
                 ) {
                     KetchupsView(showConfetti: $showConfetti)
                 }
-                .tag(0)
+                .tag(1)
                 
                 NavigationTab(
                     title: "Wishlist",
@@ -41,7 +55,7 @@ struct ContentView: View {
                 ) {
                     WishlistView(showConfetti: $showConfetti)
                 }
-                .tag(1)
+                .tag(2)
                 
                 NavigationTab(
                     title: "Friends",
@@ -54,7 +68,7 @@ struct ContentView: View {
                 ) {
                     FriendsListView()
                 }
-                .tag(2)
+                .tag(3)
             }
             .sheet(isPresented: $showingImportOptions) {
                 ImportOptionsView(showingContactPicker: $showingContactPicker, showingImportOptions: $showingImportOptions)
@@ -221,5 +235,5 @@ struct ImportOptionsView: View {
 
 #Preview {
     ContentView()
-        .modelContainer(for: [Friend.self, Hangout.self, Tag.self], inMemory: true)
+        .modelContainer(for: [Friend.self, Hangout.self, Tag.self, ketchupsoon.Milestone.self], inMemory: true)
 }

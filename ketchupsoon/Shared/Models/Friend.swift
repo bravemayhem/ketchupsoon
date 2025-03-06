@@ -69,10 +69,12 @@ final class Friend: Identifiable {
     // Relationships
     @Relationship(deleteRule: .cascade) var hangouts: [Hangout]
     @Relationship(deleteRule: .nullify) var tags: [Tag]
+    @Relationship(deleteRule: .cascade) var milestones: [Milestone]
     
     // Cache properties
     @Transient private var _lastSeenTextCache: (Date, String)?
     @Transient private var _scheduledHangoutsCache: [Hangout]?
+    @Transient private var _upcomingMilestonesCache: [Milestone]?
     
     /// Returns all email addresses for this friend.
     /// For contact-linked friends, this will trigger a contact sync.
@@ -137,10 +139,12 @@ final class Friend: Identifiable {
         self.additionalEmails = additionalEmails
         self.hangouts = []
         self.tags = []
+        self.milestones = []
         
         // Initialize caches
         self._lastSeenTextCache = nil
         self._scheduledHangoutsCache = nil
+        self._upcomingMilestonesCache = nil
     }
     
     var lastSeenText: String {
@@ -222,6 +226,63 @@ final class Friend: Identifiable {
         lastSeen = date ?? Date()
         invalidateCaches()  // Reset caches since we're updating lastSeen
     }
+    
+    // MARK: - Milestone Management
+    
+    var upcomingMilestones: [Milestone] {
+        if let cached = _upcomingMilestonesCache {
+            return cached
+        }
+        let result = milestones.filter { $0.isUpcoming && !$0.isArchived }
+        _upcomingMilestonesCache = result
+        return result
+    }
+    
+    var recentMilestones: [Milestone] {
+        milestones.filter { $0.isRecent && !$0.isArchived }
+    }
+    
+    func addMilestone(type: MilestoneType, title: String, description: String? = nil, date: Date) {
+        let milestone = Milestone(
+            friendId: self.id,
+            friendName: self.name,
+            type: type,
+            title: title,
+            milestoneDescription: description,
+            date: date
+        )
+        milestones.append(milestone)
+    }
+    
+    // Creates a birthday milestone if a birthday exists
+    func createBirthdayMilestone() {
+        guard let birthday = birthday else { return }
+        
+        // Calculate next birthday date
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        let birthdayComponents = calendar.dateComponents([.month, .day], from: birthday)
+        
+        var nextBirthdayComponents = DateComponents()
+        nextBirthdayComponents.year = calendar.component(.year, from: today)
+        nextBirthdayComponents.month = birthdayComponents.month
+        nextBirthdayComponents.day = birthdayComponents.day
+        
+        guard let nextBirthday = calendar.date(from: nextBirthdayComponents) else { return }
+        
+        // If the birthday has already occurred this year, set it for next year
+        let nextBirthdayDate = nextBirthday < today 
+            ? calendar.date(byAdding: .year, value: 1, to: nextBirthday)! 
+            : nextBirthday
+        
+        // Create the milestone
+        addMilestone(
+            type: .birthday,
+            title: "Birthday",
+            description: "Celebrating \(name)'s birthday!",
+            date: nextBirthdayDate
+        )
+    }
 }
 
 // MARK: - Calendar Types
@@ -280,6 +341,7 @@ extension Friend {
     func invalidateCaches() {
         _lastSeenTextCache = nil
         _scheduledHangoutsCache = nil
+        _upcomingMilestonesCache = nil
     }
 }
 

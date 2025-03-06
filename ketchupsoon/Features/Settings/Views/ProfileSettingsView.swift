@@ -110,7 +110,7 @@ struct ProfileSettingsView: View {
                     TextField("Not set", text: $name)
                         .multilineTextAlignment(.trailing)
                         .textContentType(.name)
-                        .onChange(of: name) { _ in
+                        .onChange(of: name) { oldValue, newValue in
                             triggerAutoSave()
                         }
                 }
@@ -125,7 +125,7 @@ struct ProfileSettingsView: View {
                         .keyboardType(.emailAddress)
                         .autocapitalization(.none)
                         .autocorrectionDisabled()
-                        .onChange(of: email) { _ in
+                        .onChange(of: email) { oldValue, newValue in
                             triggerAutoSave()
                         }
                 }
@@ -138,7 +138,7 @@ struct ProfileSettingsView: View {
                         .multilineTextAlignment(.trailing)
                         .textContentType(.telephoneNumber)
                         .keyboardType(.phonePad)
-                        .onChange(of: phoneNumber) { _ in
+                        .onChange(of: phoneNumber) { oldValue, newValue in
                             triggerAutoSave()
                         }
                 }
@@ -247,7 +247,7 @@ struct ProfileSettingsView: View {
             }
         }
         .photosPicker(isPresented: $showPhotoPicker, selection: $selectedPhoto, matching: .images)
-        .onChange(of: selectedPhoto) { newValue in
+        .onChange(of: selectedPhoto) { oldValue, newValue in
             if let newValue = newValue {
                 Task {
                     await loadTransferableImage(from: newValue)

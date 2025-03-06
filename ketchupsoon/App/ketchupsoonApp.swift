@@ -12,6 +12,8 @@ import FirebaseAuth
 import FirebaseCore
 import FirebaseFirestore       // Add this line to import Firestore
 // import FirebaseMessaging  // Temporarily commented out for testing
+import UserNotifications
+import WatchConnectivity
 
 class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate { // Removed MessagingDelegate
     func application(_ application: UIApplication,
@@ -118,7 +120,8 @@ struct ketchupsoonApp: App {
             let schema = Schema([
                 Friend.self,
                 Hangout.self,
-                Tag.self
+                Tag.self,
+                ketchupsoon.Milestone.self  // Explicitly specify the module
             ])
             
             print("📦 Creating ModelContainer...")
