@@ -9,6 +9,12 @@ struct HomeView: View {
     // Query all hangouts and filter in computed property
     @Query(sort: \Hangout.date) private var allHangouts: [Hangout]
     
+    // Navigation state
+    @State private var showSettings = false
+    
+    // Access user profile
+    @StateObject private var profileManager = UserProfileManager.shared
+    
     // Computed property to filter hangouts
     var upcomingHangouts: [Hangout] {
         allHangouts.filter { $0.date > Date() && !$0.isCompleted }
@@ -30,6 +36,21 @@ struct HomeView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 25) {
+                // Profile button - visible at the top left
+                HStack {
+                    Button(action: {
+                        showSettings = true
+                    }) {
+                        ProfileAvatarView(size: 40)
+                            .shadow(color: Color.black.opacity(0.2), radius: 3, x: 0, y: 2)
+                    }
+                    .buttonStyle(ProfileButtonStyle())
+                    .padding(.top)
+                    .padding(.leading)
+                    
+                    Spacer()
+                }
+                
                 // Activity summary section
                 VStack(alignment: .leading, spacing: 20) {
                     HStack {
@@ -218,6 +239,18 @@ struct HomeView: View {
             // Initialize sample data for preview/demo purposes
             if ProcessInfo.processInfo.isPreview && allMilestones.isEmpty {
                 createSampleMoments()
+            }
+        }
+        .sheet(isPresented: $showSettings) {
+            NavigationStack {
+                SettingsView()
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Done") {
+                                showSettings = false
+                            }
+                        }
+                    }
             }
         }
     }
@@ -559,6 +592,86 @@ struct MomentCard: View {
             RoundedRectangle(cornerRadius: 16)
                 .stroke(Color.white.opacity(0.1), lineWidth: 1)
         )
+    }
+}
+
+// Profile Avatar View
+struct ProfileAvatarView: View {
+    @StateObject private var profileManager = UserProfileManager.shared
+    let size: CGFloat
+    
+    var body: some View {
+        Group {
+            if let profile = profileManager.currentUserProfile, 
+               let imageURL = profile.profileImageURL,
+               !imageURL.isEmpty {
+                // User has a profile image
+                AsyncImage(url: URL(string: imageURL)) { phase in
+                    switch phase {
+                    case .empty:
+                        ProgressView()
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                    case .failure:
+                        // Fall back to initials if image fails to load
+                        userInitialsView(profile: profile)
+                    @unknown default:
+                        userInitialsView(profile: profile)
+                    }
+                }
+                .frame(width: size, height: size)
+                .clipShape(Circle())
+            } else {
+                // Use initials or default user icon
+                if let profile = profileManager.currentUserProfile, let name = profile.name, !name.isEmpty {
+                    userInitialsView(profile: profile)
+                } else {
+                    // Default user icon
+                    Circle()
+                        .fill(LinearGradient(
+                            colors: [AppColors.accent, Color.orange],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ))
+                        .frame(width: size, height: size)
+                        .overlay(
+                            Image(systemName: "person.fill")
+                                .foregroundColor(.white)
+                        )
+                }
+            }
+        }
+    }
+    
+    // Helper to create initials view
+    private func userInitialsView(profile: UserProfile) -> some View {
+        let name = profile.name ?? "User"
+        let initials = name.components(separatedBy: " ")
+            .compactMap { $0.first }
+            .prefix(2)
+            .map(String.init)
+            .joined()
+        
+        return ZStack {
+            Circle()
+                .fill(AppColors.avatarColor(for: name))
+                .frame(width: size, height: size)
+            
+            Text(initials)
+                .font(.system(size: size * 0.4, weight: .medium, design: .rounded))
+                .foregroundColor(.white)
+        }
+    }
+}
+
+// Custom button style for profile button
+struct ProfileButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.9 : 1.0)
+            .animation(.spring(response: 0.3), value: configuration.isPressed)
     }
 }
 
