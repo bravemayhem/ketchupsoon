@@ -130,6 +130,12 @@ class UserProfileManager: ObservableObject {
                 updatedProfile.profileImageURL = profileImageURL
             }
             
+            // Handle birthday update
+            if let birthdayTimestamp = updates["birthday"] as? TimeInterval {
+                updatedProfile.birthday = Date(timeIntervalSince1970: birthdayTimestamp)
+                logger.info("Updated local profile birthday: \(updatedProfile.birthday?.description ?? "nil")")
+            }
+            
             // Add handling for social profile fields
             if let isSocialProfileActive = updates["isSocialProfileActive"] as? Bool {
                 updatedProfile.isSocialProfileActive = isSocialProfileActive
@@ -164,6 +170,14 @@ class UserProfileManager: ObservableObject {
         let bio = data["bio"] as? String
         let profileImageURL = data["profileImageURL"] as? String
         let isSocialProfileActive = data["isSocialProfileActive"] as? Bool ?? false
+        let socialAuthProvider = data["socialAuthProvider"] as? String
+        
+        // Handle birthday
+        var birthday: Date? = nil
+        if let birthdayTimestamp = data["birthday"] as? TimeInterval {
+            birthday = Date(timeIntervalSince1970: birthdayTimestamp)
+            logger.info("Loaded birthday from Firestore: \(birthday?.description ?? "nil")")
+        }
         
         // Handle timestamps
         var createdAt = Date()
@@ -183,9 +197,11 @@ class UserProfileManager: ObservableObject {
             phoneNumber: phoneNumber,
             bio: bio,
             profileImageURL: profileImageURL,
+            birthday: birthday,
             createdAt: createdAt,
             updatedAt: updatedAt,
-            isSocialProfileActive: isSocialProfileActive
+            isSocialProfileActive: isSocialProfileActive,
+            socialAuthProvider: socialAuthProvider
         )
     }
     

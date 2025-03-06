@@ -8,6 +8,7 @@ struct UserProfile: Codable {
     var phoneNumber: String?
     var bio: String?
     var profileImageURL: String?
+    var birthday: Date?
     var createdAt: Date
     var updatedAt: Date
     
@@ -23,6 +24,10 @@ struct UserProfile: Codable {
         self.phoneNumber = user.phoneNumber
         self.bio = additionalData["bio"] as? String
         self.profileImageURL = user.photoURL?.absoluteString
+        
+        if let birthdayTimestamp = additionalData["birthday"] as? TimeInterval {
+            self.birthday = Date(timeIntervalSince1970: birthdayTimestamp)
+        }
         
         if let createdTimestamp = additionalData["createdAt"] as? TimeInterval {
             self.createdAt = Date(timeIntervalSince1970: createdTimestamp)
@@ -52,6 +57,7 @@ struct UserProfile: Codable {
         phoneNumber = try container.decodeIfPresent(String.self, forKey: .phoneNumber)
         bio = try container.decodeIfPresent(String.self, forKey: .bio)
         profileImageURL = try container.decodeIfPresent(String.self, forKey: .profileImageURL)
+        birthday = try container.decodeIfPresent(Date.self, forKey: .birthday)
         
         // Decode dates
         if let createdTimestamp = try container.decodeIfPresent(TimeInterval.self, forKey: .createdAt) {
@@ -82,6 +88,7 @@ struct UserProfile: Codable {
         try container.encodeIfPresent(phoneNumber, forKey: .phoneNumber)
         try container.encodeIfPresent(bio, forKey: .bio)
         try container.encodeIfPresent(profileImageURL, forKey: .profileImageURL)
+        try container.encodeIfPresent(birthday, forKey: .birthday)
         
         // Encode dates as timestamps
         try container.encode(createdAt.timeIntervalSince1970, forKey: .createdAt)
@@ -99,6 +106,7 @@ struct UserProfile: Codable {
          phoneNumber: String? = nil, 
          bio: String? = nil, 
          profileImageURL: String? = nil,
+         birthday: Date? = nil,
          createdAt: Date = Date(),
          updatedAt: Date = Date(),
          isSocialProfileActive: Bool = false,
@@ -109,6 +117,7 @@ struct UserProfile: Codable {
         self.phoneNumber = phoneNumber
         self.bio = bio
         self.profileImageURL = profileImageURL
+        self.birthday = birthday
         self.createdAt = createdAt
         self.updatedAt = updatedAt
         self.isSocialProfileActive = isSocialProfileActive
@@ -129,6 +138,7 @@ struct UserProfile: Codable {
         if let phoneNumber = phoneNumber { dict["phoneNumber"] = phoneNumber }
         if let bio = bio { dict["bio"] = bio }
         if let profileImageURL = profileImageURL { dict["profileImageURL"] = profileImageURL }
+        if let birthday = birthday { dict["birthday"] = birthday.timeIntervalSince1970 }
         if let socialAuthProvider = socialAuthProvider { dict["socialAuthProvider"] = socialAuthProvider }
         
         return dict
@@ -142,6 +152,7 @@ struct UserProfile: Codable {
         case phoneNumber
         case bio
         case profileImageURL
+        case birthday
         case createdAt
         case updatedAt
         case isSocialProfileActive

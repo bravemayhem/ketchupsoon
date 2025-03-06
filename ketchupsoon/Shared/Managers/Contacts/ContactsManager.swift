@@ -1,17 +1,21 @@
 import Contacts
 import ContactsUI
+import OSLog
 
 @MainActor
 class ContactsManager: ObservableObject {
     static let shared = ContactsManager()
     
     @Published var authorizationStatus: CNAuthorizationStatus = .notDetermined
+    @Published var isLoading = false
+    @Published var error: Error?
     
     #if DEBUG
     var previewContacts: [CNContact]?
     #endif
     
     private let store = CNContactStore()
+    private let logger = Logger(subsystem: "com.ketchupsoon", category: "ContactsManager")
     
     // Public accessor for the store
     var contactStore: CNContactStore { store }
@@ -26,17 +30,24 @@ class ContactsManager: ObservableObject {
         CNContactThumbnailImageDataKey as CNKeyDescriptor,
         CNContactPostalAddressesKey as CNKeyDescriptor,
         CNContactIdentifierKey as CNKeyDescriptor,
-        CNContactBirthdayKey as CNKeyDescriptor
+        CNContactBirthdayKey as CNKeyDescriptor,
+        CNContactImageDataAvailableKey as CNKeyDescriptor,
+        CNContactTypeKey as CNKeyDescriptor
     ]
     
     private let keysToFetch: [CNKeyDescriptor] = baseKeys
     
     private init() {
         print("📱 ContactsManager: Initialized")
+        // Get current authorization status
+        self.authorizationStatus = CNContactStore.authorizationStatus(for: .contacts)
     }
     
     func requestAccess() async -> Bool {
         print("📱 ContactsManager: Requesting access")
+        self.isLoading = true
+        defer { self.isLoading = false }
+        
         #if DEBUG
         if previewContacts != nil {
             print("📱 ContactsManager: Using preview contacts")
@@ -44,17 +55,184 @@ class ContactsManager: ObservableObject {
         }
         #endif
         
+        // If already authorized, return true
+        if authorizationStatus == .authorized {
+            return true
+        }
+        
         do {
             let granted = try await store.requestAccess(for: .contacts)
             await MainActor.run {
-                self.authorizationStatus = CNContactStore.authorizationStatus(for: .contacts)
+                self.authorizationStatus = granted ? .authorized : .denied
             }
             print("📱 ContactsManager: Access request result - granted: \(granted), status: \(self.authorizationStatus.rawValue)")
             return granted
         } catch {
+            await MainActor.run {
+                self.error = error
+                self.logger.error("Error requesting contacts access: \(error.localizedDescription)")
+            }
             print("📱 ContactsManager: Error requesting contacts access: \(error)")
             return false
         }
+    }
+    
+    /// Find a contact that is likely to be the user's own contact card
+    func findMyContactCard() async -> CNContact? {
+        self.isLoading = true
+        defer { self.isLoading = false }
+        
+        // Check if we have access
+        guard authorizationStatus == .authorized else {
+            logger.warning("Attempting to access contacts without permission")
+            return nil
+        }
+        
+        // Keys to fetch - use descriptors for required keys for better formatting
+        let keysToFetch: [CNKeyDescriptor] = [
+            CNContactFormatter.descriptorForRequiredKeys(for: .fullName),
+            CNContactPhoneNumbersKey as CNKeyDescriptor,
+            CNContactEmailAddressesKey as CNKeyDescriptor,
+            CNContactBirthdayKey as CNKeyDescriptor,
+            CNContactImageDataKey as CNKeyDescriptor,
+            CNContactThumbnailImageDataKey as CNKeyDescriptor,
+            CNContactImageDataAvailableKey as CNKeyDescriptor
+        ]
+        
+        do {
+            // Try to match using profile info - method is maintained for possible future use with friends
+            if let userProfile = UserProfileManager.shared.currentUserProfile {
+                
+                // Try to match by email
+                if let userEmail = userProfile.email, !userEmail.isEmpty {
+                    let emailPredicate = CNContact.predicateForContacts(matchingEmailAddress: userEmail)
+                    let emailMatches = try store.unifiedContacts(matching: emailPredicate, keysToFetch: keysToFetch)
+                    
+                    if let match = emailMatches.first {
+                        logger.info("Found contact matching user email: \(userEmail)")
+                        return match
+                    }
+                }
+                
+                // Try to match by phone number
+                if let userPhone = userProfile.phoneNumber, !userPhone.isEmpty {
+                    // Clean the phone number to just digits
+                    let cleanPhone = userPhone.replacingOccurrences(of: "[^0-9]", with: "", options: .regularExpression)
+                    
+                    // Get a non-isolated copy of our dependencies
+                    let capturedStore = store
+                    let capturedCleanPhone = cleanPhone
+                    
+                    // Perform the phone number search on a background thread
+                    let matchingContacts = try await Task.detached(priority: .userInitiated) {
+                        var results: [CNContact] = []
+                        
+                        // Create and configure the fetch request
+                        let fetchRequest = CNContactFetchRequest(keysToFetch: keysToFetch)
+                        
+                        try capturedStore.enumerateContacts(with: fetchRequest) { contact, stop in
+                            for phoneNumber in contact.phoneNumbers {
+                                // Clean the contact's phone number to just digits for comparison
+                                let contactPhone = phoneNumber.value.stringValue.replacingOccurrences(of: "[^0-9]", with: "", options: .regularExpression)
+                                
+                                // Check if the phone number contains or is contained by the user's phone
+                                if contactPhone.contains(capturedCleanPhone) || capturedCleanPhone.contains(contactPhone) {
+                                    results.append(contact)
+                                    stop.pointee = true
+                                    break
+                                }
+                            }
+                        }
+                        
+                        return results
+                    }.value
+                    
+                    if let match = matchingContacts.first {
+                        logger.info("Found contact matching user phone: \(userPhone)")
+                        return match
+                    }
+                }
+            }
+            
+            // No matching contact found
+            logger.info("No matching contact found for current user profile.")
+            return nil
+            
+        } catch {
+            await MainActor.run {
+                self.error = error
+                self.logger.error("Error finding contact: \(error.localizedDescription)")
+            }
+            return nil
+        }
+    }
+    
+    /// Extract specific profile information from a contact (name, birthday, phone number)
+    func extractProfileInfo(from contact: CNContact) -> [String: Any] {
+        var profileInfo: [String: Any] = [:]
+        
+        // Extract name using CNContactFormatter for better formatting
+        let formattedName = CNContactFormatter.string(from: contact, style: .fullName)
+        if let name = formattedName, !name.isEmpty {
+            profileInfo["name"] = name
+        } else {
+            // Fallback to our manual name concatenation if formatter fails
+            let firstName = contact.givenName
+            let lastName = contact.familyName
+            if !firstName.isEmpty || !lastName.isEmpty {
+                let fullName = [firstName, lastName].filter { !$0.isEmpty }.joined(separator: " ")
+                profileInfo["name"] = fullName
+            }
+        }
+        
+        // Extract phone number - prioritizing mobile numbers
+        if !contact.phoneNumbers.isEmpty {
+            // First look for mobile numbers
+            let mobileNumbers = contact.phoneNumbers.filter { 
+                $0.label == CNLabelPhoneNumberMobile || 
+                $0.label == "_$!<Mobile>!$_" // Old style label
+            }
+            
+            if let mobileNumber = mobileNumbers.first {
+                profileInfo["phoneNumber"] = mobileNumber.value.stringValue
+            } else {
+                // If no mobile number, just use the first number
+                profileInfo["phoneNumber"] = contact.phoneNumbers.first?.value.stringValue
+            }
+        }
+        
+        // Extract birthday
+        if let birthdayComponents = contact.birthday {
+            // Create a properly formatted string or use the components directly
+            if let month = birthdayComponents.month, let day = birthdayComponents.day {
+                let calendar = Calendar.current
+                var components = DateComponents()
+                components.day = day
+                components.month = month
+                
+                // Use the year if available, otherwise use current year
+                if let year = birthdayComponents.year {
+                    components.year = year
+                } else {
+                    // For display purposes only - when year is not specified
+                    components.year = calendar.component(.year, from: Date())
+                }
+                
+                if let birthdayDate = calendar.date(from: components) {
+                    profileInfo["birthday"] = birthdayDate
+                    
+                    // Also include components for cases where year might be missing
+                    profileInfo["birthdayComponents"] = birthdayComponents
+                }
+            }
+        }
+        
+        // Debugging info
+        let nameForLog = profileInfo["name"] as? String ?? "Unknown Name"
+        let keysFound = profileInfo.keys.joined(separator: ", ")
+        logger.info("Extracted profile info for \(nameForLog): \(keysFound)")
+        
+        return profileInfo
     }
     
     // New method to update contact emails
