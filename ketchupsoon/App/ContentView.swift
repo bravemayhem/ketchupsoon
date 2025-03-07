@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import UIKit
 
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
@@ -45,21 +46,8 @@ struct ContentView: View {
                     }
                     else if selectedTab == 1 {
                         // Pulse tab (emoji: 📅)
-                        NavigationTab(
-                            title: "Ketchups",
-                            subtitle: "Schedule time with the people who matter",
-                            icon: "calendar",
-                            subtitleAlwaysVisible: false,
-                            showImportOptions: $showingImportOptions,
-                            showingDebugAlert: $showingDebugAlert,
-                            clearData: clearAllData,
-                            useNewDesign: useNewDesign
-                        ) {
-                            KetchupsView(showConfetti: $showConfetti)
-                        }
-                        .transition(.opacity)
                     }
-                    else if selectedTab == 2 {
+           /*        else if selectedTab == 2 {
                         // Wishlist tab (emoji: ⭐)
                         NavigationTab(
                             title: "Wishlist",
@@ -74,22 +62,8 @@ struct ContentView: View {
                             WishlistView(showConfetti: $showConfetti)
                         }
                         .transition(.opacity)
-                    }
-                    else if selectedTab == 3 {
-                        // Profile tab (emoji: 😎)
-                        NavigationTab(
-                            title: "Friends",
-                            subtitle: "Keep track of the details that matter to you",
-                            icon: "person.2",
-                            subtitleAlwaysVisible: true,
-                            showImportOptions: $showingImportOptions,
-                            showingDebugAlert: $showingDebugAlert,
-                            clearData: clearAllData,
-                            useNewDesign: useNewDesign
-                        ) {
-                            FriendsListView()
-                        }
-                        .transition(.opacity)
+                    }    */
+                    else if selectedTab == 2 {
                     }
                 }
             }
@@ -103,12 +77,20 @@ struct ContentView: View {
                 ImportOptionsView(showingContactPicker: $showingContactPicker, showingImportOptions: $showingImportOptions)
             }
             .fullScreenCover(isPresented: $onboardingManager.isShowingOnboarding) {
-                OnboardingView()
+                if onboardingManager.useInnerCircleOnboarding {
+                    KetchupSoonOnboardingView()
+                        .edgesIgnoringSafeArea(.all)
+                } else {
+                    OnboardingView()
+                }
             }
             .sheet(isPresented: $showingContactPicker) {
                 ContactPickerView()
             }
             .alert("Debug Mode", isPresented: $showingDebugAlert) {
+                Button("Font Debugger") {
+                    presentFontDebugView()
+                }
                 Button("Clear All Data", role: .destructive) {
                     Task { @MainActor in
                         await clearAllData()
@@ -116,7 +98,7 @@ struct ContentView: View {
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("This will delete all friends and hangouts. This action cannot be undone.")
+                Text("Debug options:")
             }
             .tint(AppColors.accent)
             .displayConfetti(isActive: $showConfetti)
@@ -139,6 +121,17 @@ struct ContentView: View {
             for friend in friends {
                 modelContext.delete(friend)
             }
+        }
+    }
+    
+    @MainActor
+    private func presentFontDebugView() {
+        // Create and present the font debug view
+        let fontDebugView = UIHostingController(rootView: FontDebugView())
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+           let rootViewController = windowScene.windows.first?.rootViewController {
+            fontDebugView.modalPresentationStyle = .fullScreen
+            rootViewController.present(fontDebugView, animated: true)
         }
     }
 }

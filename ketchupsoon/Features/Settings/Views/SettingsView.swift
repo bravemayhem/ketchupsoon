@@ -6,8 +6,10 @@ struct SettingsView: View {
     @Environment(\.modelContext) private var modelContext
     @StateObject private var colorSchemeManager = ColorSchemeManager.shared
     @StateObject private var profileManager = UserProfileManager.shared
+    @StateObject private var onboardingManager = OnboardingManager.shared
     @State private var showingClearDataAlert = false
     @State private var showingDeleteStoreAlert = false
+    @State private var showingResetOnboardingAlert = false
     @StateObject private var socialAuthManager = SocialAuthManager.shared
     
     var body: some View {
@@ -85,11 +87,21 @@ struct SettingsView: View {
                     } label: {
                         Label("Clear All Data", systemImage: "trash")
                     }
+                    
                     Button(role: .destructive) {
                         showingDeleteStoreAlert = true
                     } label: {
                         Label("Delete Data Store", systemImage: "trash.slash")
                     }
+                    
+                    Button(role: .destructive) {
+                        showingResetOnboardingAlert = true
+                    } label: {
+                        Label("Reset Onboarding", systemImage: "arrow.triangle.2.circlepath")
+                    }
+                    
+                    Toggle("Use New Onboarding", isOn: $onboardingManager.useInnerCircleOnboarding)
+                        .tint(AppColors.accent)
                 }
                 #endif
             }
@@ -121,6 +133,15 @@ struct SettingsView: View {
                 }
             } message: {
                 Text("This will delete the entire data store. This action cannot be undone.")
+            }
+            .alert("Reset Onboarding", isPresented: $showingResetOnboardingAlert) {
+                Button("Cancel", role: .cancel) { }
+                Button("Reset", role: .destructive) {
+                    onboardingManager.resetOnboarding()
+                    dismiss()
+                }
+            } message: {
+                Text("This will reset the onboarding flow and show it again the next time you open the app.")
             }
         }
     }

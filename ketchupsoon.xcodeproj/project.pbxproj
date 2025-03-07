@@ -93,11 +93,6 @@
 			path = ketchupsoonUITests;
 			sourceTree = "<group>";
 		};
-		F4C7CEE02D1506BD00716B4C /* Cabin */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = Cabin;
-			sourceTree = "<group>";
-		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -147,7 +142,6 @@
 				F4070A3B2D0A184000B11C0B /* ketchupsoonTests */,
 				F4070A452D0A184000B11C0B /* ketchupsoonUITests */,
 				F4070A292D0A183C00B11C0B /* Products */,
-				F4C7CEE02D1506BD00716B4C /* Cabin */,
 			);
 			sourceTree = "<group>";
 		};
@@ -178,7 +172,6 @@
 			);
 			fileSystemSynchronizedGroups = (
 				F4070A2A2D0A183C00B11C0B /* ketchupsoon */,
-				F4C7CEE02D1506BD00716B4C /* Cabin */,
 			);
 			name = ketchupsoon;
 			packageProductDependencies = (

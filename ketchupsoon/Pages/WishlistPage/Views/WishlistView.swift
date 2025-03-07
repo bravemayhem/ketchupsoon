@@ -1,3 +1,4 @@
+/*
 import SwiftUI
 import SwiftData
 import UniformTypeIdentifiers
@@ -266,3 +267,4 @@ struct FriendsWishlistPreviewContainer: View {
 #Preview("Without Friends") {
     FriendsWishlistPreviewContainer(state: .empty)
 }
+*/

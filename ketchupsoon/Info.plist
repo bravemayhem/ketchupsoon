@@ -23,6 +23,11 @@
 		<string>Cabin-Regular.ttf</string>
 		<string>Cabin-Medium.ttf</string>
 		<string>Cabin-SemiBold.ttf</string>
+		<string>SpaceGrotesk-Bold.ttf</string>
+		<string>SpaceGrotesk-Light.ttf</string>
+		<string>SpaceGrotesk-Medium.ttf</string>
+		<string>SpaceGrotesk-Regular.ttf</string>
+		<string>SpaceGrotesk-SemiBold.ttf</string>
 	</array>
 	<key>UIBackgroundModes</key>
 	<array>

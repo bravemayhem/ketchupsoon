@@ -5,6 +5,7 @@ class OnboardingManager: ObservableObject {
     static let shared = OnboardingManager()
     
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
+    @AppStorage("useInnerCircleOnboarding") var useInnerCircleOnboarding = true
     @Published var isShowingOnboarding = false
     
     private init() {

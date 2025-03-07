@@ -288,3 +288,4 @@ struct KetchupsView: View {
     KetchupsView(showConfetti: .constant(false))
         .modelContainer(for: [Friend.self, Hangout.self], inMemory: true)
 }
+

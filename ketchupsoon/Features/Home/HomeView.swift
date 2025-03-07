@@ -120,22 +120,6 @@ struct HomeView: View {
             AppColors.backgroundGradient
                 .ignoresSafeArea()
         )
-        // Add navigation bar with custom design
-        .overlay(
-            // Bottom Navigation Bar with playful style
-            VStack {
-                Spacer()
-                HStack(spacing: 0) {
-                    TabButton(icon: "🏠", label: "home", isActive: true)
-                    TabButton(icon: "📅", label: "pulse", isActive: false)
-                    TabButton(icon: "⭐", label: "wishlist", isActive: false)
-                    TabButton(icon: "😎", label: "profile", isActive: false)
-                }
-                .padding(.vertical, 10)
-                .background(Color(AppColors.backgroundPrimary).opacity(0.9))
-                .overlay(Rectangle().frame(height: 1).foregroundColor(Color.white.opacity(0.05)), alignment: .top)
-            }
-        )
     }
 }
 

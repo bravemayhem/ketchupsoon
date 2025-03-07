@@ -1,11 +1,62 @@
 import Foundation
 import os.signpost
 import SwiftUI
+import UIKit
 
 func debugLog(_ message: String, file: String = #file, function: String = #function, line: Int = #line) {
     #if DEBUG
     let fileName = (file as NSString).lastPathComponent
     print("[\(fileName):\(line)] \(function): \(message)")
+    #endif
+}
+
+// Added utility to verify font registration
+func verifyFontRegistration() {
+    #if DEBUG
+    // List all registered font families
+    let families = UIFont.familyNames.sorted()
+    print("==== REGISTERED FONT FAMILIES ====")
+    for family in families {
+        print("👉 \(family)")
+        
+        // List all fonts in this family
+        let fonts = UIFont.fontNames(forFamilyName: family).sorted()
+        for font in fonts {
+            print("  - \(font)")
+        }
+    }
+    
+    // Check for SpaceGrotesk specifically
+    print("\n==== CHECKING FOR SPACEGROTESK ====")
+    var spaceGroteskFound = false
+    for family in families {
+        if family.contains("Space") || family.contains("Grotesk") {
+            print("Found potential family: \(family)")
+            let fonts = UIFont.fontNames(forFamilyName: family)
+            for font in fonts {
+                if font.contains("SpaceGrotesk") || font.contains("Space Grotesk") {
+                    print("✅ FOUND SpaceGrotesk font: \(font)")
+                    spaceGroteskFound = true
+                }
+            }
+        }
+    }
+    
+    if !spaceGroteskFound {
+        print("❌ NO SpaceGrotesk fonts found!")
+    }
+    
+    // Check bundle paths for the font files
+    print("\n==== CHECKING FONT FILE PATHS ====")
+    if let bundlePath = Bundle.main.resourcePath {
+        // Check paths for each SpaceGrotesk variant
+        let variants = ["Bold", "Regular", "Medium", "Light", "SemiBold"]
+        for variant in variants {
+            let fontPath = bundlePath + "/Fonts/Space_Grotesk/static/SpaceGrotesk-\(variant).ttf"
+            let exists = FileManager.default.fileExists(atPath: fontPath)
+            print("\(exists ? "✅" : "❌") SpaceGrotesk-\(variant).ttf: \(exists ? "EXISTS" : "MISSING")")
+        }
+    }
     #endif
 }
 

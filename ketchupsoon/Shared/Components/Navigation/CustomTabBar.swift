@@ -8,7 +8,8 @@ struct CustomTabBar: View {
     private let tabItems = [
         TabItem(icon: "🏠", label: "home", index: 0),
         TabItem(icon: "📅", label: "pulse", index: 1),
-        TabItem(icon: "⭐", label: "wishlist", index: 2),
+        TabItem(icon: "✨", label: "meetup", index: 2),
+    //  TabItem(icon: "", label: "wishlist", index: #),
         TabItem(icon: "😎", label: "profile", index: 3)
     ]
     

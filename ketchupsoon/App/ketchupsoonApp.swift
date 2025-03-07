@@ -10,8 +10,8 @@ import SwiftData
 import Foundation
 import FirebaseAuth
 import FirebaseCore
-import FirebaseFirestore       // Add this line to import Firestore
-// import FirebaseMessaging  // Temporarily commented out for testing
+import FirebaseFirestore
+import FirebaseMessaging  // Temporarily commented out for testing
 import UserNotifications
 import WatchConnectivity
 
@@ -121,7 +121,10 @@ struct ketchupsoonApp: App {
                 Friend.self,
                 Hangout.self,
                 Tag.self,
-                ketchupsoon.Milestone.self  // Explicitly specify the module
+                ketchupsoon.Milestone.self,  // Explicitly specify the module
+                Setting.self,
+                FCMToken.self,
+                GlobalStats.self
             ])
             
             print("📦 Creating ModelContainer...")
@@ -252,23 +255,21 @@ struct ketchupsoonApp: App {
     
     var body: some Scene {
         WindowGroup {
-            SplashScreenView()
+            ContentView()
+                .modelContainer(for: [Friend.self, Hangout.self, Setting.self, FCMToken.self, GlobalStats.self], inMemory: false)
                 .preferredColorScheme(colorSchemeManager.currentAppearanceMode == .system ? nil : colorSchemeManager.colorScheme)
-                .onChange(of: scenePhase) { _, newPhase in
-                    if newPhase == .active {
-                        // Refresh calendar events when app becomes active
-                        Task {
-                            await calendarManager.preloadTodaysEvents()
-                        }
-                    }
-                }
+                .environment(\.colorScheme, colorSchemeManager.colorScheme)
                 .onAppear {
-                    PerformanceMonitor.shared.stopMeasuring("AppLaunch")
+                    // Verify font registration on startup (DEBUG only)
+                    #if DEBUG
+                    verifyFontRegistration()
+                    #endif
                 }
         }
         .modelContainer(container)
     }
 }
+
 
 extension ProcessInfo {
     var isPreview: Bool {

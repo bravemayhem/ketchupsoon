@@ -1,3 +1,4 @@
+/*
 import SwiftUI
 
 struct SplashScreenView: View {
@@ -28,3 +29,4 @@ struct SplashScreenView: View {
         }
     }
 } 
+*/
