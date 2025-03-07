@@ -1,3 +1,4 @@
+/*
 import SwiftUI
 import Foundation
 
@@ -502,7 +503,7 @@ struct TimeSlotCell: View {
         if hasEvent {
             return Color.gray.opacity(0.15)
         }
-        return isSelected ? AppColors.futureGreen.opacity(0.3) : Color.gray.opacity(0.05)
+        return isSelected ? AppColors.highlight.opacity(0.3) : Color.gray.opacity(0.05)
     }
 }
 
@@ -560,3 +561,4 @@ struct EventOverlay: View {
 #Preview {
     FindTimeView()
 } 
+*/

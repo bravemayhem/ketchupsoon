@@ -36,5 +36,9 @@
 	<string>Ketchup Soon needs access to your contacts to help you add friends to the app.</string>
 	<key>NSUserNotificationsUsageDescription</key>
 	<string>Ketchup Soon sends you notifications about upcoming hangouts with friends.</string>
+	<key>UIViewControllerBasedStatusBarAppearance</key>
+	<false/>
+	<key>UIStatusBarStyle</key>
+	<string>UIStatusBarStyleLightContent</string>
 </dict>
 </plist>

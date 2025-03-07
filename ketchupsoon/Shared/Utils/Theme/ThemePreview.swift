@@ -4,149 +4,306 @@ struct ThemePreview: View {
     var body: some View {
         ScrollView {
             VStack(spacing: AppTheme.spacingLarge) {
+                // Header
+                Text("ketchup")
+                    .font(.system(size: 26, weight: .bold))
+                    .foregroundColor(.white)
+                    .kerning(-0.5) + 
+                Text("soon")
+                    .font(.system(size: 26, weight: .bold))
+                    .foregroundColor(AppColors.accent)
+                    .kerning(-0.5) +
+                Text(" design")
+                    .font(.system(size: 26, weight: .bold))
+                    .foregroundColor(.white)
+                    .kerning(-0.5)
+                
+                Text("gen z aesthetic ✨")
+                    .font(.system(size: 16))
+                    .foregroundColor(AppColors.textSecondary)
+                    .padding(.bottom)
+                
                 // Colors Section
                 colorsSection
-                
-                Divider()
-                
-                // Typography Section
-                typographySection
-                
-                Divider()
+                    .clayCard()
+                    .padding(.horizontal)
                 
                 // UI Elements Section
                 uiElementsSection
+                    .clayCard()
+                    .padding(.horizontal)
                 
-                Divider()
+                // Typography Section
+                typographySection
+                    .clayCard()
+                    .padding(.horizontal)
                 
-                // Avatar Colors Section
-                avatarColorsSection
-                
-                Divider()
+                // Avatar Styles Section
+                avatarStylesSection
+                    .clayCard()
+                    .padding(.horizontal)
                 
                 // Buttons Section
                 buttonsSection
+                    .clayCard()
+                    .padding(.horizontal)
+                
+                // UI Components Section
+                componentsSection
+                    .clayCard()
+                    .padding(.horizontal)
+                
+                // Space at the bottom
+                Spacer()
+                    .frame(height: 40)
             }
-            .padding()
+            .padding(.top)
         }
-        .background(AppColors.systemBackground)
-        .navigationTitle("Theme Preview")
+        .background(
+            ZStack {
+                AppColors.backgroundGradient
+                
+                // Decorative blobs
+                Circle()
+                    .fill(AppColors.purple.opacity(0.3))
+                    .frame(width: 400, height: 400)
+                    .blur(radius: 50)
+                    .offset(x: 150, y: -50)
+                
+                Circle()
+                    .fill(AppColors.accent.opacity(0.2))
+                    .frame(width: 360, height: 360)
+                    .blur(radius: 50)
+                    .offset(x: -150, y: 500)
+                
+                // Small decorative elements
+                Circle()
+                    .fill(AppColors.mint.opacity(0.8))
+                    .frame(width: 16, height: 16)
+                    .offset(x: -140, y: 180)
+                
+                Circle()
+                    .fill(AppColors.accentSecondary.opacity(0.8))
+                    .frame(width: 10, height: 10)
+                    .offset(x: 150, y: 400)
+                
+                RoundedRectangle(cornerRadius: 3)
+                    .fill(AppColors.purple.opacity(0.8))
+                    .frame(width: 15, height: 15)
+                    .rotationEffect(.degrees(30))
+                    .offset(x: 120, y: 220)
+            }
+        )
+        .foregroundColor(AppColors.textPrimary)
     }
     
     private var colorsSection: some View {
         VStack(alignment: .leading, spacing: AppTheme.spacingMedium) {
-            Text("Colors")
-                .font(AppTheme.titleFont)
+            sectionHeader("brand colors 🎨")
             
-            // Brand Colors
-            colorRow(name: "Accent", color: AppColors.accent)
-            colorRow(name: "Accent Light", color: AppColors.accentLight)
-            
-            // Background Colors
-            colorRow(name: "System Background", color: AppColors.systemBackground)
-            colorRow(name: "Secondary System Background", color: AppColors.secondarySystemBackground)
-            
-            // Text Colors
-            colorRow(name: "Label", color: AppColors.label)
-            colorRow(name: "Secondary Label", color: AppColors.secondaryLabel)
-            colorRow(name: "Tertiary Label", color: AppColors.tertiaryLabel)
-            
-            // Semantic Colors
-            colorRow(name: "Success", color: AppColors.success)
-            colorRow(name: "Warning", color: AppColors.warning)
-            colorRow(name: "Error", color: AppColors.error)
+            // Brand Colors Grid
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+                colorSwatch(name: "accent", color: AppColors.accent)
+                colorSwatch(name: "secondary", color: AppColors.accentSecondary)
+                colorSwatch(name: "purple", color: AppColors.purple)
+                colorSwatch(name: "mint", color: AppColors.mint)
+                colorSwatch(name: "background", color: AppColors.backgroundPrimary)
+                colorSwatch(name: "card bg", color: AppColors.cardBackground)
+            }
         }
+        .padding()
     }
     
     private var typographySection: some View {
         VStack(alignment: .leading, spacing: AppTheme.spacingMedium) {
-            Text("Typography")
-                .font(AppTheme.titleFont)
+            sectionHeader("typography ✏️")
             
-            Text("Title Font")
-                .font(AppTheme.titleFont)
-            Text("Headline Font")
-                .font(AppTheme.headlineFont)
-            Text("Body Font")
-                .font(AppTheme.bodyFont)
-            Text("Caption Font")
-                .font(AppTheme.captionFont)
+            VStack(alignment: .leading, spacing: 8) {
+                Text("title font")
+                    .font(AppTheme.titleFont)
+                    .foregroundColor(.white)
+                
+                Text("subtitle font")
+                    .font(AppTheme.subtitleFont)
+                    .foregroundColor(.white)
+                
+                Text("body font")
+                    .font(AppTheme.bodyFont)
+                    .foregroundColor(.white)
+                
+                Text("caption font")
+                    .font(AppTheme.captionFont)
+                    .foregroundColor(AppColors.textSecondary)
+            }
         }
+        .padding()
     }
     
     private var uiElementsSection: some View {
         VStack(alignment: .leading, spacing: AppTheme.spacingMedium) {
-            Text("UI Elements")
-                .font(AppTheme.titleFont)
+            sectionHeader("gradients 🌈")
             
-            // Gradients
-            Text("Background Gradient")
-            RoundedRectangle(cornerRadius: AppTheme.cornerRadiusMedium)
-                .fill(AppColors.backgroundGradient)
-                .frame(height: 100)
-            
-            Text("Accent Gradient")
-            RoundedRectangle(cornerRadius: AppTheme.cornerRadiusMedium)
-                .fill(AppColors.accentGradient)
-                .frame(height: 100)
-            
-            // Glassmorphism
-            Text("Glassmorphism")
-            ZStack {
-                AppColors.accentGradient
-                AppColors.glassMorphism()
+            // Gradients Grid
+            VStack(spacing: 12) {
+                gradientSample("gradient 1", gradient: AppColors.accentGradient1)
+                gradientSample("gradient 2", gradient: AppColors.accentGradient2)
+                gradientSample("gradient 3", gradient: AppColors.accentGradient3)
+                gradientSample("gradient 4", gradient: AppColors.accentGradient4)
             }
-            .frame(height: 100)
-            .cornerRadius(AppTheme.cornerRadiusMedium)
         }
+        .padding()
     }
     
-    private var avatarColorsSection: some View {
+    private var avatarStylesSection: some View {
         VStack(alignment: .leading, spacing: AppTheme.spacingMedium) {
-            Text("Avatar Colors")
-                .font(AppTheme.titleFont)
+            sectionHeader("avatar styles 👤")
             
+            // Avatar Styles
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: AppTheme.spacingSmall) {
-                    ForEach(AppColors.avatarColors, id: \.self) { color in
-                        Circle()
-                            .fill(color)
-                            .frame(width: 50, height: 50)
+                HStack(spacing: 16) {
+                    ForEach(0..<5) { i in
+                        let name = "User\(i)"
+                        VStack {
+                            ZStack {
+                                Circle()
+                                    .fill(AppColors.avatarGradient(for: name))
+                                    .frame(width: 60, height: 60)
+                                    .shadow(color: AppColors.gradient1Start.opacity(0.3), radius: 6, x: 0, y: 0)
+                                
+                                Circle()
+                                    .fill(AppColors.cardBackground)
+                                    .frame(width: 54, height: 54)
+                                
+                                Text(AppColors.avatarEmoji(for: name))
+                                    .font(.system(size: 26))
+                            }
+                            
+                            Text(name.lowercased())
+                                .font(.system(size: 12))
+                                .foregroundColor(AppColors.textSecondary)
+                        }
                     }
                 }
             }
         }
+        .padding()
     }
     
     private var buttonsSection: some View {
         VStack(alignment: .leading, spacing: AppTheme.spacingMedium) {
-            Text("Buttons")
-                .font(AppTheme.titleFont)
+            sectionHeader("button styles 👆")
             
-            Button("Primary Button") {}
-                .buttonStyle(AppTheme.primaryButtonStyle())
+            VStack(spacing: 16) {
+                Button("primary button") {}
+                    .buttonStyle(AppTheme.primaryButtonStyle())
+                    .frame(maxWidth: .infinity)
+                
+                Button("secondary button") {}
+                    .buttonStyle(AppTheme.secondaryButtonStyle())
+                    .frame(maxWidth: .infinity)
+                
+                Button("tertiary button") {}
+                    .buttonStyle(AppTheme.tertiaryButtonStyle())
+                    .frame(maxWidth: .infinity)
+            }
+        }
+        .padding()
+    }
+    
+    private var componentsSection: some View {
+        VStack(alignment: .leading, spacing: AppTheme.spacingMedium) {
+            sectionHeader("ui components 💎")
             
-            Button("Secondary Button") {}
-                .buttonStyle(AppTheme.secondaryButtonStyle())
+            VStack(spacing: 16) {
+                // Card Component
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("card with claymorphism")
+                        .font(AppTheme.subtitleFont)
+                        .foregroundColor(.white)
+                    
+                    Text("cards use soft shadows and subtle borders")
+                        .font(AppTheme.bodyFont)
+                        .foregroundColor(AppColors.textSecondary)
+                }
+                .padding()
+                .clayCard(cornerRadius: 20)
+                
+                // Text Field Component
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("text fields")
+                        .font(AppTheme.subtitleFont)
+                        .foregroundColor(.white)
+                    
+                    TextField("Enter your name...", text: .constant(""))
+                        .appTextFieldStyle()
+                }
+                
+                // Progress Component
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("progress indicator")
+                        .font(AppTheme.subtitleFont)
+                        .foregroundColor(.white)
+                    
+                    ProgressView(value: 0.6)
+                        .progressViewStyle(GradientProgressStyle())
+                }
+            }
+        }
+        .padding()
+    }
+    
+    // Helper functions
+    private func sectionHeader(_ title: String) -> some View {
+        Text(title)
+            .font(.system(size: 20, weight: .bold))
+            .foregroundColor(.white)
+    }
+    
+    private func colorSwatch(name: String, color: Color) -> some View {
+        VStack(spacing: 4) {
+            RoundedRectangle(cornerRadius: 12)
+                .fill(color)
+                .frame(height: 60)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                )
+            
+            Text(name)
+                .font(.system(size: 12))
+                .foregroundColor(AppColors.textSecondary)
         }
     }
     
-    private func colorRow(name: String, color: Color) -> some View {
-        HStack {
-            RoundedRectangle(cornerRadius: AppTheme.cornerRadiusSmall)
-                .fill(color)
-                .frame(width: 50, height: 50)
-            
+    private func gradientSample(_ name: String, gradient: LinearGradient) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
             Text(name)
-                .font(AppTheme.bodyFont)
+                .font(.system(size: 14))
+                .foregroundColor(AppColors.textSecondary)
             
-            Spacer()
+            RoundedRectangle(cornerRadius: 16)
+                .fill(gradient)
+                .frame(height: 50)
+        }
+    }
+}
+
+// Custom Gradient Progress Style
+struct GradientProgressStyle: ProgressViewStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        ZStack(alignment: .leading) {
+            RoundedRectangle(cornerRadius: 10)
+                .fill(Color.white.opacity(0.1))
+                .frame(height: 20)
+            
+            RoundedRectangle(cornerRadius: 10)
+                .fill(AppColors.accentGradient1)
+                .frame(width: CGFloat(configuration.fractionCompleted ?? 0) * 350, height: 20)
+                .glow(color: AppColors.accent, radius: 3, opacity: 0.5)
         }
     }
 }
 
 #Preview {
-    NavigationView {
-        ThemePreview()
-    }
+    ThemePreview()
 } 

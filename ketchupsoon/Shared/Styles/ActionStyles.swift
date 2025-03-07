@@ -35,7 +35,7 @@ extension Label {
     VStack(alignment: .leading, spacing: AppTheme.spacingLarge) {
         VStack(alignment: .leading, spacing: AppTheme.spacingMedium) {
             Text("Action Buttons")
-                .font(AppTheme.headlineFont)
+                .font(AppTheme.subtitleFont)
             
             Button("Action Button") {}
                 .actionButtonStyle()
@@ -48,7 +48,7 @@ extension Label {
         
         VStack(alignment: .leading, spacing: AppTheme.spacingMedium) {
             Text("Action Labels")
-                .font(AppTheme.headlineFont)
+                .font(AppTheme.subtitleFont)
             
             Label("Star Item", systemImage: "star.fill")
                 .actionLabelStyle()

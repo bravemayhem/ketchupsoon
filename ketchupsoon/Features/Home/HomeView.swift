@@ -2,693 +2,390 @@ import SwiftUI
 import SwiftData
 
 struct HomeView: View {
-    @Environment(\.modelContext) private var modelContext
-    @Query(sort: \Milestone.date, order: .reverse) private var allMilestones: [Milestone]
-    @Query(filter: #Predicate<Friend> { $0._needsToConnectFlag == true }) private var wishlistFriends: [Friend]
-    
-    // Query all hangouts and filter in computed property
-    @Query(sort: \Hangout.date) private var allHangouts: [Hangout]
-    
-    // Navigation state
-    @State private var showSettings = false
-    
-    // Access user profile
-    @StateObject private var profileManager = UserProfileManager.shared
-    
-    // Computed property to filter hangouts
-    var upcomingHangouts: [Hangout] {
-        allHangouts.filter { $0.date > Date() && !$0.isCompleted }
-    }
-    
-    // Computed property to get recent and upcoming moments
-    var milestones: [Milestone] {
-        // Get moments from the last 2 weeks and upcoming 2 weeks
-        let twoWeeksAgo = Calendar.current.date(byAdding: .day, value: -14, to: Date()) ?? Date()
-        let twoWeeksFromNow = Calendar.current.date(byAdding: .day, value: 14, to: Date()) ?? Date()
-        
-        return allMilestones.filter { milestone in
-            !milestone.isArchived && 
-            milestone.date >= twoWeeksAgo && 
-            milestone.date <= twoWeeksFromNow
-        }
-    }
+    // This view will display the home design from our Gen Z redesign
     
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 25) {
-                // Profile button - visible at the top left
-                HStack {
-                    Button(action: {
-                        showSettings = true
-                    }) {
-                        ProfileAvatarView(size: 40)
-                            .shadow(color: Color.black.opacity(0.2), radius: 3, x: 0, y: 2)
-                    }
-                    .buttonStyle(ProfileButtonStyle())
-                    .padding(.top)
-                    .padding(.leading)
-                    
-                    Spacer()
-                }
-                
-                // Activity summary section
-                VStack(alignment: .leading, spacing: 20) {
-                    HStack {
-                        Text("Your Circle Activity")
-                            .font(.headline)
-                            .fontWeight(.bold)
-                        
-                        Spacer()
-                        
-                        Text("\(upcomingHangouts.count + wishlistFriends.count) active connections")
-                            .font(.subheadline)
-                            .foregroundColor(AppColors.secondaryLabel)
-                    }
-                    
-                    HStack(spacing: 15) {
-                        ActivityCard(
-                            title: "Upcoming",
-                            value: "\(upcomingHangouts.count)",
-                            subtitle: "Ketchups",
-                            icon: "calendar",
-                            color: LinearGradient(
-                                colors: [AppColors.accent, Color.orange],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        
-                        ActivityCard(
-                            title: "Wishlist",
-                            value: "\(wishlistFriends.count)",
-                            subtitle: "Friends",
-                            icon: "star",
-                            color: LinearGradient(
-                                colors: [Color(hex: "6B66FF"), Color(hex: "9146FF")],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                    }
-                }
-                .padding()
-                .background(
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(AppColors.secondarySystemBackground)
-                )
-                .padding(.horizontal)
-                
-                // Upcoming Ketchups section
-                VStack(alignment: .leading, spacing: 16) {
-                    HStack {
-                        Text("Upcoming Ketchups")
-                            .font(.headline)
-                            .fontWeight(.bold)
-                        
-                        Spacer()
-                        
-                        NavigationLink(destination: KetchupsView(showConfetti: .constant(false))) {
-                            Text("See All")
-                                .font(.subheadline)
-                                .foregroundColor(AppColors.accent)
-                        }
-                    }
-                    
-                    if !upcomingHangouts.isEmpty {
-                        ForEach(upcomingHangouts.prefix(2)) { hangout in
-                            KetchupCardView(hangout: hangout)
-                        }
-                    } else {
-                        EmptyStateCard(
-                            title: "No Upcoming Ketchups",
-                            message: "Time to schedule some quality time with friends!",
-                            buttonText: "Schedule Ketchup",
-                            icon: "calendar.badge.plus"
-                        )
-                    }
-                }
-                .padding()
-                .background(
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(AppColors.secondarySystemBackground)
-                )
-                .padding(.horizontal)
-                
-                // Wishlist section
-                VStack(alignment: .leading, spacing: 16) {
-                    HStack {
-                        Text("Your Wishlist")
-                            .font(.headline)
-                            .fontWeight(.bold)
-                        
-                        Spacer()
-                        
-                        NavigationLink(destination: WishlistView(showConfetti: .constant(false))) {
-                            Text("See All")
-                                .font(.subheadline)
-                                .foregroundColor(AppColors.accent)
-                        }
-                    }
-                    
-                    if !wishlistFriends.isEmpty {
-                        ForEach(wishlistFriends.prefix(2)) { friend in
-                            FriendWishlistCardView(friend: friend)
-                        }
-                    } else {
-                        EmptyStateCard(
-                            title: "No Friends in Wishlist",
-                            message: "Add friends you want to catch up with soon!",
-                            buttonText: "Add to Wishlist",
-                            icon: "person.fill.badge.plus"
-                        )
-                    }
-                }
-                .padding()
-                .background(
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(AppColors.secondarySystemBackground)
-                )
-                .padding(.horizontal)
-                
-                // New Moments section
-                VStack(alignment: .leading, spacing: 16) {
-                    HStack {
-                        Text("Moments")
-                            .font(.headline)
-                            .fontWeight(.bold)
-                        
-                        Spacer()
-                        
-                        NavigationLink(destination: MomentsView()) {
-                            Text("See All")
-                                .font(.subheadline)
-                                .foregroundColor(AppColors.accent)
-                        }
-                    }
-                    
-                    if milestones.isEmpty {
-                        EmptyStateCard(
-                            title: "No Recent Moments",
-                            message: "Stay updated on important events in your friends' lives.",
-                            buttonText: "Add Moment",
-                            icon: "party.popper"
-                        )
-                        .onTapGesture {
-                            createSampleMoments()
-                        }
-                    } else {
-                        ForEach(milestones.prefix(2)) { milestone in
-                            MomentCard(milestone: milestone)
-                        }
-                    }
-                }
-                .padding()
-                .background(
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(AppColors.secondarySystemBackground)
-                )
-                .padding(.horizontal)
-                
-                Spacer(minLength: 40)
-            }
-            .background(
+            VStack(spacing: 0) {
+                // Main content area
                 ZStack {
-                    // Background decorative elements like the blobs from the HTML design
+                    // Background decoration
                     Circle()
-                        .fill(Color(hex: "6B66FF").opacity(0.3))
-                        .frame(width: 300, height: 300)
-                        .blur(radius: 80)
+                        .fill(AppColors.purple.opacity(0.3))
+                        .frame(width: 400, height: 400)
+                        .blur(radius: 50)
                         .offset(x: 150, y: -50)
                     
                     Circle()
-                        .fill(Color(hex: "FF6B6B").opacity(0.3))
-                        .frame(width: 300, height: 300)
-                        .blur(radius: 80)
-                        .offset(x: -150, y: 500)
+                        .fill(AppColors.accent.opacity(0.2))
+                        .frame(width: 360, height: 360)
+                        .blur(radius: 50)
+                        .offset(x: -150, y: 300)
+                    
+                    // Playful small decorative elements
+                    Circle()
+                        .fill(AppColors.mint.opacity(0.8))
+                        .frame(width: 16, height: 16)
+                        .offset(x: -140, y: 180)
                     
                     Circle()
-                        .fill(Color(hex: "9146FF").opacity(0.2))
-                        .frame(width: 200, height: 200)
-                        .blur(radius: 60)
-                        .offset(x: 50, y: 300)
-                }
-            )
-        }
-        .background(AppColors.systemBackground)
-        .onAppear {
-            // Initialize sample data for preview/demo purposes
-            if ProcessInfo.processInfo.isPreview && allMilestones.isEmpty {
-                createSampleMoments()
-            }
-        }
-        .sheet(isPresented: $showSettings) {
-            NavigationStack {
-                SettingsView()
-                    .toolbar {
-                        ToolbarItem(placement: .cancellationAction) {
-                            Button("Done") {
-                                showSettings = false
+                        .fill(AppColors.accentSecondary.opacity(0.8))
+                        .frame(width: 10, height: 10)
+                        .offset(x: 150, y: 400)
+                    
+                    RoundedRectangle(cornerRadius: 3)
+                        .fill(AppColors.purple.opacity(0.8))
+                        .frame(width: 15, height: 15)
+                        .rotationEffect(.degrees(30))
+                        .offset(x: 120, y: 220)
+                    
+                    // Actual content
+                    VStack(alignment: .leading, spacing: 20) {
+
+                        // Your Circle section - updated to "my crew"
+                        Text("my crew")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.white)
+                            .padding(.top, 10)
+                        
+                        // Circle avatar rows
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 30) {
+                                CircleAvatar(emoji: "🌟", name: "sarah", gradientColors: [AppColors.gradient1Start, AppColors.gradient1End])
+                                CircleAvatar(emoji: "🚀", name: "alex", gradientColors: [AppColors.gradient2Start, AppColors.gradient2End])
+                                CircleAvatar(emoji: "🎸", name: "jordan", gradientColors: [AppColors.gradient3Start, AppColors.gradient3End])
+                                CircleAvatar(emoji: "🎨", name: "taylor", gradientColors: [AppColors.gradient4Start, AppColors.gradient4End])
+                                AddCircleAvatar()
                             }
+                            .padding(.horizontal, 20)
+                            .padding(.bottom, 20)
                         }
+                        
+                        // Friend updates section - updated to "the good stuff 💯"
+                        Text("the good stuff 💯")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.white)
+                            .padding(.top, 10)
+                        
+                        // Promotion card
+                        FriendUpdateCard(
+                            gradientColors: [AppColors.gradient2Start, AppColors.gradient2End],
+                            avatarEmoji: "🚀",
+                            name: "alex",
+                            timeAgo: "2h ago",
+                            updateText: "just got promoted to senior designer! 🎉",
+                            primaryButtonText: "hype them up!",
+                            secondaryButtonText: "send confetti 🎊"
+                        )
+                        .padding(.bottom, 20)
+                        
+                        // Birthday card
+                        FriendUpdateCard(
+                            gradientColors: [AppColors.gradient1Start, AppColors.gradient1End],
+                            avatarEmoji: "🌟",
+                            name: "sarah",
+                            timeAgo: "tomorrow!",
+                            updateText: "birthday coming up! 🎂 gonna be epic",
+                            primaryButtonText: "plan something!",
+                            secondaryButtonText: "send birthday vibes"
+                        )
+                        
+                        Spacer(minLength: 40)
                     }
+                    .padding(.horizontal, 20)
+                }
+                
+                Spacer()
             }
-        }
-    }
-    
-    private func createSampleMoments() {
-        // Only create samples if we have friends but no moments
-        if !allMilestones.isEmpty { return }
-        
-        let sampleMoments = [
-            (type: MilestoneType.newJob, title: "Started at Apple as Senior Designer", description: "After 5 years at Google, excited for this new chapter!", daysOffset: -3),
-            (type: MilestoneType.birthday, title: "Turning 30!", description: "Celebrating with a small dinner party at home.", daysOffset: 5),
-            (type: MilestoneType.graduation, title: "Graduated from Stanford", description: "Finally got my Masters in Computer Science!", daysOffset: -7)
-        ]
-        
-        let friendsToUse = wishlistFriends.isEmpty ? 
-            (try? modelContext.fetch(FetchDescriptor<Friend>())) ?? [] : 
-            Array(wishlistFriends)
-        
-        guard !friendsToUse.isEmpty else { return }
-        
-        for (index, momentData) in sampleMoments.enumerated() {
-            let friendIndex = index % friendsToUse.count
-            let friend = friendsToUse[friendIndex]
-            
-            let date = Calendar.current.date(byAdding: .day, value: momentData.daysOffset, to: Date()) ?? Date()
-            
-            // Create a new moment using the proper SwiftData model
-            friend.addMilestone(
-                type: momentData.type,
-                title: momentData.title,
-                description: momentData.description,
-                date: date
+            .overlay(
+                // Quick Add FAB with glow effect
+                ZStack {
+                    Circle()
+                        .fill(AppColors.accentGradient1)
+                        .frame(width: 70, height: 70)
+                        .shadow(color: AppColors.accent.opacity(0.5), radius: 12, x: 0, y: 0)
+                    
+                    Text("+")
+                        .font(.system(size: 30))
+                        .foregroundColor(.white)
+                        .fontWeight(.bold)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+                .padding(.trailing, 20)
+                .padding(.bottom, 80)
             )
         }
-        
-        // Save changes
-        try? modelContext.save()
-    }
-}
-
-// Activity Card Component
-struct ActivityCard: View {
-    let title: String
-    let value: String
-    let subtitle: String
-    let icon: String
-    let color: LinearGradient
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Text(title)
-                    .font(.headline)
-                    .fontWeight(.medium)
-                
-                Spacer()
-                
-                Image(systemName: icon)
-                    .font(.headline)
-                    .foregroundStyle(color)
-            }
-            
-            HStack(alignment: .firstTextBaseline) {
-                Text(value)
-                    .font(.system(size: 36, weight: .bold))
-                
-                Text(subtitle)
-                    .font(.subheadline)
-                    .foregroundColor(AppColors.secondaryLabel)
-                    .padding(.leading, 2)
-            }
-        }
-        .padding()
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(AppColors.systemBackground)
-        .cornerRadius(16)
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(color.opacity(0.3), lineWidth: 1)
+        // Don't ignore safe area at the top to show system status bar
+        .background(
+            AppColors.backgroundGradient
+                .ignoresSafeArea()
         )
-    }
-}
-
-// Custom KetchupCard View for real data
-struct KetchupCardView: View {
-    let hangout: Hangout
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(hangout.title)
-                        .font(.headline)
-                        .fontWeight(.semibold)
-                    
-                    Text(formattedDateTime)
-                        .font(.subheadline)
-                        .foregroundColor(AppColors.secondaryLabel)
+        // Add navigation bar with custom design
+        .overlay(
+            // Bottom Navigation Bar with playful style
+            VStack {
+                Spacer()
+                HStack(spacing: 0) {
+                    TabButton(icon: "🏠", label: "home", isActive: true)
+                    TabButton(icon: "📅", label: "pulse", isActive: false)
+                    TabButton(icon: "⭐", label: "wishlist", isActive: false)
+                    TabButton(icon: "😎", label: "profile", isActive: false)
                 }
-                
-                Spacer()
-                
-                Image(systemName: "chevron.right")
-                    .font(.subheadline)
-                    .foregroundColor(AppColors.secondaryLabel)
+                .padding(.vertical, 10)
+                .background(Color(AppColors.backgroundPrimary).opacity(0.9))
+                .overlay(Rectangle().frame(height: 1).foregroundColor(Color.white.opacity(0.05)), alignment: .top)
             }
-            
-            HStack {
-                // Avatar stack
-                ZStack(alignment: .leading) {
-                    if hangout.friends.first != nil {
-                        Circle()
-                            .fill(LinearGradient(
-                                colors: [AppColors.accent, Color.orange],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            ))
-                            .frame(width: 32, height: 32)
-                    }
-                    
-                    if hangout.friends.count > 1 {
-                        Circle()
-                            .fill(Color(hex: "6B66FF").opacity(0.9))
-                            .frame(width: 32, height: 32)
-                            .padding(.leading, 16)
-                    }
-                }
-                
-                Text(friendsText)
-                    .font(.caption)
-                    .foregroundColor(AppColors.secondaryLabel)
-                    .padding(.leading, 8)
-                
-                Spacer()
-                
-                Text("Upcoming")
-                    .font(.caption2)
-                    .fontWeight(.medium)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(AppColors.accent.opacity(0.2))
-                    .foregroundColor(AppColors.accent)
-                    .cornerRadius(8)
-            }
-        }
-        .padding()
-        .background(AppColors.systemBackground)
-        .cornerRadius(16)
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(Color.white.opacity(0.1), lineWidth: 1)
-        )
-    }
-    
-    private var formattedDateTime: String {
-        let date = hangout.date
-        
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateStyle = .medium
-        dateFormatter.timeStyle = .short
-        
-        var locationText = ""
-        if !hangout.location.isEmpty {
-            locationText = " • \(hangout.location)"
-        }
-        
-        return "\(dateFormatter.string(from: date))\(locationText)"
-    }
-    
-    private var friendsText: String {
-        if hangout.friends.isEmpty {
-            return "No friends added"
-        } else if hangout.friends.count == 1 {
-            return "with \(hangout.friends[0].name)"
-        } else {
-            return "with \(hangout.friends[0].name) and \(hangout.friends.count - 1) more"
-        }
-    }
-}
-
-// Custom FriendWishlistCard for real data
-struct FriendWishlistCardView: View {
-    let friend: Friend
-    
-    var body: some View {
-        HStack {
-            Circle()
-                .fill(LinearGradient(
-                    colors: [AppColors.accent, Color.orange],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                ))
-                .frame(width: 50, height: 50)
-            
-            VStack(alignment: .leading, spacing: 4) {
-                Text(friend.name)
-                    .font(.headline)
-                    .fontWeight(.semibold)
-                
-                Text("Last seen \(friend.lastSeenText)")
-                    .font(.subheadline)
-                    .foregroundColor(AppColors.secondaryLabel)
-            }
-            
-            Spacer()
-            
-            Button(action: {}) {
-                Text("Schedule")
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(AppColors.accent)
-                    .foregroundColor(.white)
-                    .cornerRadius(8)
-            }
-        }
-        .padding()
-        .background(AppColors.systemBackground)
-        .cornerRadius(16)
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(Color.white.opacity(0.1), lineWidth: 1)
         )
     }
 }
 
-// Empty State Card Component
-struct EmptyStateCard: View {
-    let title: String
-    let message: String
-    let buttonText: String
-    let icon: String
-    
-    var body: some View {
-        VStack(spacing: 16) {
-            Image(systemName: icon)
-                .font(.system(size: 40))
-                .foregroundColor(AppColors.secondaryLabel)
-                .padding(.bottom, 8)
-            
-            Text(title)
-                .font(.headline)
-                .fontWeight(.semibold)
-            
-            Text(message)
-                .font(.subheadline)
-                .foregroundColor(AppColors.secondaryLabel)
-                .multilineTextAlignment(.center)
-            
-            Button(action: {}) {
-                Text(buttonText)
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 10)
-                    .background(AppColors.accent)
-                    .foregroundColor(.white)
-                    .cornerRadius(12)
-            }
-            .padding(.top, 8)
-        }
-        .padding()
-        .frame(maxWidth: .infinity)
-        .background(AppColors.systemBackground)
-        .cornerRadius(16)
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(Color.white.opacity(0.1), lineWidth: 1)
-        )
-    }
-}
+// MARK: - Supporting Views
 
-// Moment Card Component
-struct MomentCard: View {
-    let milestone: Milestone
+// Circle Avatar component - Updated with claymorphism and glow
+struct CircleAvatar: View {
+    let emoji: String
+    let name: String
+    let gradientColors: [Color]
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 12) {
-                // Friend avatar
+        VStack {
+            ZStack {
                 Circle()
                     .fill(LinearGradient(
-                        colors: [AppColors.accent, Color.orange],
+                        gradient: Gradient(colors: gradientColors),
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     ))
-                    .frame(width: 40, height: 40)
-                    .overlay(
-                        Image(systemName: milestone.type.iconName)
-                            .font(.system(size: 16))
-                            .foregroundColor(.white)
-                    )
+                    .frame(width: 64, height: 64)
+                    .shadow(color: gradientColors[0].opacity(0.3), radius: 6, x: 0, y: 0)
                 
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(milestone.friendName)
-                        .font(.headline)
-                        .fontWeight(.semibold)
-                    
-                    Text(milestone.title)
-                        .font(.subheadline)
-                        .foregroundColor(AppColors.label)
-                }
+                Circle()
+                    .fill(AppColors.cardBackground)
+                    .frame(width: 58, height: 58)
                 
-                Spacer()
-                
-                // Date badge
-                Text(milestone.timeframe)
-                    .font(.caption)
-                    .foregroundColor(AppColors.secondaryLabel)
+                Text(emoji)
+                    .font(.system(size: 30))
             }
             
-            if let description = milestone.milestoneDescription, !description.isEmpty {
-                Text(description)
-                    .font(.subheadline)
-                    .foregroundColor(AppColors.secondaryLabel)
-                    .padding(.top, 4)
-                    .padding(.leading, 52) // Align with the text above
-            }
-            
-            HStack {
-                Spacer()
-                
-                // Milestone type badge
-                Text(milestone.type.rawValue)
-                    .font(.caption2)
-                    .fontWeight(.medium)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(milestone.type.color.opacity(0.2))
-                    .foregroundColor(milestone.type.color)
-                    .cornerRadius(8)
-            }
+            Text(name)
+                .font(.system(size: 12))
+                .foregroundColor(.white)
+                .padding(.top, 5)
         }
-        .padding()
-        .background(AppColors.systemBackground)
-        .cornerRadius(16)
+    }
+}
+
+// Add Circle Avatar component - Updated with claymorphism
+struct AddCircleAvatar: View {
+    var body: some View {
+        VStack {
+            ZStack {
+                Circle()
+                    .strokeBorder(
+                        Color.white.opacity(0.3),
+                        lineWidth: 2,
+                        dash: [4, 2]
+                    )
+                    .frame(width: 64, height: 64)
+                
+                Circle()
+                    .fill(AppColors.cardBackground)
+                    .frame(width: 58, height: 58)
+                
+                Text("+")
+                    .font(.system(size: 30))
+                    .foregroundColor(.white.opacity(0.6))
+            }
+            
+            Text("add")
+                .font(.system(size: 12))
+                .foregroundColor(.white.opacity(0.6))
+                .padding(.top, 5)
+        }
+    }
+}
+
+// Friend Update Card component - Updated with claymorphism
+struct FriendUpdateCard: View {
+    let gradientColors: [Color]
+    let avatarEmoji: String
+    let name: String
+    let timeAgo: String
+    let updateText: String
+    let primaryButtonText: String
+    let secondaryButtonText: String
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Card header with claymorphism
+            ZStack(alignment: .leading) {
+                Rectangle()
+                    .fill(LinearGradient(
+                        gradient: Gradient(colors: gradientColors),
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ))
+                    .opacity(0.2)
+                    .frame(height: 60)
+                    .cornerRadius(24, corners: [.topLeft, .topRight])
+                
+                HStack {
+                    // Avatar
+                    ZStack {
+                        Circle()
+                            .fill(LinearGradient(
+                                gradient: Gradient(colors: gradientColors),
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ))
+                            .frame(width: 40, height: 40)
+                        
+                        Text(avatarEmoji)
+                            .font(.system(size: 18))
+                    }
+                    
+                    // Name and time
+                    VStack(alignment: .leading) {
+                        Text(name)
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundColor(.white)
+                    }
+                    
+                    Spacer()
+                    
+                    Text(timeAgo)
+                        .font(.system(size: 12))
+                        .foregroundColor(.white.opacity(0.7))
+                }
+                .padding(.horizontal, 20)
+            }
+            
+            // Card content with claymorphism
+            VStack(alignment: .leading, spacing: 10) {
+                // Update message
+                Text(updateText)
+                    .font(.system(size: 16))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 15)
+                    .padding(.vertical, 15)
+                    .background(Rectangle().fill(gradientColors[0].opacity(0.15)))
+                    .cornerRadius(16)
+                    .padding(.top, 15)
+                
+                // Action buttons with glow effect
+                HStack(spacing: 10) {
+                    // Primary button - with glow
+                    Button(action: {}) {
+                        Text(primaryButtonText)
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(
+                                LinearGradient(
+                                    gradient: Gradient(colors: gradientColors),
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .cornerRadius(20)
+                            .shadow(color: gradientColors[0].opacity(0.5), radius: 6, x: 0, y: 0)
+                    }
+                    
+                    // Secondary button - with claymorphism
+                    Button(action: {}) {
+                        Text(secondaryButtonText)
+                            .font(.system(size: 14))
+                            .foregroundColor(.white.opacity(0.9))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(Color.white.opacity(0.1))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 20)
+                                    .strokeBorder(Color.white.opacity(0.1), lineWidth: 1)
+                            )
+                            .cornerRadius(20)
+                    }
+                }
+                .padding(.top, 5)
+            }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 20)
+        }
+        .background(AppColors.cardBackground)
+        .cornerRadius(24)
+        .shadow(color: Color.black.opacity(0.2), radius: 4, x: 0, y: 4)
         .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(Color.white.opacity(0.1), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 24)
+                .strokeBorder(Color.white.opacity(0.1), lineWidth: 1)
         )
     }
 }
 
-// Profile Avatar View
-struct ProfileAvatarView: View {
-    @StateObject private var profileManager = UserProfileManager.shared
-    let size: CGFloat
+// Tab Button for new bottom navigation
+struct TabButton: View {
+    let icon: String
+    let label: String
+    let isActive: Bool
     
     var body: some View {
-        Group {
-            if let profile = profileManager.currentUserProfile, 
-               let imageURL = profile.profileImageURL,
-               !imageURL.isEmpty {
-                // User has a profile image
-                AsyncImage(url: URL(string: imageURL)) { phase in
-                    switch phase {
-                    case .empty:
-                        ProgressView()
-                    case .success(let image):
-                        image
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                    case .failure:
-                        // Fall back to initials if image fails to load
-                        userInitialsView(profile: profile)
-                    @unknown default:
-                        userInitialsView(profile: profile)
-                    }
-                }
-                .frame(width: size, height: size)
-                .clipShape(Circle())
+        VStack(spacing: 4) {
+            // Pill indicator for active tab
+            if isActive {
+                RoundedRectangle(cornerRadius: 2.5)
+                    .fill(AppColors.accentGradient1)
+                    .frame(width: 36, height: 5)
+                    .offset(y: -2)
             } else {
-                // Use initials or default user icon
-                if let profile = profileManager.currentUserProfile, let name = profile.name, !name.isEmpty {
-                    userInitialsView(profile: profile)
-                } else {
-                    // Default user icon
-                    Circle()
-                        .fill(LinearGradient(
-                            colors: [AppColors.accent, Color.orange],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ))
-                        .frame(width: size, height: size)
-                        .overlay(
-                            Image(systemName: "person.fill")
-                                .foregroundColor(.white)
-                        )
-                }
+                Rectangle()
+                    .fill(Color.clear)
+                    .frame(width: 36, height: 5)
+                    .offset(y: -2)
             }
-        }
-    }
-    
-    // Helper to create initials view
-    private func userInitialsView(profile: UserProfile) -> some View {
-        let name = profile.name ?? "User"
-        let initials = name.components(separatedBy: " ")
-            .compactMap { $0.first }
-            .prefix(2)
-            .map(String.init)
-            .joined()
-        
-        return ZStack {
-            Circle()
-                .fill(AppColors.avatarColor(for: name))
-                .frame(width: size, height: size)
             
-            Text(initials)
-                .font(.system(size: size * 0.4, weight: .medium, design: .rounded))
-                .foregroundColor(.white)
+            Text(icon)
+                .font(.system(size: 24))
+                .foregroundColor(isActive ? .white : .white.opacity(0.5))
+            
+            Text(label)
+                .font(.system(size: 11))
+                .foregroundColor(isActive ? .white : .white.opacity(0.5))
         }
+        .frame(maxWidth: .infinity)
     }
 }
 
-// Custom button style for profile button
-struct ProfileButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .scaleEffect(configuration.isPressed ? 0.9 : 1.0)
-            .animation(.spring(response: 0.3), value: configuration.isPressed)
+// MARK: - Extensions
+
+// Extension for creating rounded corners only on specific corners
+extension View {
+    func newcornerRadius(_ radius: CGFloat, corners: UIRectCorner) -> some View {
+        clipShape(RoundedCorner(radius: radius, corners: corners))
     }
 }
 
-// Replace the #Preview macro with a PreviewProvider
-struct HomeView_Previews: PreviewProvider {
-    static var previews: some View {
-        do {
-            let config = ModelConfiguration(isStoredInMemoryOnly: true)
-            let container = try ModelContainer(
-                for: ketchupsoon.Milestone.self, Friend.self, Hangout.self, Tag.self,
-                configurations: config
-            )
-                    
-            return AnyView(HomeView()
-                .modelContainer(container))
-        } catch {
-            return AnyView(Text("Failed to create preview: \(error.localizedDescription)"))
-        }
+struct newRoundedCorner: Shape {
+    var radius: CGFloat = .infinity
+    var corners: UIRectCorner = .allCorners
+
+    func path(in rect: CGRect) -> Path {
+        let path = UIBezierPath(
+            roundedRect: rect,
+            byRoundingCorners: corners,
+            cornerRadii: CGSize(width: radius, height: radius)
+        )
+        return Path(path.cgPath)
     }
-} 
+}
+
+// Extension for creating dashed borders
+extension Shape {
+    func strokeBorder<S>(_ content: S, lineWidth: CGFloat, dash: [CGFloat] = []) -> some View where S : ShapeStyle {
+        return self
+            .stroke(content, style: StrokeStyle(lineWidth: lineWidth, dash: dash))
+    }
+}
+
+#Preview {
+    HomeView()
+}

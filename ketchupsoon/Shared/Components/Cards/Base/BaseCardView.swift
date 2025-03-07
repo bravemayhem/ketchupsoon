@@ -32,7 +32,7 @@ struct BaseCardView<Content: View>: View {
     VStack(spacing: 20) {
         BaseCardView {
             Text("Simple Card")
-                .font(AppTheme.headlineFont)
+                .font(AppTheme.subtitleFont)
         }
         
         BaseCardView {
@@ -43,7 +43,7 @@ struct BaseCardView<Content: View>: View {
                 
                 VStack(alignment: .leading) {
                     Text("Complex Card")
-                        .font(AppTheme.headlineFont)
+                        .font(AppTheme.subtitleFont)
                     Text("With multiple elements")
                         .cardSecondaryText()
                 }

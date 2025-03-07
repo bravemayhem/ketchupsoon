@@ -10,7 +10,7 @@ struct CardStyles {
                     RoundedRectangle(cornerRadius: AppTheme.cornerRadiusLarge)
                         .fill(AppColors.secondarySystemBackground)
                         .overlay(
-                            RoundedRectangle(cornerRadius: AppTheme.cornerRadiusMedium)   .stroke(AppColors.systemGray.opacity(0.10), lineWidth: 0.5) // Optional border
+                            RoundedRectangle(cornerRadius: AppTheme.cornerRadiusMedium)   .stroke(AppColors.separator, lineWidth: 0.5) // Optional border
                             )
                         .shadow(
                             color: AppTheme.shadowSmall.color,
@@ -48,7 +48,7 @@ struct CardStyles {
         
         func body(content: Content) -> some View {
             content
-                .font(AppTheme.headlineFont)
+                .font(AppTheme.subtitleFont)
                 .foregroundColor(style.foregroundColor)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, AppTheme.spacingSmall)
@@ -91,11 +91,11 @@ extension View {
             // Card Background
             VStack(alignment: .leading, spacing: AppTheme.spacingMedium) {
                 Text("Card Background")
-                    .font(AppTheme.headlineFont)
+                    .font(AppTheme.subtitleFont)
                 
                 VStack(alignment: .leading, spacing: AppTheme.spacingSmall) {
                     Text("Card Title")
-                        .font(AppTheme.headlineFont)
+                        .font(AppTheme.subtitleFont)
                     Text("Card content with background and shadow")
                         .font(AppTheme.bodyFont)
                 }
@@ -106,7 +106,7 @@ extension View {
             // Card Buttons
             VStack(alignment: .leading, spacing: AppTheme.spacingMedium) {
                 Text("Card Buttons")
-                    .font(AppTheme.headlineFont)
+                    .font(AppTheme.subtitleFont)
                 
                 Button("Primary Button") {}
                     .cardButton(style: .primary)
@@ -121,7 +121,7 @@ extension View {
             // Card Text Styles
             VStack(alignment: .leading, spacing: AppTheme.spacingMedium) {
                 Text("Card Text")
-                    .font(AppTheme.headlineFont)
+                    .font(AppTheme.subtitleFont)
                 
                 VStack(alignment: .leading) {
                     Text("Primary Text")
@@ -138,12 +138,12 @@ extension View {
             // Complete Card Example
             VStack(alignment: .leading, spacing: AppTheme.spacingMedium) {
                 Text("Complete Card")
-                    .font(AppTheme.headlineFont)
+                    .font(AppTheme.subtitleFont)
                 
                 VStack(spacing: AppTheme.spacingMedium) {
                     VStack(alignment: .leading, spacing: AppTheme.spacingSmall) {
                         Text("Card Title")
-                            .font(AppTheme.headlineFont)
+                            .font(AppTheme.subtitleFont)
                         Text("Main content of the card")
                             .font(AppTheme.bodyFont)
                         Text("Additional information")
