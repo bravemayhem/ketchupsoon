@@ -10,7 +10,7 @@ struct StatusBarView: View {
             // Header with app title and progress
             HStack {
                 HStack(spacing: 0) {
-                    Text("Ketchup")
+                    Text("ketchup")
                         .font(.custom("SpaceGrotesk-Bold", size: 24))
                         .foregroundColor(.white)
                         .onTapGesture(count: 3) {
@@ -18,7 +18,7 @@ struct StatusBarView: View {
                             showFontDebug = true
                         }
                     
-                    Text("Soon")
+                    Text("soon")
                         .font(.custom("SpaceGrotesk-Bold", size: 24))
                         .foregroundColor(Color(UIColor(red: 255/255, green: 58/255, blue: 94/255, alpha: 1.0)))
                 }

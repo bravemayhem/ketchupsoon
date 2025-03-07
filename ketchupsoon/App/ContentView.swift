@@ -4,7 +4,7 @@ import UIKit
 
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
-    @StateObject private var onboardingManager = OnboardingManager.shared
+    @EnvironmentObject private var onboardingManager: OnboardingManager
     @State private var selectedTab = 0
     @State private var showingContactPicker = false
     @State private var showingDebugAlert = false

@@ -1,23 +1,42 @@
-/*
 import SwiftUI
 
 struct SplashScreenView: View {
     @State private var isActive = false
     @StateObject private var onboardingManager = OnboardingManager.shared
+    @EnvironmentObject private var colorSchemeManager: ColorSchemeManager
     
     var body: some View {
         if isActive {
             ContentView()
+                .environmentObject(onboardingManager)
         } else {
             ZStack {
-                Color(red: 236/255, green: 190/255, blue: 96/255) // The yellow-orange background color
-                    .ignoresSafeArea()
+                // Background from InnerCircleOnboardingView
+                BackgroundView()
                 
-                Image("KetchupMascots") // We'll add this image to the asset catalog
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 200)
+                VStack(spacing: 12) {
+                    // App name with gradient and glow effect
+                    Text("ketchupsoon")
+                        .font(.system(size: 42, weight: .bold))
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [AppColors.accent, AppColors.accentSecondary],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .shadow(color: AppColors.accent.opacity(0.7), radius: 10, x: 0, y: 0)
+                    
+                    // Tagline
+                    Text("a social app without all the noise")
+                        .font(.system(size: 18, weight: .medium))
+                        .foregroundColor(.white.opacity(0.8))
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 24)
+                }
             }
+            .ignoresSafeArea() // Ignore safe areas to use entire screen
+            .preferredColorScheme(.dark) // Force dark mode
             .onAppear {
                 // Simulate a loading delay and then show the main content
                 DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
@@ -28,5 +47,4 @@ struct SplashScreenView: View {
             }
         }
     }
-} 
-*/
+}

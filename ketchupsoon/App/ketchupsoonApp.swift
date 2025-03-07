@@ -255,7 +255,7 @@ struct ketchupsoonApp: App {
     
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            SplashScreenView()
                 .modelContainer(for: [Friend.self, Hangout.self, Setting.self, FCMToken.self, GlobalStats.self], inMemory: false)
                 .preferredColorScheme(colorSchemeManager.currentAppearanceMode == .system ? nil : colorSchemeManager.colorScheme)
                 .environment(\.colorScheme, colorSchemeManager.colorScheme)
