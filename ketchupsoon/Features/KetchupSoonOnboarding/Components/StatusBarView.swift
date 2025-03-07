@@ -9,19 +9,29 @@ struct StatusBarView: View {
         VStack(spacing: 0) {
             // Header with app title and progress
             HStack {
-                HStack(spacing: 0) {
-                    Text("ketchup")
-                        .font(.custom("SpaceGrotesk-Bold", size: 24))
-                        .foregroundColor(.white)
-                        .onTapGesture(count: 3) {
-                            // Triple tap to show font debug info
-                            showFontDebug = true
-                        }
-                    
-                    Text("soon")
-                        .font(.custom("SpaceGrotesk-Bold", size: 24))
-                        .foregroundColor(Color(UIColor(red: 255/255, green: 58/255, blue: 94/255, alpha: 1.0)))
-                }
+                // Updated app title with gradient and glow effect to match SplashScreenView
+                Text("ketchupsoon")
+                    .font(.custom("SpaceGrotesk-Bold", size: 24))
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [
+                                Color(UIColor(red: 255/255, green: 58/255, blue: 94/255, alpha: 1.0)),
+                                Color(UIColor(red: 255/255, green: 138/255, blue: 66/255, alpha: 1.0))
+                            ],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .shadow(
+                        color: Color(UIColor(red: 255/255, green: 58/255, blue: 94/255, alpha: 0.7)),
+                        radius: 8,
+                        x: 0,
+                        y: 0
+                    )
+                    .onTapGesture(count: 3) {
+                        // Triple tap to show font debug info
+                        showFontDebug = true
+                    }
                 
                 if currentStep < 5 {
                     Spacer()

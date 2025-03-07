@@ -4,8 +4,7 @@ extension DateFormatter {
     /// Shared formatter for displaying birthdays consistently throughout the app
     static let birthday: DateFormatter = {
         let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .none
+        formatter.dateFormat = "MMM d, yyyy"  // More modern format (e.g., "Mar 7, 2025")
         return formatter
     }()
     

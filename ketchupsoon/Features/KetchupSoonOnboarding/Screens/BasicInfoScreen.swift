@@ -37,8 +37,16 @@ struct BasicInfoScreen: View {
                         selection: Binding(
                             get: { viewModel.profileData.birthday ?? Date() },
                             set: { viewModel.profileData.birthday = $0 }
-                        )
+                        ),
+                        style: .standard // Explicitly use standard style to match other fields
                     )
+                    
+                    // Example: To use the gradient style variant in the future:
+                    // CustomDatePicker(
+                    //     title: "special date",
+                    //     selection: $someDate,
+                    //     style: .gradient
+                    // )
                     
                     // Email field
                     CustomTextField(
@@ -101,16 +109,23 @@ struct BasicInfoScreen: View {
 }
 
 // Custom Date Picker Component that matches CustomTextField style
+// Define DatePickerStyle enum
+enum DatePickerStyle {
+    case standard // Matches CustomTextField style
+    case gradient // Original style with gradient border
+}
+
 struct CustomDatePicker: View {
     let title: String
     @Binding var selection: Date
     @State private var showingDatePicker = false
+    var style: DatePickerStyle = .standard // Default to standard style
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 6) {
             Text(title)
-                .font(.custom("SpaceGrotesk-SemiBold", size: 14))
-                .foregroundColor(.white.opacity(0.8))
+                .font(.custom("SpaceGrotesk-Regular", size: 14)) // Match CustomTextField font
+                .foregroundColor(.white.opacity(0.7)) // Match CustomTextField opacity
             
             Button(action: {
                 showingDatePicker = true
@@ -123,49 +138,57 @@ struct CustomDatePicker: View {
                     
                     Spacer()
                     
-                    // Calendar icon
+                    // Calendar icon with accent color
                     Image(systemName: "calendar")
-                        .foregroundColor(.white.opacity(0.7))
+                        .foregroundColor(AppColors.accent)
+                        .font(.system(size: 16, weight: .semibold))
                 }
                 .padding(.vertical, 12)
-                .padding(.horizontal, 12)
-                .background(Color.white.opacity(0.1))
-                .cornerRadius(12)
+                .padding(.horizontal, 16) // Match CustomTextField horizontal padding
+                .frame(height: 50) // Match CustomTextField height
+                .background(
+                    RoundedRectangle(cornerRadius: style == .standard ? 16 : 12)
+                        .fill(style == .standard ? 
+                              Color(UIColor(red: 21/255, green: 17/255, blue: 50/255, alpha: 0.7)) : // Match CustomTextField background
+                              Color.white.opacity(0.08)) // Original background
+                        .overlay(
+                            RoundedRectangle(cornerRadius: style == .standard ? 16 : 12)
+                                .stroke(
+                                    style == .standard ?
+                                    LinearGradient( // Use LinearGradient for both cases
+                                        colors: [Color.white.opacity(0.1), Color.white.opacity(0.1)],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    ) : 
+                                    LinearGradient( // Original gradient border
+                                        colors: [AppColors.accent.opacity(0.5), AppColors.accentSecondary.opacity(0.3)],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    ),
+                                    lineWidth: 1
+                                )
+                        )
+                )
                 .contentShape(Rectangle())
             }
-            .buttonStyle(PlainButtonStyle())
+            .buttonStyle(PressableButtonStyle())
         }
-        .sheet(isPresented: $showingDatePicker) {
-            // Present a custom date picker sheet
-            NavigationStack {
-                VStack {
-                    DatePicker(
-                        "Select a date",
-                        selection: $selection,
-                        displayedComponents: .date
-                    )
-                    .datePickerStyle(.graphical)
-                    .colorScheme(.light) // Ensure it's visible in dark mode
-                    .padding()
-                    .labelsHidden()
-                }
-                .navigationTitle("Birthday")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button("Cancel") {
-                            showingDatePicker = false
-                        }
+        .fullScreenCover(isPresented: $showingDatePicker) {
+            ZStack {
+                // Background that matches the app theme
+                BackgroundView()
+                
+                // Our custom styled date picker
+                StyledDatePicker(
+                    selectedDate: $selection,
+                    isShowingPicker: $showingDatePicker,
+                    onSave: {
+                        // Nothing extra needed here, binding handles the update
                     }
-                    
-                    ToolbarItem(placement: .confirmationAction) {
-                        Button("Done") {
-                            showingDatePicker = false
-                        }
-                    }
-                }
+                )
+                .transition(.opacity)
+                .animation(.easeInOut, value: showingDatePicker)
             }
-            .presentationDetents([.medium])
         }
     }
 } 

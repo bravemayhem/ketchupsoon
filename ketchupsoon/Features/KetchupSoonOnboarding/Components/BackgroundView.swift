@@ -2,6 +2,12 @@ import SwiftUI
 
 struct BackgroundView: View {
     var body: some View {
+        // Use the CompleteBackground.onboarding style from our shared components
+        CompleteBackground.onboarding
+        
+        /* 
+         * Previous implementation:
+         *
         ZStack {
             // Main background
             LinearGradient(
@@ -55,5 +61,17 @@ struct BackgroundView: View {
                 .fill(Color.white.opacity(0.04))
                 .ignoresSafeArea()
         }
+        */
+    }
+} 
+
+#Preview {
+    ZStack {
+        BackgroundView()
+        
+        Text("Background Preview")
+            .font(.title)
+            .fontWeight(.bold)
+            .foregroundColor(.white)
     }
 } 
