@@ -215,11 +215,7 @@ final class Friend: Identifiable {
     // Helper to format birthday for display
     var formattedBirthday: String? {
         guard let birthday = birthday else { return nil }
-        
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .none
-        return formatter.string(from: birthday)
+        return DateFormatter.birthday.string(from: birthday)
     }
     
     func updateLastSeen(to date: Date? = nil) {

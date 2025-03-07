@@ -426,10 +426,7 @@ struct FriendInfoExistingSection: View {
     }
     
     private func formatBirthday(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .none
-        return formatter.string(from: date)
+        return DateFormatter.birthday.string(from: date)
     }
 }
 

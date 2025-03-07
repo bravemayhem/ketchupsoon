@@ -15,8 +15,12 @@
 			</array>
 		</dict>
 	</array>
+	<key>GIDClientID</key>
+	<string>558448152377-448mdad95e743dnankqcrevjs1oruf8g.apps.googleusercontent.com</string>
 	<key>NSCalendarsFullAccessUsageDescription</key>
 	<string>Ketchup Soon needs full calendar access to create and manage hangout events in your calendar.</string>
+	<key>NSUserNotificationsUsageDescription</key>
+	<string>Ketchup Soon sends you notifications about upcoming hangouts with friends.</string>
 	<key>UIAppFonts</key>
 	<array>
 		<string>Cabin-Bold.ttf</string>
@@ -32,18 +36,10 @@
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>
+		<string>fetch</string>
+		<string>processing</string>
 	</array>
-	<key>CFBundleDisplayName</key>
-	<string>Ketchup Soon</string>
-	<key>GIDClientID</key>
-	<string>558448152377-448mdad95e743dnankqcrevjs1oruf8g.apps.googleusercontent.com</string>
-	<key>NSContactsUsageDescription</key>
-	<string>Ketchup Soon needs access to your contacts to help you add friends to the app.</string>
-	<key>NSUserNotificationsUsageDescription</key>
-	<string>Ketchup Soon sends you notifications about upcoming hangouts with friends.</string>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<false/>
-	<key>UIStatusBarStyle</key>
-	<string>UIStatusBarStyleLightContent</string>
 </dict>
 </plist>

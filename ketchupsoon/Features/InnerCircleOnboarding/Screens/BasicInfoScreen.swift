@@ -31,11 +31,13 @@ struct BasicInfoScreen: View {
                         text: $viewModel.profileData.name
                     )
                     
-                    // Birthday field
-                    CustomTextField(
+                    // Birthday field - custom styled to match other fields
+                    CustomDatePicker(
                         title: "birthday",
-                        placeholder: "july 14, 1992 🎂",
-                        text: $viewModel.profileData.birthday
+                        selection: Binding(
+                            get: { viewModel.profileData.birthday ?? Date() },
+                            set: { viewModel.profileData.birthday = $0 }
+                        )
                     )
                     
                     // Email field
@@ -95,5 +97,75 @@ struct BasicInfoScreen: View {
             .padding(.top, 24)
         }
         .padding(20)
+    }
+}
+
+// Custom Date Picker Component that matches CustomTextField style
+struct CustomDatePicker: View {
+    let title: String
+    @Binding var selection: Date
+    @State private var showingDatePicker = false
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .font(.custom("SpaceGrotesk-SemiBold", size: 14))
+                .foregroundColor(.white.opacity(0.8))
+            
+            Button(action: {
+                showingDatePicker = true
+            }) {
+                HStack {
+                    // Use the shared DateFormatter.birthday for consistent formatting
+                    Text(DateFormatter.birthday.string(from: selection))
+                        .font(.custom("SpaceGrotesk-Regular", size: 16))
+                        .foregroundColor(.white)
+                    
+                    Spacer()
+                    
+                    // Calendar icon
+                    Image(systemName: "calendar")
+                        .foregroundColor(.white.opacity(0.7))
+                }
+                .padding(.vertical, 12)
+                .padding(.horizontal, 12)
+                .background(Color.white.opacity(0.1))
+                .cornerRadius(12)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(PlainButtonStyle())
+        }
+        .sheet(isPresented: $showingDatePicker) {
+            // Present a custom date picker sheet
+            NavigationStack {
+                VStack {
+                    DatePicker(
+                        "Select a date",
+                        selection: $selection,
+                        displayedComponents: .date
+                    )
+                    .datePickerStyle(.graphical)
+                    .colorScheme(.light) // Ensure it's visible in dark mode
+                    .padding()
+                    .labelsHidden()
+                }
+                .navigationTitle("Birthday")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Cancel") {
+                            showingDatePicker = false
+                        }
+                    }
+                    
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Done") {
+                            showingDatePicker = false
+                        }
+                    }
+                }
+            }
+            .presentationDetents([.medium])
+        }
     }
 } 

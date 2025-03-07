@@ -105,10 +105,9 @@ struct SuccessScreen: View {
                 updates["profileImageURL"] = viewModel.profileData.avatarEmoji
                 
                 // Parse birthday if provided
-                if !viewModel.profileData.birthday.isEmpty {
-                    // Convert string to Date if possible
-                    // For this implementation, we'll just pass the string directly
-                    updates["birthday"] = viewModel.profileData.birthday
+                if let birthday = viewModel.profileData.birthday {
+                    // Store as timestamp for Firestore
+                    updates["birthday"] = birthday.timeIntervalSince1970
                 }
                 
                 // Update UserProfileManager

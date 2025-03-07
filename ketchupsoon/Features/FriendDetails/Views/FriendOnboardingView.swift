@@ -383,10 +383,7 @@ struct FirebaseUserProfileSheet: View {
 
 // Date formatter for displaying birthdays
 private var birthdayFormatter: DateFormatter {
-    let formatter = DateFormatter()
-    formatter.dateStyle = .medium
-    formatter.timeStyle = .none
-    return formatter
+    return DateFormatter.birthday
 }
 
 #Preview("From Contacts") {

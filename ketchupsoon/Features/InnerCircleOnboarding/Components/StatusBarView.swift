@@ -23,7 +23,7 @@ struct StatusBarView: View {
                         .foregroundColor(Color(UIColor(red: 255/255, green: 58/255, blue: 94/255, alpha: 1.0)))
                 }
                 
-                if currentStep < 4 {
+                if currentStep < 5 {
                     Spacer()
                     
                     // Progress indicator
@@ -45,10 +45,10 @@ struct StatusBarView: View {
                                         endPoint: .trailing
                                     )
                                 )
-                                .frame(width: CGFloat((currentStep + 1) * 25), height: 4)
+                                .frame(width: CGFloat((currentStep + 1) * 20), height: 4)
                         }
                         
-                        Text("\(currentStep + 1)/4")
+                        Text("\(currentStep + 1)/5")
                             .font(.custom("SpaceGrotesk-Regular", size: 12))
                             .foregroundColor(.white.opacity(0.6))
                     }
