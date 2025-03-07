@@ -19,6 +19,10 @@
 	<string>558448152377-448mdad95e743dnankqcrevjs1oruf8g.apps.googleusercontent.com</string>
 	<key>NSCalendarsFullAccessUsageDescription</key>
 	<string>Ketchup Soon needs full calendar access to create and manage hangout events in your calendar.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Ketchup Soon needs camera access to take photos for your profile avatar.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Ketchup Soon needs photo library access to select images for your profile avatar.</string>
 	<key>NSUserNotificationsUsageDescription</key>
 	<string>Ketchup Soon sends you notifications about upcoming hangouts with friends.</string>
 	<key>UIAppFonts</key>

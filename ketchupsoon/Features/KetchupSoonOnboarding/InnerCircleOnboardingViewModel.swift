@@ -16,6 +16,10 @@ class KetchupSoonOnboardingViewModel: ObservableObject {
     @Published var authError: Error?
     @Published var showingError = false
     
+    // Image picker state
+    @Published var showImagePicker = false
+    @Published var sourceType: UIImagePickerController.SourceType = .camera
+    
     // User profile data
     @Published var profileData = ProfileData()
     
@@ -26,6 +30,8 @@ class KetchupSoonOnboardingViewModel: ObservableObject {
         var email: String = ""
         var bio: String = ""
         var avatarEmoji: String = "🌟"
+        var avatarImage: UIImage? = nil
+        var useImageAvatar: Bool = false
     }
     
     // Navigation methods
@@ -153,5 +159,31 @@ class KetchupSoonOnboardingViewModel: ObservableObject {
     private func savePhoneNumber() {
         // Add code to save the verified phone number to UserSettings or other user data store
         UserSettings.shared.updatePhoneNumber(phoneNumber)
+    }
+    
+    // MARK: - Avatar Methods
+    
+    // Set avatar to use emoji
+    func setEmojiAvatar(_ emoji: String) {
+        profileData.avatarEmoji = emoji
+        profileData.useImageAvatar = false
+    }
+    
+    // Set avatar to use image
+    func setImageAvatar(_ image: UIImage) {
+        profileData.avatarImage = image
+        profileData.useImageAvatar = true
+    }
+    
+    // Show camera for taking photo
+    func showCamera() {
+        sourceType = .camera
+        showImagePicker = true
+    }
+    
+    // Show photo library for choosing image
+    func showPhotoLibrary() {
+        sourceType = .photoLibrary
+        showImagePicker = true
     }
 } 

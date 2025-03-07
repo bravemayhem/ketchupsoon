@@ -2,6 +2,7 @@ import SwiftUI
 
 struct AvatarScreen: View {
     @EnvironmentObject var viewModel: KetchupSoonOnboardingViewModel
+    @State private var tempImage: UIImage? = nil
     let emojis = ["✨", "🌟", "🚀", "🎸", "🎨", "🎮", "🎵", "💫", "😎"]
     
     // Colors
@@ -59,6 +60,15 @@ struct AvatarScreen: View {
             navigationButtonsView
         }
         .padding(20)
+        .sheet(isPresented: $viewModel.showImagePicker) {
+            ImagePicker(selectedImage: $tempImage, sourceType: viewModel.sourceType)
+                .onDisappear {
+                    if let image = tempImage {
+                        viewModel.setImageAvatar(image)
+                        tempImage = nil
+                    }
+                }
+        }
     }
     
     // MARK: - Component Views
@@ -97,8 +107,16 @@ struct AvatarScreen: View {
                     .fill(darkBackgroundGradient)
                     .frame(width: 118, height: 118)
                 
-                Text(viewModel.profileData.avatarEmoji)
-                    .font(.system(size: 48))
+                if viewModel.profileData.useImageAvatar, let image = viewModel.profileData.avatarImage {
+                    Image(uiImage: image)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 100, height: 100)
+                        .clipShape(Circle())
+                } else {
+                    Text(viewModel.profileData.avatarEmoji)
+                        .font(.system(size: 48))
+                }
             }
             Spacer()
         }
@@ -118,7 +136,7 @@ struct AvatarScreen: View {
     
     private var cameraButton: some View {
         Button {
-            // Photo action (would connect to camera in production)
+            viewModel.showCamera()
         } label: {
             Text("take a photo 📸")
                 .font(.custom("SpaceGrotesk-SemiBold", size: 16))
@@ -134,7 +152,7 @@ struct AvatarScreen: View {
     
     private var galleryButton: some View {
         Button {
-            // Gallery action (would connect to photo picker in production)
+            viewModel.showPhotoLibrary()
         } label: {
             Text("choose from library")
                 .font(.custom("SpaceGrotesk-Regular", size: 16))
@@ -170,10 +188,10 @@ struct AvatarScreen: View {
     }
     
     private func emojiButton(for emoji: String) -> some View {
-        let isSelected = viewModel.profileData.avatarEmoji == emoji
+        let isSelected = !viewModel.profileData.useImageAvatar && viewModel.profileData.avatarEmoji == emoji
         
         return Button {
-            viewModel.profileData.avatarEmoji = emoji
+            viewModel.setEmojiAvatar(emoji)
         } label: {
             Text(emoji)
                 .font(.system(size: 24))
