@@ -38,7 +38,7 @@ struct WelcomeCardView: View {
                 Spacer()
                 GIFView(url: gifUrl)
                     .aspectRatio(contentMode: .fit)
-                    .frame(width: 180, height: 120)
+                    .frame(width: 330)
                     .clipShape(RoundedRectangle(cornerRadius: 10))
                 Spacer()
             }
@@ -122,7 +122,7 @@ struct GIFView: UIViewRepresentable {
     func makeUIView(context: Context) -> UIImageView {
         let imageView = UIImageView()
         imageView.contentMode = .scaleAspectFit
-        imageView.clipsToBounds = false // Ensure no clipping happens
+        imageView.clipsToBounds = true
         
         if let url = url {
             // Load the GIF from URL
