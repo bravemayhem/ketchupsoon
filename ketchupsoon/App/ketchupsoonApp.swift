@@ -67,6 +67,23 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         print("Failed to register for remote notifications: \(error)")
     }
     
+    // MARK: - Remote Notification Handling for Firebase Auth
+    
+    func application(_ application: UIApplication, 
+                    didReceiveRemoteNotification userInfo: [AnyHashable: Any],
+                    fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void) {
+        // Forward the notification to Firebase Auth to handle phone authentication
+        if Auth.auth().canHandleNotification(userInfo) {
+            completionHandler(.noData)
+            return
+        }
+        
+        // Handle other notification types here if needed
+        print("Received remote notification: \(userInfo)")
+        
+        completionHandler(.newData)
+    }
+    
     // MARK: - UNUserNotificationCenterDelegate
     
     func userNotificationCenter(_ center: UNUserNotificationCenter,
@@ -270,6 +287,22 @@ struct ketchupsoonApp: App {
     }
 }
 
+// MARK: - URL Handling Extension for Firebase Auth
+extension AppDelegate {
+    // Handle URL scheme for Firebase phone auth
+    func application(_ app: UIApplication,
+                     open url: URL,
+                     options: [UIApplication.OpenURLOptionsKey: Any] = [:]) -> Bool {
+        // Forward URL to Firebase Auth
+        if Auth.auth().canHandle(url) {
+            return true
+        }
+        
+        // Handle other URL schemes here if needed
+        
+        return false
+    }
+}
 
 extension ProcessInfo {
     var isPreview: Bool {
