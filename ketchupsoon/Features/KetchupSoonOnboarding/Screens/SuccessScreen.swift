@@ -1,4 +1,7 @@
 import SwiftUI
+import UIKit
+import FirebaseStorage
+import FirebaseAuth
 
 struct SuccessScreen: View {
     @EnvironmentObject var viewModel: KetchupSoonOnboardingViewModel
@@ -7,6 +10,7 @@ struct SuccessScreen: View {
     @StateObject private var userProfileManager = UserProfileManager.shared
     @State private var showError = false
     @State private var errorMessage = ""
+    @State private var isUploadingImage = false
     
     var body: some View {
         VStack(spacing: 0) {
@@ -60,24 +64,32 @@ struct SuccessScreen: View {
                     // Save profile data and move to permissions
                     saveProfileAndContinue()
                 } label: {
-                    Text("Next: Setup Permissions")
-                        .font(.custom("SpaceGrotesk-SemiBold", size: 16))
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        .background(
-                            LinearGradient(
-                                gradient: Gradient(colors: [
-                                    Color(UIColor(red: 255/255, green: 58/255, blue: 94/255, alpha: 1.0)),
-                                    Color(UIColor(red: 255/255, green: 138/255, blue: 66/255, alpha: 1.0))
-                                ]),
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
-                        .cornerRadius(20)
-                        .shadow(color: Color(UIColor(red: 255/255, green: 58/255, blue: 94/255, alpha: 0.3)), radius: 8, x: 0, y: 4)
+                    if isUploadingImage {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                    } else {
+                        Text("Next: Setup Permissions")
+                            .font(.custom("SpaceGrotesk-SemiBold", size: 16))
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                    }
                 }
+                .disabled(isUploadingImage)
+                .background(
+                    LinearGradient(
+                        gradient: Gradient(colors: [
+                            Color(UIColor(red: 255/255, green: 58/255, blue: 94/255, alpha: 1.0)),
+                            Color(UIColor(red: 255/255, green: 138/255, blue: 66/255, alpha: 1.0))
+                        ]),
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+                .cornerRadius(20)
+                .shadow(color: Color(UIColor(red: 255/255, green: 58/255, blue: 94/255, alpha: 0.3)), radius: 8, x: 0, y: 4)
                 .padding(.horizontal, 20)
                 .padding(.vertical, 16)
             }
@@ -93,6 +105,10 @@ struct SuccessScreen: View {
     private func saveProfileAndContinue() {
         // Create updates dictionary
         Task {
+            await MainActor.run {
+                isUploadingImage = true
+            }
+            
             do {
                 var updates = [String: Any]()
                 updates["name"] = viewModel.profileData.name
@@ -101,8 +117,15 @@ struct SuccessScreen: View {
                     updates["bio"] = viewModel.profileData.bio
                 }
                 
-                // Add avatar emoji as profileImageURL for now (could be replaced with actual image later)
-                updates["profileImageURL"] = viewModel.profileData.avatarEmoji
+                // Handle profile image - either upload image or use emoji
+                if viewModel.profileData.useImageAvatar, let image = viewModel.profileData.avatarImage {
+                    // Upload image to Firebase and get URL
+                    let imageURL = try await uploadProfileImage(image)
+                    updates["profileImageURL"] = imageURL
+                } else {
+                    // Use emoji avatar
+                    updates["profileImageURL"] = viewModel.profileData.avatarEmoji
+                }
                 
                 // Parse birthday if provided
                 if let birthday = viewModel.profileData.birthday {
@@ -119,14 +142,44 @@ struct SuccessScreen: View {
                 
                 // Continue to permissions screen
                 await MainActor.run {
+                    isUploadingImage = false
                     viewModel.nextStep()
                 }
             } catch {
                 await MainActor.run {
+                    isUploadingImage = false
                     showError = true
                     errorMessage = "Could not save profile: \(error.localizedDescription)"
                 }
             }
         }
+    }
+    
+    private func uploadProfileImage(_ image: UIImage) async throws -> String {
+        // Resize image for storage efficiency
+        guard let resizedImage = image.resized(to: CGSize(width: 500, height: 500)) else {
+            throw NSError(domain: "SuccessScreen", code: 1, userInfo: [NSLocalizedDescriptionKey: "Could not resize image"])
+        }
+        
+        guard let imageData = resizedImage.jpegData(compressionQuality: 0.7) else {
+            throw NSError(domain: "SuccessScreen", code: 2, userInfo: [NSLocalizedDescriptionKey: "Could not convert image to JPEG data"])
+        }
+        
+        // Get user ID for storage path
+        guard let userId = Auth.auth().currentUser?.uid else {
+            throw NSError(domain: "SuccessScreen", code: 3, userInfo: [NSLocalizedDescriptionKey: "User not authenticated"])
+        }
+        
+        // Create a reference to Firebase Storage
+        let storage = Storage.storage()
+        let storageRef = storage.reference()
+        let profileImagesRef = storageRef.child("profile_images/\(userId).jpg")
+        
+        // Upload the image
+        _ = try await profileImagesRef.putDataAsync(imageData)
+        
+        // Get the download URL
+        let downloadURL = try await profileImagesRef.downloadURL()
+        return downloadURL.absoluteString
     }
 } 

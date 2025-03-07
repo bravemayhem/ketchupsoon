@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 import PhotosUI
 import FirebaseStorage
 import Combine
@@ -489,16 +490,6 @@ struct ProfileSettingsView: View {
                     showAlert = true
                 }
             }
-        }
-    }
-}
-
-// Extension to resize UIImage
-extension UIImage {
-    func resized(to size: CGSize) -> UIImage? {
-        let renderer = UIGraphicsImageRenderer(size: size)
-        return renderer.image { context in
-            self.draw(in: CGRect(origin: .zero, size: size))
         }
     }
 }
