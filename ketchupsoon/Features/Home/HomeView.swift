@@ -2,374 +2,326 @@ import SwiftUI
 import SwiftData
 
 struct HomeView: View {
-    // This view will display the home design from our Gen Z redesign
+    // State for selected friends
+    @State private var selectedFriends: Set<String> = []
+    @State private var searchText: String = ""
+    @State private var pendingFriendRequests: Int = 3
+    
+    // Sample friends data
+    let friends = [
+        FriendItem(id: "1", name: "sarah", emoji: "🌟", lastHangout: "3 months", gradient: [AppColors.gradient1Start, AppColors.gradient1End]),
+        FriendItem(id: "2", name: "jordan", emoji: "🎮", lastHangout: "2 weeks", gradient: [AppColors.gradient2Start, AppColors.gradient2End]),
+        FriendItem(id: "3", name: "alex", emoji: "🎵", lastHangout: "1 month", gradient: [AppColors.gradient3Start, AppColors.gradient3End]),
+        FriendItem(id: "4", name: "taylor", emoji: "🎨", lastHangout: "yesterday", gradient: [AppColors.gradient4Start, AppColors.gradient4End]),
+        FriendItem(id: "5", name: "marcus", emoji: "🚀", lastHangout: "3 weeks", gradient: [AppColors.gradient5Start, AppColors.gradient5End]),
+        FriendItem(id: "6", name: "ethan", emoji: "🌲", lastHangout: "6 months", gradient: [AppColors.gradient1Start, AppColors.gradient1End]),
+        FriendItem(id: "7", name: "sofia", emoji: "🏄", lastHangout: "8 months", gradient: [AppColors.gradient2Start, AppColors.gradient2End]),
+        FriendItem(id: "8", name: "noah", emoji: "🎭", lastHangout: "5 months", gradient: [AppColors.gradient3Start, AppColors.gradient3End])
+    ]
     
     var body: some View {
-        ScrollView {
-            VStack(spacing: 0) {
-                // Main content area
-                ZStack {
-                    // Background decoration
-                    Circle()
-                        .fill(AppColors.purple.opacity(0.3))
-                        .frame(width: 400, height: 400)
-                        .blur(radius: 50)
-                        .offset(x: 150, y: -50)
-                    
-                    Circle()
-                        .fill(AppColors.accent.opacity(0.2))
-                        .frame(width: 360, height: 360)
-                        .blur(radius: 50)
-                        .offset(x: -150, y: 300)
-                    
-                    // Playful small decorative elements
-                    Circle()
-                        .fill(AppColors.mint.opacity(0.8))
-                        .frame(width: 16, height: 16)
-                        .offset(x: -140, y: 180)
-                    
-                    Circle()
-                        .fill(AppColors.accentSecondary.opacity(0.8))
-                        .frame(width: 10, height: 10)
-                        .offset(x: 150, y: 400)
-                    
-                    RoundedRectangle(cornerRadius: 3)
-                        .fill(AppColors.purple.opacity(0.8))
-                        .frame(width: 15, height: 15)
-                        .rotationEffect(.degrees(30))
-                        .offset(x: 120, y: 220)
-                    
-                    // Actual content
-                    VStack(alignment: .leading, spacing: 20) {
-
-                        // Your Circle section - updated to "my crew"
-                        Text("my crew")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(.white)
-                            .padding(.top, 10)
-                        
-                        // Circle avatar rows
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 30) {
-                                CircleAvatar(emoji: "🌟", name: "sarah", gradientColors: [AppColors.gradient1Start, AppColors.gradient1End])
-                                CircleAvatar(emoji: "🚀", name: "alex", gradientColors: [AppColors.gradient2Start, AppColors.gradient2End])
-                                CircleAvatar(emoji: "🎸", name: "jordan", gradientColors: [AppColors.gradient3Start, AppColors.gradient3End])
-                                CircleAvatar(emoji: "🎨", name: "taylor", gradientColors: [AppColors.gradient4Start, AppColors.gradient4End])
-                                AddCircleAvatar()
-                            }
-                            .padding(.horizontal, 20)
-                            .padding(.bottom, 20)
-                        }
-                        
-                        // Friend updates section - updated to "the good stuff 💯"
-                        Text("the good stuff 💯")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(.white)
-                            .padding(.top, 10)
-                        
-                        // Promotion card
-                        FriendUpdateCard(
-                            gradientColors: [AppColors.gradient2Start, AppColors.gradient2End],
-                            avatarEmoji: "🚀",
-                            name: "alex",
-                            timeAgo: "2h ago",
-                            updateText: "just got promoted to senior designer! 🎉",
-                            primaryButtonText: "hype them up!",
-                            secondaryButtonText: "send confetti 🎊"
-                        )
-                        .padding(.bottom, 20)
-                        
-                        // Birthday card
-                        FriendUpdateCard(
-                            gradientColors: [AppColors.gradient1Start, AppColors.gradient1End],
-                            avatarEmoji: "🌟",
-                            name: "sarah",
-                            timeAgo: "tomorrow!",
-                            updateText: "birthday coming up! 🎂 gonna be epic",
-                            primaryButtonText: "plan something!",
-                            secondaryButtonText: "send birthday vibes"
-                        )
-                        
-                        Spacer(minLength: 40)
-                    }
-                    .padding(.horizontal, 20)
-                }
-                
-                Spacer()
-            }
-            .overlay(
-                // Quick Add FAB with glow effect
-                ZStack {
-                    Circle()
-                        .fill(AppColors.accentGradient1)
-                        .frame(width: 70, height: 70)
-                        .shadow(color: AppColors.accent.opacity(0.5), radius: 12, x: 0, y: 0)
-                    
-                    Text("+")
-                        .font(.system(size: 30))
-                        .foregroundColor(.white)
-                        .fontWeight(.bold)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
-                .padding(.trailing, 20)
-                .padding(.bottom, 80)
-            )
-        }
-        // Don't ignore safe area at the top to show system status bar
-        .background(
-            AppColors.backgroundGradient
-                .ignoresSafeArea()
-        )
-    }
-}
-
-// MARK: - Supporting Views
-
-// Circle Avatar component - Updated with claymorphism and glow
-struct CircleAvatar: View {
-    let emoji: String
-    let name: String
-    let gradientColors: [Color]
-    
-    var body: some View {
-        VStack {
-            ZStack {
-                Circle()
-                    .fill(LinearGradient(
-                        gradient: Gradient(colors: gradientColors),
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ))
-                    .frame(width: 64, height: 64)
-                    .shadow(color: gradientColors[0].opacity(0.3), radius: 6, x: 0, y: 0)
-                
-                Circle()
-                    .fill(AppColors.cardBackground)
-                    .frame(width: 58, height: 58)
-                
-                Text(emoji)
-                    .font(.system(size: 30))
-            }
-            
-            Text(name)
-                .font(.system(size: 12))
-                .foregroundColor(.white)
-                .padding(.top, 5)
-        }
-    }
-}
-
-// Add Circle Avatar component - Updated with claymorphism
-struct AddCircleAvatar: View {
-    var body: some View {
-        VStack {
-            ZStack {
-                Circle()
-                    .strokeBorder(
-                        Color.white.opacity(0.3),
-                        lineWidth: 2,
-                        dash: [4, 2]
-                    )
-                    .frame(width: 64, height: 64)
-                
-                Circle()
-                    .fill(AppColors.cardBackground)
-                    .frame(width: 58, height: 58)
-                
-                Text("+")
-                    .font(.system(size: 30))
-                    .foregroundColor(.white.opacity(0.6))
-            }
-            
-            Text("add")
-                .font(.system(size: 12))
-                .foregroundColor(.white.opacity(0.6))
-                .padding(.top, 5)
-        }
-    }
-}
-
-// Friend Update Card component - Updated with claymorphism
-struct FriendUpdateCard: View {
-    let gradientColors: [Color]
-    let avatarEmoji: String
-    let name: String
-    let timeAgo: String
-    let updateText: String
-    let primaryButtonText: String
-    let secondaryButtonText: String
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            // Card header with claymorphism
-            ZStack(alignment: .leading) {
-                Rectangle()
-                    .fill(LinearGradient(
-                        gradient: Gradient(colors: gradientColors),
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ))
-                    .opacity(0.2)
-                    .frame(height: 60)
-                    .cornerRadius(24, corners: [.topLeft, .topRight])
-                
-                HStack {
-                    // Avatar
+        ZStack(alignment: .bottom) { // Use ZStack for layering with alignment at bottom
+            // Main content
+            ScrollView {
+                VStack(spacing: 0) {
+                    // Main content area
                     ZStack {
+                        // Background decoration
                         Circle()
-                            .fill(LinearGradient(
-                                gradient: Gradient(colors: gradientColors),
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            ))
-                            .frame(width: 40, height: 40)
+                            .fill(AppColors.purple.opacity(0.3))
+                            .frame(width: 400, height: 400)
+                            .blur(radius: 50)
+                            .offset(x: 150, y: -50)
                         
-                        Text(avatarEmoji)
-                            .font(.system(size: 18))
+                        Circle()
+                            .fill(AppColors.accent.opacity(0.2))
+                            .frame(width: 360, height: 360)
+                            .blur(radius: 50)
+                            .offset(x: -150, y: 300)
+                        
+                        // Playful small decorative elements
+                        Circle()
+                            .fill(AppColors.mint.opacity(0.8))
+                            .frame(width: 16, height: 16)
+                            .offset(x: -140, y: 180)
+                        
+                        Circle()
+                            .fill(AppColors.accentSecondary.opacity(0.8))
+                            .frame(width: 10, height: 10)
+                            .offset(x: 150, y: 400)
+                        
+                        Circle()
+                            .fill(AppColors.accent.opacity(0.8))
+                            .frame(width: 12, height: 12)
+                            .offset(x: -130, y: 500)
+                        
+                        RoundedRectangle(cornerRadius: 3)
+                            .fill(AppColors.purple.opacity(0.8))
+                            .frame(width: 15, height: 15)
+                            .rotationEffect(.degrees(30))
+                            .offset(x: 120, y: 220)
+                        
+                        RoundedRectangle(cornerRadius: 2)
+                            .fill(AppColors.accentSecondary.opacity(0.8))
+                            .frame(width: 10, height: 10)
+                            .rotationEffect(.degrees(-15))
+                            .offset(x: -130, y: 380)
+                        
+                        // Actual content
+                        VStack(alignment: .leading, spacing: 10) {
+                            // Search bar
+                            HStack {
+                                Image(systemName: "magnifyingglass")
+                                    .foregroundColor(.white.opacity(0.6))
+                                    .padding(.leading, 15)
+                                
+                                ZStack(alignment: .leading) {
+                                    
+                                    TextField("", text: $searchText)
+                                        .foregroundColor(.white.opacity(0.8))
+                                        .font(.system(size: 14))
+                                }
+                                
+                                Spacer()
+                                
+                                Image(systemName: "mic.fill")
+                                    .foregroundColor(.white.opacity(0.6))
+                                    .padding(.trailing, 15)
+                            }
+                            .frame(height: 40)
+                            .background(Color(UIColor.systemGray6).opacity(0.3))
+                            .cornerRadius(25)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 25)
+                                    .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                            )
+                            .padding(.top, 20)
+                            
+                            // Consolidated section title
+                            HStack {
+                                Text("your friends")
+                                    .font(.system(size: 20, weight: .bold))
+                                    .foregroundColor(.white)
+                                
+                                // Plus button with badge
+                                Button(action: {
+                                    // Add friend action
+                                }) {
+                                    ZStack {
+                                        Circle()
+                                            .fill(LinearGradient(
+                                                gradient: Gradient(colors: [AppColors.gradient1Start, AppColors.gradient1End]),
+                                                startPoint: .topLeading,
+                                                endPoint: .bottomTrailing
+                                            ))
+                                            .frame(width: 32, height: 32)
+                                        
+                                        Text("+")
+                                            .font(.system(size: 22, weight: .bold))
+                                            .foregroundColor(.white)
+                                        
+                                        // Badge for friend requests
+                                        if pendingFriendRequests > 0 {
+                                            ZStack {
+                                                Circle()
+                                                    .fill(LinearGradient(
+                                                        gradient: Gradient(colors: [AppColors.gradient5Start, AppColors.pureBlue]),
+                                                        startPoint: .topLeading,
+                                                        endPoint: .bottomTrailing
+                                                    ))
+                                                    .frame(width: 18, height: 18)
+                                                    .shadow(color: AppColors.pureBlue.opacity(0.4), radius: 2, x: 0, y: 0)
+                                                
+                                                Text("\(pendingFriendRequests)")
+                                                    .font(.system(size: 10, weight: .bold))
+                                                    .foregroundColor(.white)
+                                            }
+                                            .offset(x: 11, y: -15)
+                                        }
+                                    }
+                                }
+                                
+                                Spacer()
+                                
+                                // Cancel button
+                                Button(action: {
+                                    // Cancel action
+                                    selectedFriends.removeAll()
+                                }) {
+                                    Text("X")
+                                        .font(.system(size: 14))
+                                        .foregroundColor(.white.opacity(0.8))
+                                        .frame(width: 50, height: 30)
+                                        .background(Color(UIColor.systemGray6).opacity(0.3))
+                                        .cornerRadius(15)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 15)
+                                                .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                                        )
+                                }
+                            }
+                            .padding(.top, 20)
+                            
+                            // Friend grid
+                            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 20) {
+                                ForEach(friends) { friend in
+                                    FriendAvatarView(
+                                        friend: friend,
+                                        isSelected: selectedFriends.contains(friend.id),
+                                        onSelect: {
+                                            toggleFriendSelection(friend.id)
+                                        }
+                                    )
+                                }
+                        
+                            }
+                            .padding(.top, 10)
+                            
+                            // Add extra spacing at the bottom to account for the action panel
+                            Spacer(minLength: 150)
+                        }
+                        .padding(.horizontal, 20)
                     }
-                    
-                    // Name and time
-                    VStack(alignment: .leading) {
-                        Text(name)
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundColor(.white)
-                    }
+                }
+            }
+            .background(
+                AppColors.backgroundGradient
+                    .ignoresSafeArea()
+            )
+            
+            // Bottom action panel as a separate layer
+            VStack(spacing: 0) {
+                // Selection count and schedule button in the same row
+                HStack {
+                    Text("\(selectedFriends.count) friends selected")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.white)
                     
                     Spacer()
                     
-                    Text(timeAgo)
-                        .font(.system(size: 12))
-                        .foregroundColor(.white.opacity(0.7))
+                    // Schedule button
+                    Button(action: {
+                        // Schedule action
+                    }) {
+                        HStack {                            
+                            Text("schedule ketchup")
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundColor(.white)
+                        }
+                        .frame(height: 40)
+                        .padding(.horizontal, 20)
+                        .background(
+                            LinearGradient(
+                                gradient: Gradient(colors: [AppColors.gradient1Start, AppColors.gradient1End]),
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .cornerRadius(20)
+                        .shadow(color: AppColors.accent.opacity(0.5), radius: 6, x: 0, y: 0)
+                    }
                 }
                 .padding(.horizontal, 20)
+                .padding(.vertical, 12)
             }
-            
-            // Card content with claymorphism
-            VStack(alignment: .leading, spacing: 10) {
-                // Update message
-                Text(updateText)
-                    .font(.system(size: 16))
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 15)
-                    .padding(.vertical, 15)
-                    .background(Rectangle().fill(gradientColors[0].opacity(0.15)))
-                    .cornerRadius(16)
-                    .padding(.top, 15)
-                
-                // Action buttons with glow effect
-                HStack(spacing: 10) {
-                    // Primary button - with glow
-                    Button(action: {}) {
-                        Text(primaryButtonText)
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 12)
-                            .background(
-                                LinearGradient(
-                                    gradient: Gradient(colors: gradientColors),
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                            .cornerRadius(20)
-                            .shadow(color: gradientColors[0].opacity(0.5), radius: 6, x: 0, y: 0)
-                    }
-                    
-                    // Secondary button - with claymorphism
-                    Button(action: {}) {
-                        Text(secondaryButtonText)
-                            .font(.system(size: 14))
-                            .foregroundColor(.white.opacity(0.9))
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 12)
-                            .background(Color.white.opacity(0.1))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 20)
-                                    .strokeBorder(Color.white.opacity(0.1), lineWidth: 1)
-                            )
-                            .cornerRadius(20)
-                    }
-                }
-                .padding(.top, 5)
-            }
-            .padding(.horizontal, 20)
-            .padding(.bottom, 20)
+            .background(Color(UIColor.systemBackground).opacity(0.1))
+            .background(.ultraThinMaterial)
+            .padding(.bottom, 70) // Add padding to position above tab bar
+            .zIndex(999) // Ensure it's above everything
         }
-        .background(AppColors.cardBackground)
-        .cornerRadius(24)
-        .shadow(color: Color.black.opacity(0.2), radius: 4, x: 0, y: 4)
-        .overlay(
-            RoundedRectangle(cornerRadius: 24)
-                .strokeBorder(Color.white.opacity(0.1), lineWidth: 1)
-        )
+    }
+    
+    // Toggle friend selection
+    private func toggleFriendSelection(_ id: String) {
+        if selectedFriends.contains(id) {
+            selectedFriends.remove(id)
+        } else {
+            selectedFriends.insert(id)
+        }
     }
 }
 
-// Tab Button for new bottom navigation
-struct TabButton: View {
-    let icon: String
-    let label: String
-    let isActive: Bool
+// Friend model - renamed to avoid conflicts with existing Friend model
+struct FriendItem: Identifiable {
+    let id: String
+    let name: String
+    let emoji: String
+    let lastHangout: String
+    let gradient: [Color]
+}
+
+// Friend Avatar View
+struct FriendAvatarView: View {
+    let friend: FriendItem
+    let isSelected: Bool
+    let onSelect: () -> Void
     
     var body: some View {
-        VStack(spacing: 4) {
-            // Pill indicator for active tab
-            if isActive {
-                RoundedRectangle(cornerRadius: 2.5)
-                    .fill(AppColors.accentGradient1)
-                    .frame(width: 36, height: 5)
-                    .offset(y: -2)
-            } else {
-                Rectangle()
-                    .fill(Color.clear)
-                    .frame(width: 36, height: 5)
-                    .offset(y: -2)
+        Button(action: onSelect) {
+            VStack {
+                ZStack {
+                    // Selection glow for selected friends
+                    if isSelected {
+                        Circle()
+                            .fill(LinearGradient(
+                                gradient: Gradient(colors: friend.gradient),
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ))
+                            .opacity(0.3)
+                            .frame(width: 96, height: 96)
+                    }
+                    
+                    // Main avatar circle
+                    Circle()
+                        .fill(LinearGradient(
+                            gradient: Gradient(colors: friend.gradient),
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ))
+                        .frame(width: 90, height: 90)
+                        .shadow(color: friend.gradient[0].opacity(0.3), radius: 6, x: 0, y: 0)
+                    
+                    // Inner circle
+                    Circle()
+                        .fill(AppColors.cardBackground)
+                        .frame(width: 80, height: 80)
+                    
+                    // Emoji
+                    Text(friend.emoji)
+                        .font(.system(size: 30))
+                    
+                    // Selection indicator
+                    if isSelected {
+                        Circle()
+                            .fill(LinearGradient(
+                                gradient: Gradient(colors: friend.gradient),
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ))
+                            .frame(width: 30, height: 30)
+                            .overlay(
+                                Text("✓")
+                                    .font(.system(size: 14, weight: .bold))
+                                    .foregroundColor(.white)
+                            )
+                            .offset(x: 30, y: -30)
+                    }
+                }
+                
+                // Friend name
+                Text(friend.name)
+                    .font(.system(size: 14))
+                    .foregroundColor(.white)
+                    .padding(.top, 5)
             }
-            
-            Text(icon)
-                .font(.system(size: 24))
-                .foregroundColor(isActive ? .white : .white.opacity(0.5))
-            
-            Text(label)
-                .font(.system(size: 11))
-                .foregroundColor(isActive ? .white : .white.opacity(0.5))
         }
-        .frame(maxWidth: .infinity)
     }
 }
 
-// MARK: - Extensions
-
-// Extension for creating rounded corners only on specific corners
-extension View {
-    func newcornerRadius(_ radius: CGFloat, corners: UIRectCorner) -> some View {
-        clipShape(RoundedCorner(radius: radius, corners: corners))
+// MARK: - Preview
+struct HomeView_Previews: PreviewProvider {
+    static var previews: some View {
+        HomeView()
     }
-}
-
-struct newRoundedCorner: Shape {
-    var radius: CGFloat = .infinity
-    var corners: UIRectCorner = .allCorners
-
-    func path(in rect: CGRect) -> Path {
-        let path = UIBezierPath(
-            roundedRect: rect,
-            byRoundingCorners: corners,
-            cornerRadii: CGSize(width: radius, height: radius)
-        )
-        return Path(path.cgPath)
-    }
-}
-
-// Extension for creating dashed borders
-extension Shape {
-    func strokeBorder<S>(_ content: S, lineWidth: CGFloat, dash: [CGFloat] = []) -> some View where S : ShapeStyle {
-        return self
-            .stroke(content, style: StrokeStyle(lineWidth: lineWidth, dash: dash))
-    }
-}
-
-#Preview {
-    HomeView()
 }

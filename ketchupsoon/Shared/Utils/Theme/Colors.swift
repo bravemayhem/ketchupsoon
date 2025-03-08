@@ -13,6 +13,7 @@ enum AppColors {
     static let purple = Color(hex: "5E17EB") // Vibrant purple
     static let highlight = Color(hex: "00F5A0") // Bright mint (to maintain compatibility)
     static let mint = Color(hex: "00F5A0") // Bright mint
+    static let pureBlue = Color(hex: "0073E6") // Pure blue color (RGB: 0, 115, 230 ≈ 0.0, 0.45, 0.9)
     
     // Background Colors - Dark mode focused
     static let background = Color(hex: "0A0728") // Deep blue-black

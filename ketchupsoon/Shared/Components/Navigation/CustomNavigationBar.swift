@@ -81,7 +81,7 @@ struct CustomNavigationBar: View {
     }
     */
     
-    // New design based on Home1View
+    // New design based on HomeView
     private var newDesignNavigationBar: some View {
         // Simplified ZStack without the extra space for status bar
         ZStack {

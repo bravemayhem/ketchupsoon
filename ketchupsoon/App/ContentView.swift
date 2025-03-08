@@ -15,9 +15,6 @@ struct ContentView: View {
         }
     }
     
-    // Added state to control which home view to show
-    @State private var showHome1 = false
-    
     var body: some View {
         ZStack {
             // Content based on selected tab - replacing TabView with our custom implementation
@@ -39,42 +36,8 @@ struct ContentView: View {
                             showingDebugAlert: $showingDebugAlert,
                             clearData: clearAllData
                         ) {
-                            // Toggle between HomeView and Home1View based on showHome1 state
-                            if !showHome1 {
-                                HomeView()
-                                    .overlay(
-                                        Button(action: {
-                                            showHome1.toggle()
-                                        }) {
-                                            Text("Try Home1 View")
-                                                .font(.system(size: 16, weight: .semibold))
-                                                .foregroundColor(.white)
-                                                .padding(.horizontal, 16)
-                                                .padding(.vertical, 8)
-                                                .background(AppColors.accent)
-                                                .cornerRadius(20)
-                                        }
-                                        .padding(.bottom, 120),
-                                        alignment: .bottom
-                                    )
-                            } else {
-                                Home1View()
-                                    .overlay(
-                                        Button(action: {
-                                            showHome1.toggle()
-                                        }) {
-                                            Text("Back to Home View")
-                                                .font(.system(size: 16, weight: .semibold))
-                                                .foregroundColor(.white)
-                                                .padding(.horizontal, 16)
-                                                .padding(.vertical, 8)
-                                                .background(AppColors.accent)
-                                                .cornerRadius(20)
-                                        }
-                                        .padding(.bottom, 120),
-                                        alignment: .bottom
-                                    )
-                            }
+                            // Directly using HomeView as our home page
+                            HomeView()
                         }
                         .transition(.opacity)
                     }

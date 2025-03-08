@@ -77,7 +77,7 @@ private struct NavigationTab<Content: View>: View {
 The component now offers two design styles:
 
 1. **Classic Design**: The original design with standard navigation bar styling
-2. **New Design**: A custom design based on Home1View with a status bar and unique header styling
+2. **New Design**: A custom design based on HomeView with a status bar and unique header styling
 
 ### Classic Design Example
 
