@@ -17,7 +17,7 @@ struct SplashScreenView: View {
                 VStack(spacing: 12) {
                     // App name with gradient and glow effect
                     Text("ketchupsoon")
-                        .font(.system(size: 42, weight: .bold))
+                        .font(.custom("SpaceGrotesk-Bold", size: 42))
                         .foregroundStyle(
                             LinearGradient(
                                 colors: [AppColors.accent, AppColors.accentSecondary],
@@ -29,7 +29,7 @@ struct SplashScreenView: View {
                     
                     // Tagline
                     Text("a social app without all the noise")
-                        .font(.system(size: 18, weight: .medium))
+                        .font(.custom("SpaceGrotesk-Regular", size: 18))
                         .foregroundColor(.white.opacity(0.8))
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 24)

@@ -92,15 +92,25 @@ struct CustomNavigationBar: View {
             
             // Main navigation content
             HStack {
-                // Changed from two separate Text views to a single Text with different styling
-                Text("ketchup")
-                    .font(.system(size: 24, weight: .bold))
-                    .foregroundColor(.white)
-                    .kerning(-0.5) +
-                Text("soon")
-                    .font(.system(size: 24, weight: .bold))
-                    .foregroundColor(AppColors.accent)
-                    .kerning(-0.5)
+                // Updated to match StatusBarView styling
+                Text("ketchupsoon")
+                    .font(.custom("SpaceGrotesk-Bold", size: 24))
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [
+                                Color(UIColor(red: 255/255, green: 58/255, blue: 94/255, alpha: 1.0)),
+                                Color(UIColor(red: 255/255, green: 138/255, blue: 66/255, alpha: 1.0))
+                            ],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .shadow(
+                        color: Color(UIColor(red: 255/255, green: 58/255, blue: 94/255, alpha: 0.7)),
+                        radius: 8,
+                        x: 0,
+                        y: 0
+                    )
                 
                 Spacer()
                 
