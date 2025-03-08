@@ -15,8 +15,8 @@ struct ContentView: View {
         }
     }
     
-    // Added state to control which design to use
-    @State private var useNewDesign = true
+    // Added state to control which home view to show
+    @State private var showHome1 = false
     
     var body: some View {
         ZStack {
@@ -37,10 +37,44 @@ struct ContentView: View {
                             subtitleAlwaysVisible: false,
                             showImportOptions: $showingImportOptions,
                             showingDebugAlert: $showingDebugAlert,
-                            clearData: clearAllData,
-                            useNewDesign: useNewDesign
+                            clearData: clearAllData
                         ) {
-                            HomeView()
+                            // Toggle between HomeView and Home1View based on showHome1 state
+                            if !showHome1 {
+                                HomeView()
+                                    .overlay(
+                                        Button(action: {
+                                            showHome1.toggle()
+                                        }) {
+                                            Text("Try Home1 View")
+                                                .font(.system(size: 16, weight: .semibold))
+                                                .foregroundColor(.white)
+                                                .padding(.horizontal, 16)
+                                                .padding(.vertical, 8)
+                                                .background(AppColors.accent)
+                                                .cornerRadius(20)
+                                        }
+                                        .padding(.bottom, 120),
+                                        alignment: .bottom
+                                    )
+                            } else {
+                                Home1View()
+                                    .overlay(
+                                        Button(action: {
+                                            showHome1.toggle()
+                                        }) {
+                                            Text("Back to Home View")
+                                                .font(.system(size: 16, weight: .semibold))
+                                                .foregroundColor(.white)
+                                                .padding(.horizontal, 16)
+                                                .padding(.vertical, 8)
+                                                .background(AppColors.accent)
+                                                .cornerRadius(20)
+                                        }
+                                        .padding(.bottom, 120),
+                                        alignment: .bottom
+                                    )
+                            }
                         }
                         .transition(.opacity)
                     }
@@ -56,8 +90,7 @@ struct ContentView: View {
                             subtitleAlwaysVisible: false,
                             showImportOptions: $showingImportOptions,
                             showingDebugAlert: $showingDebugAlert,
-                            clearData: clearAllData,
-                            useNewDesign: useNewDesign
+                            clearData: clearAllData
                         ) {
                             WishlistView(showConfetti: $showConfetti)
                         }
@@ -145,7 +178,6 @@ private struct NavigationTab<Content: View>: View {
     @State private var showingSettings = false
     let clearData: () async -> Void
     let content: Content
-    let useNewDesign: Bool
     
     init(
         title: String,
@@ -155,7 +187,6 @@ private struct NavigationTab<Content: View>: View {
         showImportOptions: Binding<Bool>,
         showingDebugAlert: Binding<Bool>,
         clearData: @escaping () async -> Void,
-        useNewDesign: Bool = false,
         @ViewBuilder content: () -> Content
     ) {
         self.title = title
@@ -164,89 +195,35 @@ private struct NavigationTab<Content: View>: View {
         self._showImportOptions = showImportOptions
         self._showingDebugAlert = showingDebugAlert
         self.clearData = clearData
-        self.useNewDesign = useNewDesign
         self.content = content()
     }
     
     var body: some View {
-        if useNewDesign {
-            // New design using CustomNavigationBarContainer
-            CustomNavigationBarContainer(
-                title: title,
-                subtitle: subtitle,
-                leadingIcon: "gear",
-                trailingIcon: "plus",
-                leadingButtonAction: {
-                    showingSettings = true
-                },
-                trailingButtonAction: {
-                    showImportOptions = true
-                },
-                useNewDesign: true,
-                enableDebugMode: true,
-                debugModeAction: {
-                    showingDebugAlert = true
-                },
-                content: {
-                    content
-                }
-            )
-            .sheet(isPresented: $showingSettings) {
-                SettingsView()
+        // Always use the new design with CustomNavigationBarContainer
+        CustomNavigationBarContainer(
+            title: title,
+            subtitle: subtitle,
+            leadingIcon: "gear",
+            trailingIcon: "plus",
+            leadingButtonAction: {
+                showingSettings = true
+            },
+            trailingButtonAction: {
+                showImportOptions = true
+            },
+            enableDebugMode: true,
+            debugModeAction: {
+                showingDebugAlert = true
+            },
+            content: {
+                content
             }
-            .tabItem {
-                Label(title, systemImage: icon)
-            }
-        } else {
-            // Original design using standard NavigationStack
-            NavigationStack {
-                VStack(spacing: 0) {
-                    if let subtitle = subtitle {
-                        Text(subtitle)
-                            .font(.subheadline)
-                            .foregroundColor(AppColors.secondaryLabel)
-                            .padding(.horizontal, 16)
-                            .padding(.bottom, 8)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                    
-                    content
-                }
-                .navigationTitle(title)
-                .navigationBarTitleDisplayMode(.large)
-                .toolbar {
-                    ToolbarItem(placement: .topBarLeading) {
-                        Button {
-                            showingSettings = true
-                        } label: {
-                            Image(systemName: "gear")
-                                .font(.title2)
-                                .foregroundColor(AppColors.label)
-                        }
-                    }
-                    
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button {
-                            showImportOptions = true
-                        } label: {
-                            Image(systemName: "plus")
-                                .font(.title2)
-                                .foregroundColor(AppColors.label)
-                        }
-                        #if DEBUG
-                        .onLongPressGesture {
-                            showingDebugAlert = true
-                        }
-                        #endif
-                    }
-                }
-                .sheet(isPresented: $showingSettings) {
-                    SettingsView()
-                }
-            }
-            .tabItem {
-                Label(title, systemImage: icon)
-            }
+        )
+        .sheet(isPresented: $showingSettings) {
+            SettingsView()
+        }
+        .tabItem {
+            Label(title, systemImage: icon)
         }
     }
 }

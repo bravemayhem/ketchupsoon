@@ -22,20 +22,16 @@ struct CustomNavigationBar: View {
     var enableDebugMode: Bool = false
     var debugModeAction: () -> Void = {}
     
-    // New design options
-    var useNewDesign: Bool = false
+    // Profile emoji
     var showProfileEmoji: Bool = true
     var profileEmoji: String = "👋"
     
     var body: some View {
-        if useNewDesign {
-            newDesignNavigationBar
-        } else {
-            classicNavigationBar
-        }
+        newDesignNavigationBar
     }
     
-    // Original design
+    // Original design (kept as reference, not used)
+    /*
     private var classicNavigationBar: some View {
         HStack {
             if showLeadingButton {
@@ -83,6 +79,7 @@ struct CustomNavigationBar: View {
         .padding(.horizontal)
         .padding(.top, 8)
     }
+    */
     
     // New design based on Home1View
     private var newDesignNavigationBar: some View {
@@ -192,7 +189,6 @@ struct CustomNavigationBarContainer<Content: View>: View {
     var enableDebugMode: Bool
     var debugModeAction: () -> Void
     let content: Content
-    var useNewDesign: Bool = false
     var profileEmoji: String = "👋"
     
     init(
@@ -204,7 +200,6 @@ struct CustomNavigationBarContainer<Content: View>: View {
         trailingIcon: String = "plus",
         leadingButtonAction: @escaping () -> Void = {},
         trailingButtonAction: @escaping () -> Void = {},
-        useNewDesign: Bool = false,
         enableDebugMode: Bool = false,
         debugModeAction: @escaping () -> Void = {},
         profileEmoji: String = "👋",
@@ -220,7 +215,6 @@ struct CustomNavigationBarContainer<Content: View>: View {
         self.trailingButtonAction = trailingButtonAction
         self.enableDebugMode = enableDebugMode
         self.debugModeAction = debugModeAction
-        self.useNewDesign = useNewDesign
         self.profileEmoji = profileEmoji
         self.content = content()
     }
@@ -230,7 +224,7 @@ struct CustomNavigationBarContainer<Content: View>: View {
             // Use ZStack instead of VStack to ensure seamless background
             ZStack(alignment: .top) {
                 // App background fills the entire screen
-                (useNewDesign ? AppColors.background : AppColors.systemBackground)
+                AppColors.background
                     .ignoresSafeArea()
                 
                 // Content container
@@ -246,7 +240,6 @@ struct CustomNavigationBarContainer<Content: View>: View {
                         trailingButtonAction: trailingButtonAction,
                         enableDebugMode: enableDebugMode,
                         debugModeAction: debugModeAction,
-                        useNewDesign: useNewDesign,
                         profileEmoji: profileEmoji
                     )
                     
@@ -261,8 +254,6 @@ struct CustomNavigationBarContainer<Content: View>: View {
 
 // MARK: - Example Usage Preview
 struct CustomNavigationBarPreview: View {
-    @State private var useNewDesign = false
-    
     var body: some View {
         CustomNavigationBarContainer(
             title: "Friends",
@@ -277,11 +268,9 @@ struct CustomNavigationBarPreview: View {
             trailingButtonAction: {
                 print("Trailing button tapped")
             },
-            useNewDesign: useNewDesign,
             enableDebugMode: true,
             debugModeAction: {
                 print("Debug mode activated")
-                useNewDesign.toggle()
             }
         ) {
             ScrollView {
@@ -304,15 +293,13 @@ struct CustomNavigationBarPreview: View {
 
 // MARK: - Status Bar Style Modifier
 struct CustomStatusBarStyleModifier: ViewModifier {
-    let useNewDesign: Bool
-    
     func body(content: Content) -> some View {
         content
             .overlay(
                 ZStack {
                     // Status bar background
                     Rectangle()
-                        .fill(useNewDesign ? AppColors.background : Color.clear)
+                        .fill(AppColors.background)
                         .ignoresSafeArea(edges: .top)
                         .frame(height: 0) // Invisible but will affect status bar color
                 }
@@ -323,8 +310,8 @@ struct CustomStatusBarStyleModifier: ViewModifier {
 }
 
 extension View {
-    func customStatusBarStyle(useNewDesign: Bool) -> some View {
-        modifier(CustomStatusBarStyleModifier(useNewDesign: useNewDesign))
+    func customStatusBarStyle() -> some View {
+        modifier(CustomStatusBarStyleModifier())
     }
 }
 
@@ -340,7 +327,6 @@ struct CustomNavigationBar_Previews: PreviewProvider {
                 showTrailingButton: true,
                 leadingIcon: "gear",
                 trailingIcon: "plus",
-                useNewDesign: false,
                 enableDebugMode: true
             ) {
                 ScrollView {
@@ -368,7 +354,6 @@ struct CustomNavigationBar_Previews: PreviewProvider {
                 showTrailingButton: true,
                 leadingIcon: "gear",
                 trailingIcon: "plus",
-                useNewDesign: true,
                 enableDebugMode: true,
                 profileEmoji: "🚀"
             ) {
@@ -398,8 +383,7 @@ struct CustomNavigationBar_Previews: PreviewProvider {
         title: "Classic Bar",
         subtitle: "No buttons",
         showLeadingButton: false,
-        showTrailingButton: false,
-        useNewDesign: false
+        showTrailingButton: false
     )
     .padding()
     .background(Color.white)
@@ -410,7 +394,6 @@ struct CustomNavigationBar_Previews: PreviewProvider {
         title: "",
         showLeadingButton: true,
         showTrailingButton: true,
-        useNewDesign: true,
         profileEmoji: "👨‍💻"
     )
     .padding()

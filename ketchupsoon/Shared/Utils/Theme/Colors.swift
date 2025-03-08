@@ -59,6 +59,10 @@ enum AppColors {
     static let gradient4Start = Color(hex: "00F5A0") // Mint
     static let gradient4End = Color(hex: "5E17EB") // Purple
     
+    // Adding gradient5 from React file (blue-purple to mint)
+    static let gradient5Start = Color(hex: "6B66FF") // Blue-purple
+    static let gradient5End = Color(hex: "00F5A0") // Mint
+    
     // Gradient Presets
     static let backgroundGradient = LinearGradient(
         colors: [
@@ -99,14 +103,15 @@ enum AppColors {
         endPoint: .bottomTrailing
     )
     
-    static let alternateGradient = LinearGradient(
+    static let accentGradient4 = LinearGradient(
         colors: [gradient4Start, gradient4End],
         startPoint: .topLeading,
         endPoint: .bottomTrailing
     )
     
-    static let accentGradient4 = LinearGradient(
-        colors: [gradient4Start, gradient4End],
+    // Adding gradient5 preset
+    static let accentGradient5 = LinearGradient(
+        colors: [gradient5Start, gradient5End],
         startPoint: .topLeading,
         endPoint: .bottomTrailing
     )
@@ -124,7 +129,8 @@ enum AppColors {
         accentGradient1, 
         accentGradient2,
         accentGradient3,
-        accentGradient4
+        accentGradient4,
+        accentGradient5
     ]
     
     // Avatar Colors (compatibility with existing code)
