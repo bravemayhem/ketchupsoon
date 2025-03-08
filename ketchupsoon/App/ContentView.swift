@@ -9,6 +9,7 @@ struct ContentView: View {
     @State private var showingContactPicker = false
     @State private var showingDebugAlert = false
     @State private var showingImportOptions = false
+    @State private var showingSettings = false
     @State private var showConfetti = false {
         didSet {
             print("DEBUG: ContentView - showConfetti changed to \(showConfetti)")
@@ -27,39 +28,79 @@ struct ContentView: View {
                 Group {
                     if selectedTab == 0 {
                         // Home tab (emoji: 🏠)
-                        NavigationTab(
+                        CustomNavigationBarContainer(
                             title: "Home",
-                            subtitle: "Development version with SVG design",
-                            icon: "house.fill",
-                            subtitleAlwaysVisible: false,
-                            showImportOptions: $showingImportOptions,
-                            showingDebugAlert: $showingDebugAlert,
-                            clearData: clearAllData
+                            subtitle: "Your friends",
+                            showLeadingButton: true,
+                            showTrailingButton: true,
+                            leadingIcon: "gear",
+                            trailingIcon: "plus",
+                            leadingButtonAction: {
+                                showingSettings = true
+                            },
+                            trailingButtonAction: {
+                                showingContactPicker = true
+                            },
+                            enableDebugMode: true,
+                            debugModeAction: {
+                                showingDebugAlert = true
+                            },
+                            profileEmoji: "👋"
                         ) {
-                            // Directly using HomeView as our home page
                             HomeView()
                         }
                         .transition(.opacity)
+                        .sheet(isPresented: $showingSettings) {
+                            SettingsView()
+                        }
                     }
                     else if selectedTab == 1 {
                         // Pulse tab (emoji: 📅)
-                    }
-           /*        else if selectedTab == 2 {
-                        // Wishlist tab (emoji: ⭐)
-                        NavigationTab(
-                            title: "Wishlist",
-                            subtitle: "Keep track of friends you want to see soon",
-                            icon: "star",
-                            subtitleAlwaysVisible: false,
-                            showImportOptions: $showingImportOptions,
-                            showingDebugAlert: $showingDebugAlert,
-                            clearData: clearAllData
+                        CustomNavigationBarContainer(
+                            title: "Pulse",
+                            subtitle: "Schedule ketchups",
+                            showLeadingButton: true,
+                            showTrailingButton: true,
+                            leadingIcon: "gear",
+                            trailingIcon: "calendar.badge.plus",
+                            leadingButtonAction: {
+                                showingSettings = true
+                            },
+                            trailingButtonAction: {
+                                // Calendar action
+                            },
+                            profileEmoji: "📆"
                         ) {
-                            WishlistView(showConfetti: $showConfetti)
+                            Text("Pulse View Coming Soon")
+                                .foregroundColor(.white)
+                                .font(.title)
                         }
                         .transition(.opacity)
-                    }    */
+                        .sheet(isPresented: $showingSettings) {
+                            SettingsView()
+                        }
+                    }
                     else if selectedTab == 2 {
+                        // Other tab content
+                        CustomNavigationBarContainer(
+                            title: "Profile",
+                            subtitle: "Your account",
+                            showLeadingButton: true,
+                            showTrailingButton: false,
+                            leadingIcon: "gear",
+                            leadingButtonAction: {
+                                showingSettings = true
+                            },
+                            profileEmoji: "👤"
+                        ) {
+                            Text("Profile View Coming Soon")
+                                .foregroundColor(.white)
+                                .font(.title)
+                        }
+                        .transition(.opacity)
+                        .sheet(isPresented: $showingSettings) {
+                            SettingsView()
+                        }
                     }
                 }
             }
@@ -69,167 +110,16 @@ struct ContentView: View {
                     selectedTab = tab
                 }
             }
-            .sheet(isPresented: $showingImportOptions) {
-                ImportOptionsView(showingContactPicker: $showingContactPicker, showingImportOptions: $showingImportOptions)
-            }
-            .fullScreenCover(isPresented: $onboardingManager.isShowingOnboarding) {
-                if onboardingManager.useInnerCircleOnboarding {
-                    KetchupSoonOnboardingView()
-                        .edgesIgnoringSafeArea(.all)
-                } else {
-                    OnboardingView()
-                }
-            }
-            .sheet(isPresented: $showingContactPicker) {
-                ContactPickerView()
-            }
-            .alert("Debug Mode", isPresented: $showingDebugAlert) {
-                Button("Font Debugger") {
-                    presentFontDebugView()
-                }
-                Button("Clear All Data", role: .destructive) {
-                    Task { @MainActor in
-                        await clearAllData()
-                    }
-                }
-                Button("Cancel", role: .cancel) {}
-            } message: {
-                Text("Debug options:")
-            }
-            .tint(AppColors.accent)
-            .displayConfetti(isActive: $showConfetti)
         }
-    }
-    
-    @MainActor
-    private func clearAllData() async {
-        // Delete all hangouts
-        let hangoutDescriptor = FetchDescriptor<Hangout>()
-        if let hangouts = try? modelContext.fetch(hangoutDescriptor) {
-            for hangout in hangouts {
-                modelContext.delete(hangout)
-            }
-        }
-        
-        // Delete all friends
-        let friendDescriptor = FetchDescriptor<Friend>()
-        if let friends = try? modelContext.fetch(friendDescriptor) {
-            for friend in friends {
-                modelContext.delete(friend)
-            }
-        }
-    }
-    
-    @MainActor
-    private func presentFontDebugView() {
-        // Create and present the font debug view
-        let fontDebugView = UIHostingController(rootView: FontDebugView())
-        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-           let rootViewController = windowScene.windows.first?.rootViewController {
-            fontDebugView.modalPresentationStyle = .fullScreen
-            rootViewController.present(fontDebugView, animated: true)
-        }
-    }
-}
-
-private struct NavigationTab<Content: View>: View {
-    let title: String
-    let subtitle: String?
-    let icon: String
-    @Binding var showImportOptions: Bool
-    @Binding var showingDebugAlert: Bool
-    @State private var showingSettings = false
-    let clearData: () async -> Void
-    let content: Content
-    
-    init(
-        title: String,
-        subtitle: String? = nil,
-        icon: String,
-        subtitleAlwaysVisible: Bool = false,
-        showImportOptions: Binding<Bool>,
-        showingDebugAlert: Binding<Bool>,
-        clearData: @escaping () async -> Void,
-        @ViewBuilder content: () -> Content
-    ) {
-        self.title = title
-        self.subtitle = subtitle
-        self.icon = icon
-        self._showImportOptions = showImportOptions
-        self._showingDebugAlert = showingDebugAlert
-        self.clearData = clearData
-        self.content = content()
-    }
-    
-    var body: some View {
-        // Always use the new design with CustomNavigationBarContainer
-        CustomNavigationBarContainer(
-            title: title,
-            subtitle: subtitle,
-            leadingIcon: "gear",
-            trailingIcon: "plus",
-            leadingButtonAction: {
-                showingSettings = true
-            },
-            trailingButtonAction: {
-                showImportOptions = true
-            },
-            enableDebugMode: true,
-            debugModeAction: {
-                showingDebugAlert = true
-            },
-            content: {
-                content
-            }
-        )
-        .sheet(isPresented: $showingSettings) {
-            SettingsView()
-        }
-        .tabItem {
-            Label(title, systemImage: icon)
-        }
-    }
-}
-
-struct ImportOptionsView: View {
-    @Environment(\.dismiss) private var dismiss
-    @Binding var showingContactPicker: Bool
-    @Binding var showingImportOptions: Bool
-    
-    var body: some View {
-        NavigationStack {
-            List {
-                Button(action: {
-                    showingImportOptions = false
-                    showingContactPicker = true
-                }) {
-                    Label("Import from Contacts", systemImage: "person.crop.circle")
-                        .foregroundColor(AppColors.label)
-                }
-                .listRowBackground(AppColors.systemBackground)
-                
-                NavigationLink(destination: FriendOnboardingView(contact: (name: "", identifier: nil, phoneNumber: nil, email: nil, imageData: nil, city: nil))) {
-                    Label("Add Manually", systemImage: "brain")
-                        .foregroundColor(AppColors.label)
-                }
-                .listRowBackground(AppColors.systemBackground)
-            }
-            .navigationTitle("Add Friend")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
-                    .foregroundColor(AppColors.accent)
-                }
-            }
-            .background(AppColors.systemBackground)
+        .alert("Debug Mode", isPresented: $showingDebugAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Debug mode activated!")
         }
     }
 }
 
 #Preview {
     ContentView()
-        .modelContainer(for: [Friend.self, Hangout.self, Tag.self, ketchupsoon.Milestone.self], inMemory: true)
+        .modelContainer(for: [], inMemory: true)
 }

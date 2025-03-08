@@ -27,62 +27,10 @@ struct CustomNavigationBar: View {
     var profileEmoji: String = "👋"
     
     var body: some View {
-        newDesignNavigationBar
+        NavigationBar
     }
-    
-    // Original design (kept as reference, not used)
-    /*
-    private var classicNavigationBar: some View {
-        HStack {
-            if showLeadingButton {
-                Button(action: leadingButtonAction) {
-                    Image(systemName: leadingIcon)
-                        .font(.title2)
-                        .foregroundColor(AppColors.label)
-                }
-            } else {
-                Spacer()
-                    .frame(width: 44) // Reserve space for consistency
-            }
-            
-            Spacer()
-            
-            VStack {
-                Text(title)
-                    .font(.largeTitle.bold())
-                    .foregroundColor(AppColors.label)
-                
-                if let subtitle = subtitle {
-                    Text(subtitle)
-                        .font(.subheadline)
-                        .foregroundColor(AppColors.secondaryLabel)
-                }
-            }
-            
-            Spacer()
-            
-            if showTrailingButton {
-                Button(action: trailingButtonAction) {
-                    Image(systemName: trailingIcon)
-                        .font(.title2)
-                        .foregroundColor(AppColors.label)
-                }
-                .modifier(ConditionalDebugModifier(
-                    enableDebugMode: enableDebugMode,
-                    action: debugModeAction
-                ))
-            } else {
-                Spacer()
-                    .frame(width: 44) // Reserve space for consistency
-            }
-        }
-        .padding(.horizontal)
-        .padding(.top, 8)
-    }
-    */
-    
-    // New design based on HomeView
-    private var newDesignNavigationBar: some View {
+ 
+    private var NavigationBar: some View {
         // Simplified ZStack without the extra space for status bar
         ZStack {
             // Background just for the navigation bar itself

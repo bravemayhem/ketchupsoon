@@ -84,16 +84,8 @@ class FirebaseUserSearchService: ObservableObject {
             logger.error("Error fetching existing friends: \(error.localizedDescription)")
         }
         
-        // Create new Friend
-        let friend = Friend(
-            name: profile.name ?? "Unnamed User",
-            location: nil,
-            needsToConnectFlag: false,
-            phoneNumber: profile.phoneNumber,
-            email: profile.email,
-            photoData: nil, // We'll need to download the image data separately
-            firebaseUserId: profile.id
-        )
+        // Create new Friend using the convenience initializer
+        let friend = Friend(from: profile)
         
         // Handle profile image if available
         if let profileImageURLString = profile.profileImageURL, 

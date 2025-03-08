@@ -1,7 +1,5 @@
-//
-//  ketchupsoonApp.swift
+////  ketchupsoonApp.swift
 //  ketchupsoon
-//
 //  Created by Amineh Beltran on 12/11/24.
 //
 
@@ -11,7 +9,7 @@ import Foundation
 import FirebaseAuth
 import FirebaseCore
 import FirebaseFirestore
-import FirebaseMessaging  // Temporarily commented out for testing
+import FirebaseMessaging
 import UserNotifications
 import WatchConnectivity
 
@@ -41,7 +39,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
     
     func checkForFirebaseUsersInContacts() async {
         // Get model context
-        let sharedModelContainer = try? ModelContainer(for: Friend.self)
+        let sharedModelContainer = try? ModelContainer()
         guard let context = sharedModelContainer?.mainContext else {
             print("⚠️ Failed to get SwiftData context")
             return
@@ -110,6 +108,40 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
     }
 }
 
+// MARK: - URL Handling Extension for Firebase Auth
+extension AppDelegate {
+    // Handle URL scheme for Firebase phone auth
+    func application(_ app: UIApplication,
+                     open url: URL,
+                     options: [UIApplication.OpenURLOptionsKey: Any] = [:]) -> Bool {
+        // Forward URL to Firebase Auth
+        if Auth.auth().canHandle(url) {
+            return true
+        }
+        
+        // Handle other URL schemes here if needed
+        
+        return false
+    }
+}
+
+// Extension to check if running in preview mode
+extension ProcessInfo {
+    var isPreview: Bool {
+        environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1"
+    }
+}
+
+// Extension for application support directory URL
+extension URL {
+    static var applicationSupportDirectory: URL {
+        FileManager.default.urls(
+            for: .applicationSupportDirectory,
+            in: .userDomainMask
+        )[0]
+    }
+}
+
 @main
 struct ketchupsoonApp: App {
     // register app delegate for Firebase setup
@@ -117,14 +149,10 @@ struct ketchupsoonApp: App {
     
     let container: ModelContainer
     @StateObject private var colorSchemeManager = ColorSchemeManager.shared
-    @StateObject private var calendarManager = CalendarManager.shared
     @StateObject private var profileManager = UserProfileManager.shared  // Initialize UserProfileManager
     @Environment(\.scenePhase) private var scenePhase
     
     init() {
-        // Register value transformers first
-        EmailArrayValueTransformer.register()
-        
         PerformanceMonitor.shared.startMeasuring("AppLaunch")
         
         // Verify transformer registration
@@ -135,13 +163,6 @@ struct ketchupsoonApp: App {
         do {
             print("🏗 Creating schema...")
             let schema = Schema([
-                Friend.self,
-                Hangout.self,
-                Tag.self,
-                ketchupsoon.Milestone.self,  // Explicitly specify the module
-                Setting.self,
-                FCMToken.self,
-                GlobalStats.self
             ])
             
             print("📦 Creating ModelContainer...")
@@ -190,10 +211,6 @@ struct ketchupsoonApp: App {
                     )
                     print("✅ Created fresh ModelContainer successfully")
                 }
-                
-                // Initialize predefined tags
-                print("🏷 Initializing predefined tags...")
-                initializePredefinedTags()
             }
         } catch {
             print("❌ Fatal error initializing ModelContainer: \(error)")
@@ -201,30 +218,6 @@ struct ketchupsoonApp: App {
         }
         
         configureAppearance()
-        
-        // Preload calendar events
-        if !ProcessInfo.processInfo.isPreview {
-            Task { @MainActor in
-                await CalendarManager.shared.preloadTodaysEvents()
-            }
-        }
-    }
-    
-    private func initializePredefinedTags() {
-        Task { @MainActor in
-            let context = container.mainContext
-            let tagDescriptor = FetchDescriptor<Tag>(predicate: #Predicate<Tag> { tag in
-                tag.isPredefined == true
-            })
-            
-            if let existingTags = try? context.fetch(tagDescriptor), existingTags.isEmpty {
-                Tag.predefinedTags.forEach { tagName in
-                    let tag = Tag.createPredefinedTag(tagName)
-                    context.insert(tag)
-                }
-                try? context.save()
-            }
-        }
     }
     
     private func configureAppearance() {
@@ -273,7 +266,7 @@ struct ketchupsoonApp: App {
     var body: some Scene {
         WindowGroup {
             SplashScreenView()
-                .modelContainer(for: [Friend.self, Hangout.self, Setting.self, FCMToken.self, GlobalStats.self], inMemory: false)
+                .modelContainer(for: [], inMemory: false)
                 .preferredColorScheme(colorSchemeManager.currentAppearanceMode == .system ? nil : colorSchemeManager.colorScheme)
                 .environment(\.colorScheme, colorSchemeManager.colorScheme)
                 .onAppear {
@@ -284,37 +277,5 @@ struct ketchupsoonApp: App {
                 }
         }
         .modelContainer(container)
-    }
-}
-
-// MARK: - URL Handling Extension for Firebase Auth
-extension AppDelegate {
-    // Handle URL scheme for Firebase phone auth
-    func application(_ app: UIApplication,
-                     open url: URL,
-                     options: [UIApplication.OpenURLOptionsKey: Any] = [:]) -> Bool {
-        // Forward URL to Firebase Auth
-        if Auth.auth().canHandle(url) {
-            return true
-        }
-        
-        // Handle other URL schemes here if needed
-        
-        return false
-    }
-}
-
-extension ProcessInfo {
-    var isPreview: Bool {
-        environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1"
-    }
-}
-
-extension URL {
-    static var applicationSupportDirectory: URL {
-        FileManager.default.urls(
-            for: .applicationSupportDirectory,
-            in: .userDomainMask
-        )[0]
     }
 }

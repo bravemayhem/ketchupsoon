@@ -251,17 +251,8 @@ struct AddFriendView: View {
     private func addFriend() {
         guard let userToAdd = searchResult else { return }
         
-        // Create a Friend object and add it to SwiftData
-        let newFriend = Friend(
-            name: userToAdd.name ?? "Unnamed User",
-            location: "Online",
-            needsToConnectFlag: false,
-            phoneNumber: userToAdd.phoneNumber,
-            email: userToAdd.email
-        )
-        
-        // Add Firebase ID to an attribute or tag for future reference
-        // This would require extending the Friend model with a firebaseId property
+        // Create a Friend object and add it to SwiftData using the convenience initializer
+        let newFriend = Friend(from: userToAdd)
         
         modelContext.insert(newFriend)
         

@@ -11,7 +11,7 @@ struct SplashScreenView: View {
                 .environmentObject(onboardingManager)
         } else {
             ZStack {
-                // Background from InnerCircleOnboardingView
+                // Background from UserOnboardingView
                 BackgroundView()
                 
                 VStack(spacing: 12) {

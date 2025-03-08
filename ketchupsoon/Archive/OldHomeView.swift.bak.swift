@@ -1,4 +1,5 @@
 /*
+/*
  * DEPRECATED: This file contains the old home view that is no longer in use.
  * We've switched to using Home1View as our main home page.
  * This file is kept for reference purposes only.
@@ -379,3 +380,6 @@ extension Shape {
 #Preview {
     OldHomeView()
 }
+
+
+*/

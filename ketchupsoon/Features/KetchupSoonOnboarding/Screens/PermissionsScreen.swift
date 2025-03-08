@@ -5,7 +5,6 @@ struct PermissionsScreen: View {
     @EnvironmentObject var onboardingManager: OnboardingManager
     @StateObject private var notificationsManager = NotificationsManager.shared
     @StateObject private var contactsManager = ContactsManager.shared
-    @StateObject private var calendarManager = CalendarManager.shared
     
     var body: some View {
         VStack(spacing: 0) {
@@ -52,7 +51,7 @@ struct PermissionsScreen: View {
                             }
                         }
                     )
-                    
+  /*
                     // Calendar permission
                     PermissionCard(
                         title: "Calendar",
@@ -65,10 +64,11 @@ struct PermissionsScreen: View {
                                 await calendarManager.requestAccess()
                             }
                         }
-                    )
+                    ) */
                 }
                 .padding(.horizontal, 20)
             }
+
             
             // Button to complete onboarding
             VStack {
