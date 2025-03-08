@@ -3,11 +3,7 @@ import SwiftUI
 /// A reusable navigation bar component that can be customized for different pages.
 /// Allows for optional leading and trailing buttons with custom actions.
 struct CustomNavigationBar: View {
-    // Title configuration
-    var title: String
-    var subtitle: String?
-    var displayMode: NavigationBarItem.TitleDisplayMode = .large
-    
+    @State private var pendingFriendRequests: Int = 3
     // Leading button (typically gear/settings)
     var showLeadingButton: Bool = true
     var leadingIcon: String = "gear"
@@ -24,7 +20,7 @@ struct CustomNavigationBar: View {
     
     // Profile emoji
     var showProfileEmoji: Bool = true
-    var profileEmoji: String = "👋"
+    var profileEmoji: String = "👨‍💻"
     
     var body: some View {
         NavigationBar
@@ -39,7 +35,7 @@ struct CustomNavigationBar: View {
                 .frame(height: 60)
             
             // Main navigation content
-            HStack {
+            HStack {  // Removed the spacing parameter to control it more precisely
                 // Updated to match StatusBarView styling
                 Text("ketchupsoon")
                     .font(.custom("SpaceGrotesk-Bold", size: 24))
@@ -59,55 +55,80 @@ struct CustomNavigationBar: View {
                         x: 0,
                         y: 0
                     )
+                    .fixedSize(horizontal: true, vertical: false)  // Prevent text from being truncated
                 
                 Spacer()
                 
-                if showLeadingButton {
-                    Button(action: leadingButtonAction) {
+                // Group all the icons in a secondary HStack with consistent spacing
+                HStack(spacing: 12) {  // Adjusted spacing for equal distance between icons
+                    if showLeadingButton {
+                        Button(action: leadingButtonAction) {
+                            ZStack {
+                                Circle()
+                                    .fill(AppColors.circleBackground())
+                                    .frame(width: 40, height: 40)
+                                
+                                Image(systemName: leadingIcon)
+                                    .font(.system(size: 16))
+                                    .foregroundColor(.white)
+                            }
+                        }
+                    }
+                    
+                    if showTrailingButton {
+                        Button(action: trailingButtonAction) {
+                            ZStack {
+                                Circle()
+                                    .fill(AppColors.circleBackground())
+                                    .frame(width: 40, height: 40)
+                                
+                                Image(systemName: trailingIcon)
+                                    .font(.system(size: 16))
+                                    .foregroundColor(.white)
+                            }
+                        }
+                        .modifier(ConditionalDebugModifier(
+                            enableDebugMode: enableDebugMode,
+                            action: debugModeAction
+                        ))
+                        .overlay(
+                            // Badge for friend requests
+                            Group {
+                                if pendingFriendRequests > 0 {
+                                    ZStack {
+                                        Circle()
+                                            .fill(LinearGradient(
+                                                gradient: Gradient(colors: [AppColors.gradient5Start, AppColors.pureBlue]),
+                                                startPoint: .topLeading,
+                                                endPoint: .bottomTrailing
+                                            ))
+                                            .frame(width: 18, height: 18)
+                                            .shadow(color: AppColors.pureBlue.opacity(0.4), radius: 2, x: 0, y: 0)
+                                        
+                                        Text("\(pendingFriendRequests)")
+                                            .font(.system(size: 10, weight: .bold))
+                                            .foregroundColor(.white)
+                                    }
+                                    .offset(x: 1, y: -6)
+                                }
+                            },
+                            alignment: .topTrailing
+                        )
+                    }
+                    
+                    if showProfileEmoji {
                         ZStack {
                             Circle()
                                 .fill(AppColors.circleBackground())
                                 .frame(width: 40, height: 40)
                             
-                            Image(systemName: leadingIcon)
-                                .font(.system(size: 16))
-                                .foregroundColor(.white)
+                            Text(profileEmoji)
+                                .font(.system(size: 18))
                         }
                     }
-                    .padding(.horizontal, 8)
-                }
-                
-                if showTrailingButton {
-                    Button(action: trailingButtonAction) {
-                        ZStack {
-                            Circle()
-                                .fill(AppColors.circleBackground())
-                                .frame(width: 40, height: 40)
-                            
-                            Image(systemName: trailingIcon)
-                                .font(.system(size: 16))
-                                .foregroundColor(.white)
-                        }
-                    }
-                    .modifier(ConditionalDebugModifier(
-                        enableDebugMode: enableDebugMode,
-                        action: debugModeAction
-                    ))
-                }
-                
-                if showProfileEmoji {
-                    ZStack {
-                        Circle()
-                            .fill(AppColors.circleBackground())
-                            .frame(width: 40, height: 40)
-                        
-                        Text(profileEmoji)
-                            .font(.system(size: 18))
-                    }
-                    .padding(.trailing, 20)
                 }
             }
-            .padding(.horizontal, 20)
+            .padding(.horizontal, 12) // Add horizontal padding to keep items from the edges
             .frame(height: 60)
         }
     }
@@ -136,8 +157,6 @@ struct ConditionalDebugModifier: ViewModifier {
 
 /// An example of how to use CustomNavigationBar within a NavigationStack
 struct CustomNavigationBarContainer<Content: View>: View {
-    let title: String
-    let subtitle: String?
     let showLeadingButton: Bool
     let showTrailingButton: Bool
     let leadingIcon: String
@@ -147,11 +166,9 @@ struct CustomNavigationBarContainer<Content: View>: View {
     var enableDebugMode: Bool
     var debugModeAction: () -> Void
     let content: Content
-    var profileEmoji: String = "👋"
+    var profileEmoji: String = "👨‍💻"
     
     init(
-        title: String,
-        subtitle: String? = nil,
         showLeadingButton: Bool = true,
         showTrailingButton: Bool = true,
         leadingIcon: String = "gear",
@@ -160,11 +177,9 @@ struct CustomNavigationBarContainer<Content: View>: View {
         trailingButtonAction: @escaping () -> Void = {},
         enableDebugMode: Bool = false,
         debugModeAction: @escaping () -> Void = {},
-        profileEmoji: String = "👋",
+        profileEmoji: String = "👨‍💻",
         @ViewBuilder content: () -> Content
     ) {
-        self.title = title
-        self.subtitle = subtitle
         self.showLeadingButton = showLeadingButton
         self.showTrailingButton = showTrailingButton
         self.leadingIcon = leadingIcon
@@ -188,8 +203,6 @@ struct CustomNavigationBarContainer<Content: View>: View {
                 // Content container
                 VStack(spacing: 0) {
                     CustomNavigationBar(
-                        title: title,
-                        subtitle: subtitle,
                         showLeadingButton: showLeadingButton,
                         leadingIcon: leadingIcon,
                         leadingButtonAction: leadingButtonAction,
@@ -213,33 +226,24 @@ struct CustomNavigationBarContainer<Content: View>: View {
 // MARK: - Example Usage Preview
 struct CustomNavigationBarPreview: View {
     var body: some View {
+        // Use the exact same configuration as the New Design preview
         CustomNavigationBarContainer(
-            title: "Friends",
-            subtitle: "Stay connected",
             showLeadingButton: true,
             showTrailingButton: true,
             leadingIcon: "gear",
             trailingIcon: "plus",
-            leadingButtonAction: {
-                print("Leading button tapped")
-            },
-            trailingButtonAction: {
-                print("Trailing button tapped")
-            },
             enableDebugMode: true,
-            debugModeAction: {
-                print("Debug mode activated")
-            }
+            profileEmoji: "🚀"
         ) {
             ScrollView {
                 VStack(spacing: 20) {
-                    ForEach(1...10, id: \.self) { index in
+                    ForEach(1...5, id: \.self) { index in
                         RoundedRectangle(cornerRadius: 10)
-                            .fill(Color.gray.opacity(0.2))
+                            .fill(Color.gray.opacity(0.5))
                             .frame(height: 80)
                             .overlay(
                                 Text("Item \(index)")
-                                    .foregroundColor(.primary)
+                                    .foregroundColor(.white)
                             )
                     }
                 }
@@ -277,37 +281,8 @@ extension View {
 struct CustomNavigationBar_Previews: PreviewProvider {
     static var previews: some View {
         Group {
-            // Classic Design Preview
+            // Design Preview
             CustomNavigationBarContainer(
-                title: "Classic Design",
-                subtitle: "Original layout",
-                showLeadingButton: true,
-                showTrailingButton: true,
-                leadingIcon: "gear",
-                trailingIcon: "plus",
-                enableDebugMode: true
-            ) {
-                ScrollView {
-                    VStack(spacing: 20) {
-                        ForEach(1...5, id: \.self) { index in
-                            RoundedRectangle(cornerRadius: 10)
-                                .fill(Color.gray.opacity(0.2))
-                                .frame(height: 80)
-                                .overlay(
-                                    Text("Item \(index)")
-                                        .foregroundColor(.primary)
-                                )
-                        }
-                    }
-                    .padding()
-                }
-            }
-            .previewDisplayName("Classic Design")
-            
-            // New Design Preview
-            CustomNavigationBarContainer(
-                title: "New Design",
-                subtitle: nil,
                 showLeadingButton: true,
                 showTrailingButton: true,
                 leadingIcon: "gear",
@@ -335,21 +310,8 @@ struct CustomNavigationBar_Previews: PreviewProvider {
     }
 }
 
-// This preview uses the macOS 14+ format
-#Preview("Navigation Bar (Classic)") {
+#Preview("Navigation Bar (Simplified)") {
     CustomNavigationBar(
-        title: "Classic Bar",
-        subtitle: "No buttons",
-        showLeadingButton: false,
-        showTrailingButton: false
-    )
-    .padding()
-    .background(Color.white)
-}
-
-#Preview("Navigation Bar (New Design)") {
-    CustomNavigationBar(
-        title: "",
         showLeadingButton: true,
         showTrailingButton: true,
         profileEmoji: "👨‍💻"
@@ -358,7 +320,12 @@ struct CustomNavigationBar_Previews: PreviewProvider {
     .background(Color.black)
 }
 
-// Old code:
-// #Preview {
-//     CustomNavigationBarPreview()
-// } 
+#Preview("Custom Nav Bar Container") {
+    CustomNavigationBarContainer(
+        showLeadingButton: true,
+        showTrailingButton: true,
+        content: { Text("Hello World!") }
+    )
+    .padding()
+    .background(Color.black)
+}

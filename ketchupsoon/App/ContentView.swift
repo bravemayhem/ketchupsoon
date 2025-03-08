@@ -27,14 +27,8 @@ struct ContentView: View {
                 // Tab content based on selection
                 Group {
                     if selectedTab == 0 {
-                        // Home tab (emoji: 🏠)
+                        // Home tab
                         CustomNavigationBarContainer(
-                            title: "Home",
-                            subtitle: "Your friends",
-                            showLeadingButton: true,
-                            showTrailingButton: true,
-                            leadingIcon: "gear",
-                            trailingIcon: "plus",
                             leadingButtonAction: {
                                 showingSettings = true
                             },
@@ -44,8 +38,7 @@ struct ContentView: View {
                             enableDebugMode: true,
                             debugModeAction: {
                                 showingDebugAlert = true
-                            },
-                            profileEmoji: "👋"
+                            }
                         ) {
                             HomeView()
                         }
@@ -55,21 +48,18 @@ struct ContentView: View {
                         }
                     }
                     else if selectedTab == 1 {
-                        // Pulse tab (emoji: 📅)
+                        // Pulse tab
                         CustomNavigationBarContainer(
-                            title: "Pulse",
-                            subtitle: "Schedule ketchups",
-                            showLeadingButton: true,
-                            showTrailingButton: true,
-                            leadingIcon: "gear",
-                            trailingIcon: "calendar.badge.plus",
                             leadingButtonAction: {
                                 showingSettings = true
                             },
                             trailingButtonAction: {
-                                // Calendar action
+                                showingContactPicker = true
                             },
-                            profileEmoji: "📆"
+                            enableDebugMode: true,
+                            debugModeAction: {
+                                showingDebugAlert = true
+                            }
                         ) {
                             Text("Pulse View Coming Soon")
                                 .foregroundColor(.white)
@@ -81,17 +71,18 @@ struct ContentView: View {
                         }
                     }
                     else if selectedTab == 2 {
-                        // Other tab content
+                        // Profile tab
                         CustomNavigationBarContainer(
-                            title: "Profile",
-                            subtitle: "Your account",
-                            showLeadingButton: true,
-                            showTrailingButton: false,
-                            leadingIcon: "gear",
                             leadingButtonAction: {
                                 showingSettings = true
                             },
-                            profileEmoji: "👤"
+                            trailingButtonAction: {
+                                showingContactPicker = true
+                            },
+                            enableDebugMode: true,
+                            debugModeAction: {
+                                showingDebugAlert = true
+                            }
                         ) {
                             Text("Profile View Coming Soon")
                                 .foregroundColor(.white)

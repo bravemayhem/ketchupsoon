@@ -103,44 +103,6 @@ struct HomeView: View {
                                     .font(.system(size: 20, weight: .bold))
                                     .foregroundColor(.white)
                                 
-                                // Plus button with badge
-                                Button(action: {
-                                    // Add friend action
-                                }) {
-                                    ZStack {
-                                        Circle()
-                                            .fill(LinearGradient(
-                                                gradient: Gradient(colors: [AppColors.gradient1Start, AppColors.gradient1End]),
-                                                startPoint: .topLeading,
-                                                endPoint: .bottomTrailing
-                                            ))
-                                            .frame(width: 32, height: 32)
-                                        
-                                        Text("+")
-                                            .font(.system(size: 22, weight: .bold))
-                                            .foregroundColor(.white)
-                                        
-                                        // Badge for friend requests
-                                        if pendingFriendRequests > 0 {
-                                            ZStack {
-                                                Circle()
-                                                    .fill(LinearGradient(
-                                                        gradient: Gradient(colors: [AppColors.gradient5Start, AppColors.pureBlue]),
-                                                        startPoint: .topLeading,
-                                                        endPoint: .bottomTrailing
-                                                    ))
-                                                    .frame(width: 18, height: 18)
-                                                    .shadow(color: AppColors.pureBlue.opacity(0.4), radius: 2, x: 0, y: 0)
-                                                
-                                                Text("\(pendingFriendRequests)")
-                                                    .font(.system(size: 10, weight: .bold))
-                                                    .foregroundColor(.white)
-                                            }
-                                            .offset(x: 11, y: -15)
-                                        }
-                                    }
-                                }
-                                
                                 Spacer()
                                 
                                 // Cancel button
