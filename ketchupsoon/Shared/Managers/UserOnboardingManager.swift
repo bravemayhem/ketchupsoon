@@ -26,4 +26,22 @@ class OnboardingManager: ObservableObject {
         isOnboardingComplete = false
         isShowingOnboarding = true
     }
+    
+    // Enhanced method that handles both internal state and app-level UserDefaults
+    func resetOnboardingAndNavigateToOnboarding() {
+        // Reset internal OnboardingManager state
+        resetOnboarding()
+        
+        // Update the UserDefaults value that the app uses to determine whether to show onboarding
+        UserDefaults.standard.set(false, forKey: "onboardingComplete")
+        
+        // Ensure isShowingOnboarding is set to true
+        isShowingOnboarding = true
+        
+        // Optional: Post notification that onboarding has been reset
+        NotificationCenter.default.post(name: Notification.Name("onboardingReset"), object: nil)
+        
+        // Force UI update by setting objectWillChange
+        self.objectWillChange.send()
+    }
 } 

@@ -2,7 +2,7 @@ import SwiftUI
 
 // MARK: - QR Code Content Component
 /// This component contains just the QR code content without the full screen navigation elements.
-/// It can be reused in other views like AddFriendViewOne for dynamic tab content.
+/// It can be reused in other views like AddFriendView for dynamic tab content.
 public struct QRCodeContent: View {
     public init() {}
     public var body: some View {

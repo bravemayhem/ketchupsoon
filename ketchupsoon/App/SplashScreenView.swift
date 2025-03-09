@@ -7,6 +7,7 @@ struct SplashScreenView: View {
     
     var body: some View {
         if isActive {
+            // Always navigate to ContentView, which will handle onboarding display
             ContentView()
                 .environmentObject(onboardingManager)
         } else {

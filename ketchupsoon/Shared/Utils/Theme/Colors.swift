@@ -246,7 +246,7 @@ enum AppColors {
 }
 
 // MARK: - AddFriendView Colors (Experimental)
-// This enum contains all the colors used in AddFriendViewOne for experimentation
+// This enum contains all the colors used in AddFriendView for experimentation
 enum AddFriendViewColors {
     // Base Colors
     static let backgroundDark = Color(hex: "0A0728")      // Deep blue-black (same as AppColors.backgroundPrimary)
@@ -268,7 +268,7 @@ enum AddFriendViewColors {
     static let separator = Color.white.opacity(0.1)
     static let outline = Color.white.opacity(0.2)
     
-    // Gradients Used in AddFriendViewOne
+    // Gradients Used in AddFriendView
     static let backgroundGradient = LinearGradient(
         gradient: Gradient(colors: [backgroundDark, backgroundLight]),
         startPoint: .topLeading,

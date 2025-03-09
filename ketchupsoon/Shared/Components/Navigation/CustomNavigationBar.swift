@@ -82,7 +82,7 @@ struct CustomNavigationBar: View {
                     
                     if showTrailingButton {
                         Button(action: {
-                            // Trigger navigation to AddFriendViewOne
+                            // Trigger navigation to AddFriendView
                             onAddFriendTapped()
                             
                             // Also call the original action if provided
@@ -238,7 +238,7 @@ struct CustomNavigationBarContainer<Content: View>: View {
             }
             .navigationBarHidden(true)
             .navigationDestination(isPresented: $navigateToAddFriend) {
-                AddFriendViewOne()
+                AddFriendView()
             }
         }
     }

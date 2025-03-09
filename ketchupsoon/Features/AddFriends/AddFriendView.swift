@@ -1,726 +1,552 @@
-/*
 import SwiftUI
 import FirebaseFirestore
 import SwiftData
 
-
-enum AddFriendTab: String, CaseIterable {
-    case contacts = "contacts"
-    // Temporarily commented out
-    // case qrCode = "qr code"
-    // case inviteViaText = "invite via text"
-}
-
-enum FriendViewMode {
-    case addFriends
-    case friendRequests
-}
-
-
-
 struct AddFriendView: View {
-    @StateObject private var profileManager = UserProfileManager.shared
+    // MARK: - Properties
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     
-    @State private var selectedTab: AddFriendTab = .contacts
-    @State private var viewMode: FriendViewMode = .addFriends
+    // Simple state properties - kept for UI display only
     @State private var searchQuery = ""
-    @State private var searchResult: UserProfile?
     @State private var isSearching = false
-    @State private var errorMessage: String?
-    @State private var showAlert = false
-    @State private var alertMessage = ""
-    @State private var friendAdded = false
+    @State private var errorMessage: String? = nil
+    @State private var selectedTab = 0
+    @State private var showComingSoonPopup = false
+    @State private var popupMessage = ""
     
-    // Sample contacts data for UI mockup
-    let contactsOnApp = [
-        ContactPerson(name: "Jamie Chen", phoneNumber: "+(123) 456-7890", isOnApp: true),
-        ContactPerson(name: "Riley Smith", phoneNumber: "+(123) 555-1234", isOnApp: true)
+    // Static mock data for UI display
+    @State private var searchResults: [SimpleFriend] = [
+        SimpleFriend(id: "1", name: "Jamie Smith", email: "jamie@example.com", phoneNumber: "123-456-7890"),
+        SimpleFriend(id: "2", name: "Alex Johnson", email: "alex@example.com", phoneNumber: "555-123-4567")
     ]
     
-    let contactsToInvite = [
-        ContactPerson(name: "Avery Singh", phoneNumber: "+(123) 555-6789", isOnApp: false),
-        ContactPerson(name: "Jordan Lee", phoneNumber: "+(123) 555-4321", isOnApp: false),
-        ContactPerson(name: "Morgan Park", phoneNumber: "+(123) 555-9876", isOnApp: false)
-    ]
+    // Tab options
+    let tabs = ["contacts", "qr code", "invite via text"]
     
+    // MARK: - Body
     var body: some View {
         ZStack {
-            // Background
-            AppColors.backgroundGradient
+            // Background gradient
+            AddFriendViewColors.backgroundGradient
                 .ignoresSafeArea()
             
+            // Decorative background elements
+            Circle()
+                .fill(AddFriendViewColors.purple.opacity(0.3))
+                .frame(width: 400, height: 400)
+                .blur(radius: 50)
+                .position(x: 350, y: 150)
+            
+            Circle()
+                .fill(AddFriendViewColors.pinkRed.opacity(0.2))
+                .frame(width: 360, height: 360)
+                .blur(radius: 50)
+                .position(x: 50, y: 650)
+            
+            // Main content
             VStack(spacing: 0) {
-                // Custom Navigation Bar
-                customNavigationBar
+                // Header
+                HStack {
+                    Spacer()
+                    
+                    // Back button
+                    Button(action: {
+                        withAnimation(.easeInOut(duration: 0.3)) {
+                            dismiss()
+                        }
+                    }) {
+                        Circle()
+                            .fill(AddFriendViewColors.cardBackground.opacity(0.7))
+                            .frame(width: 52, height: 52)
+                            .overlay(
+                                Text("←")
+                                    .font(.system(size: 22))
+                                    .foregroundColor(AddFriendViewColors.textPrimary)
+                            )
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 4)
+                .padding(.bottom, 20)
                 
-                // Tab Selection
-                tabSelectionView
+                // Method selection tabs
+                HStack(spacing: 10) {
+                    ForEach(0..<3) { index in
+                        Button(action: {
+                            if index == 0 || index == 1 || index == 2 {
+                                // For all tabs, just update the selected tab with animation
+                                withAnimation(.easeInOut(duration: 0.3)) {
+                                    selectedTab = index
+                                }
+                                showComingSoonPopup = false
+                            }
+                        }) {
+                            Text(tabs[index])
+                                .font(.system(size: 14, weight: index == selectedTab ? .semibold : .regular))
+                                .foregroundColor(index == selectedTab ? AddFriendViewColors.textPrimary : AddFriendViewColors.textPrimary.opacity(0.6))
+                                .frame(height: 40)
+                                .frame(maxWidth: .infinity)
+                                .background(
+                                    AddFriendViewColors.tabButton(isSelected: index == selectedTab)
+                                )
+                        }
+                    }
+                }
+                .padding(.horizontal, 20)
+                
+                // Search bar (only show for contacts tab)
+                if selectedTab == 0 {
+                    HStack {
+                        Image(systemName: "magnifyingglass")
+                            .foregroundColor(AddFriendViewColors.textPrimary.opacity(0.6))
+                            .padding(.leading, 15)
+                        
+                        TextField("", text: $searchQuery)
+                            .placeholder(when: searchQuery.isEmpty) {
+                                Text("search contacts...")
+                                    .foregroundColor(AddFriendViewColors.textTertiary)
+                            }
+                            .foregroundColor(AddFriendViewColors.textPrimary)
+                            .padding(.vertical, 15)
+                    }
+                    .background(
+                        RoundedRectangle(cornerRadius: 25)
+                            .fill(AddFriendViewColors.cardBackground.opacity(0.7))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 25)
+                                    .stroke(AddFriendViewColors.separator, lineWidth: 1)
+                            )
+                    )
                     .padding(.horizontal, 20)
                     .padding(.top, 20)
-                
-                // Search Bar
-                searchBar
-                    .padding(.horizontal, 20)
-                    .padding(.top, 20)
-                
-                // Optionally, show search results if any
-                searchResultsView
-                    .padding(.top, 10)
+                }
                 
                 // Content based on selected tab
                 ScrollView {
-                    VStack(spacing: 20) {
-                        switch selectedTab {
-                        case .contacts:
-                            contactsView
-                        // Temporarily commented out
-                        /*
-                        case .qrCode:
-                            qrCodeView
-                        case .inviteViaText:
-                            inviteViaTextView
-                        */
-                        }
+                    if selectedTab == 0 {
+                        // CONTACTS TAB CONTENT
+                        contactsTabContent
+                    } else if selectedTab == 1 {
+                        // QR CODE TAB CONTENT - Use the dedicated component from QRCodeScreen.swift
+                        QRCodeContent()
+                    } else if selectedTab == 2 {
+                        // INVITE VIA TEXT TAB CONTENT - Use the dedicated component from InviteViaTextContent.swift
+                        InviteViaTextContent()
                     }
-                    .padding(.bottom, 100) // Add padding for bottom safe area
                 }
-                .padding(.top, 20)
+                .padding(.top, selectedTab == 0 ? 0 : 20)
+                .padding(.bottom, 80)
+
+            }
+            
+            // Coming soon popup
+            if showComingSoonPopup {
+                ComingSoonPopupView(message: popupMessage, isShowing: $showComingSoonPopup)
+                    .animation(.spring(response: 0.3, dampingFraction: 0.7), value: showComingSoonPopup)
+            }
+            
+            // Tab bar at bottom
+            VStack {
+                Spacer()
+                BottomTabBar(selectedTab: 0)
             }
         }
         .navigationBarHidden(true)
-        .alert(alertMessage, isPresented: $showAlert) {
-            Button("OK") { 
-                if friendAdded {
-                    dismiss()
-                }
-            }
-        }
     }
     
-    // MARK: - Custom Navigation Bar
-    private var customNavigationBar: some View {
-        HStack {
-            VStack(alignment: .leading) {
-                HStack(spacing: 4) {
-                    Text("add")
-                        .font(.custom("SpaceGrotesk-Bold", size: 26))
-                        .foregroundColor(.white)
-                    
-                    Text("friends")
-                        .font(.custom("SpaceGrotesk-Bold", size: 26))
-                        .foregroundColor(AppColors.accent)
-                }
-            }
-            
-            Spacer()
-            
-            Button(action: { dismiss() }) {
-                ZStack {
-                    Circle()
-                        .fill(AppColors.cardBackground)
-                        .frame(width: 40, height: 40)
-                        .overlay(
-                            Circle()
-                                .stroke(Color.white.opacity(0.1), lineWidth: 1)
-                        )
-                    
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.white)
-                }
-            }
-        }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 10)
-        .background(AppColors.backgroundPrimary.opacity(0.9))
-    }
-    
-    // MARK: - Tab Selection
-    private var tabSelectionView: some View {
-        HStack(spacing: 10) {
-            ForEach(AddFriendTab.allCases, id: \.self) { tab in
-                Button(action: {
-                    withAnimation {
-                        selectedTab = tab
-                    }
-                }) {
-                    Text(tab.rawValue)
-                        .font(.system(size: 14, weight: .semibold))
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 10)
-                        .frame(height: 40)
-                }
-                .background(
-                    Capsule()
-                        .fill(selectedTab == tab ? AppColors.accentGradient1 : AppColors.cardBackground)
-                )
-                .foregroundColor(selectedTab == tab ? .white : .white.opacity(0.6))
-                .overlay(
-                    Capsule()
-                        .stroke(Color.white.opacity(0.1), lineWidth: selectedTab == tab ? 0 : 1)
-                )
-                .shadow(color: selectedTab == tab ? AppColors.accent.opacity(0.3) : .clear, radius: 8, x: 0, y: 4)
-            }
-        }
-    }
-    
-    // MARK: - Search Bar
-    private var searchBar: some View {
-        HStack {
-            Image(systemName: "magnifyingglass")
-                .foregroundColor(.white.opacity(0.5))
-                .padding(.leading, 12)
-            
-            TextField("search contacts...", text: $searchQuery)
-                .font(.system(size: 16))
-                .foregroundColor(.white)
-                .padding(12)
-                .onSubmit {
-                    searchForUser()
-                }
-        }
-        .background(AppColors.cardBackground)
-        .cornerRadius(25)
-        .overlay(
-            RoundedRectangle(cornerRadius: 25)
-                .stroke(Color.white.opacity(0.1), lineWidth: 1)
-        )
-    }
-    
-    // MARK: - Contacts View
-    private var contactsView: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            // On KetchupSoon section
+    // MARK: - Contacts Tab Content
+    private var contactsTabContent: some View {
+        VStack(spacing: 10) {
+            // Section Title - On KetchupSoon
             Text("on ketchupsoon")
                 .font(.system(size: 16, weight: .semibold))
-                .foregroundColor(.white)
+                .foregroundColor(AddFriendViewColors.textPrimary)
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 20)
+                .padding(.top, 30)
             
-            ForEach(contactsOnApp) { contact in
-                ContactRowView(contact: contact, onAddAction: {
-                    // Action for adding this contact
-                    print("Adding contact: \(contact.name)")
-                })
-                .padding(.horizontal, 20)
-            }
+            // Contacts on app - using example data
+            ContactRow(
+                name: "Jamie Smith",
+                phone: "123-456-7890",
+                emoji: "🦋",
+                gradientColors: [AddFriendViewColors.mint, AddFriendViewColors.purple],
+                buttonType: .add
+            )
             
-            // Invite to KetchupSoon section
+            ContactRow(
+                name: "Alex Johnson",
+                phone: "555-123-4567",
+                emoji: "🔮",
+                gradientColors: [AddFriendViewColors.bluePurple, AddFriendViewColors.mint],
+                buttonType: .add
+            )
+            
+            // Section Title - Invite to KetchupSoon
             Text("invite to ketchupsoon")
                 .font(.system(size: 16, weight: .semibold))
-                .foregroundColor(.white)
-                .padding(.horizontal, 20)
-                .padding(.top, 10)
+                .foregroundColor(AddFriendViewColors.textPrimary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.top, 20)
             
-            ForEach(contactsToInvite) { contact in
-                ContactRowView(contact: contact, onAddAction: {
-                    // Action for inviting this contact
-                    print("Inviting contact: \(contact.name)")
-                })
-                .padding(.horizontal, 20)
-            }
+            // Contacts not on app - using example data
+            ContactRow(
+                name: "Avery Singh",
+                phone: "555-6789",
+                initials: "AS",
+                buttonType: .invite
+            )
             
-            // Invite multiple button
-            Button(action: {
-                // Action for inviting multiple
-            }) {
+            ContactRow(
+                name: "Jordan Lee",
+                phone: "555-4321",
+                initials: "JL",
+                buttonType: .invite
+            )
+            
+            ContactRow(
+                name: "Morgan Park",
+                phone: "555-9876",
+                initials: "MP",
+                buttonType: .invite
+            )
+            
+            // Multi-invite button
+            Button(action: {}) {
                 Text("invite multiple")
                     .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(.white)
+                    .foregroundColor(AddFriendViewColors.textPrimary)
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .background(AppColors.accentGradient2)
-                    .cornerRadius(25)
-                    .shadow(color: AppColors.purple.opacity(0.3), radius: 8, x: 0, y: 4)
-            }
-            .padding(.horizontal, 60)
-            .padding(.top, 20)
-        }
-    }
-    
-    // MARK: - QR Code View
-    /* Temporarily commented out
-    private var qrCodeView: some View {
-        VStack(spacing: 30) {
-            // QR Code display area
-            ZStack {
-                RoundedRectangle(cornerRadius: 20)
-                    .fill(AppColors.cardBackground)
-                    .frame(width: 280, height: 280)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 20)
-                            .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                    .frame(height: 50)
+                    .background(
+                        AddFriendViewColors.purplePinkGradient
+                            .cornerRadius(25)
                     )
-                
-                Image(systemName: "qrcode")
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 200, height: 200)
-                    .foregroundColor(.white)
-            }
-            
-            // Instructions
-            Text("Share your QR code with friends")
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundColor(.white)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 40)
-            
-            Text("They can scan it to add you on KetchupSoon")
-                .font(.system(size: 14))
-                .foregroundColor(.white.opacity(0.7))
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 40)
-                .padding(.top, 5)
-            
-            // Share button
-            Button(action: {
-                // Action to share QR code
-            }) {
-                HStack {
-                    Image(systemName: "square.and.arrow.up")
-                        .font(.system(size: 16))
-                    
-                    Text("share qr code")
-                        .font(.system(size: 16, weight: .semibold))
-                }
-                .foregroundColor(.white)
-                .padding(.horizontal, 30)
-                .padding(.vertical, 16)
-                .background(AppColors.accentGradient2)
-                .cornerRadius(25)
-                .shadow(color: AppColors.purple.opacity(0.3), radius: 8, x: 0, y: 4)
+                    .glow(color: AddFriendViewColors.purple, radius: 8, opacity: 0.5)
             }
             .padding(.top, 20)
+            .padding(.bottom, 40)
         }
         .padding(.horizontal, 20)
-    }
-    */
-    
-    // MARK: - Invite via Text View
-    /* Temporarily commented out
-    private var inviteViaTextView: some View {
-        VStack(spacing: 20) {
-            // Selected contacts section
-            VStack(alignment: .leading, spacing: 10) {
-                Text("Selected contacts")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(.white)
-                
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 10) {
-                        ForEach(contactsToInvite) { contact in
-                            HStack {
-                                Text(contact.name)
-                                    .font(.system(size: 14))
-                                    .foregroundColor(.white)
-                                
-                                Button(action: {
-                                    // Remove contact
-                                }) {
-                                    Image(systemName: "xmark")
-                                        .font(.system(size: 10, weight: .bold))
-                                        .foregroundColor(.white.opacity(0.8))
-                                        .padding(5)
-                                        .background(Circle().fill(Color.white.opacity(0.2)))
-                                }
-                            }
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 8)
-                            .background(AppColors.cardBackground)
-                            .cornerRadius(20)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 20)
-                                    .stroke(Color.white.opacity(0.1), lineWidth: 1)
-                            )
-                        }
-                    }
-                    .padding(.vertical, 5)
-                }
-            }
-            .padding(.horizontal, 20)
-            
-            // Invitation message
-            VStack(alignment: .leading, spacing: 10) {
-                Text("Invitation message")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(.white)
-                
-                TextEditor(text: .constant("Hey! I'm using KetchupSoon to hangout with friends. It's an awesome app to schedule time with people you actually want to see! Join me: https://ketchupsoon.app/invite"))
-                    .padding()
-                    .frame(height: 120)
-                    .background(AppColors.cardBackground)
-                    .cornerRadius(16)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16)
-                            .stroke(Color.white.opacity(0.1), lineWidth: 1)
-                    )
-                    .foregroundColor(.white)
-            }
-            .padding(.horizontal, 20)
-            
-            // Message preview
-            VStack(alignment: .leading, spacing: 10) {
-                Text("Message preview")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(.white)
-                
-                HStack(alignment: .top, spacing: 12) {
-                    Image(systemName: "message.fill")
-                        .font(.system(size: 24))
-                        .foregroundColor(AppColors.accent)
-                    
-                    VStack(alignment: .leading, spacing: 5) {
-                        Text("SMS to 3 contacts")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(.white)
-                        
-                        Text("Hey! I'm using KetchupSoon to hangout with friends. It's an awesome app to schedule time with people you actually want to see! Join me: https://ketchupsoon.app/invite")
-                            .font(.system(size: 12))
-                            .foregroundColor(.white.opacity(0.7))
-                            .lineLimit(3)
-                    }
-                }
-                .padding()
-                .background(AppColors.cardBackground)
-                .cornerRadius(16)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16)
-                        .stroke(Color.white.opacity(0.1), lineWidth: 1)
-                )
-            }
-            .padding(.horizontal, 20)
-            
-            // Send invites button
-            Button(action: {
-                // Action to send invites
-            }) {
-                Text("send invites")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .background(AppColors.accentGradient1)
-                    .cornerRadius(25)
-                    .shadow(color: AppColors.accent.opacity(0.3), radius: 8, x: 0, y: 4)
-            }
-            .padding(.horizontal, 60)
-            .padding(.top, 20)
-        }
-    }
-    */
-    
-    // MARK: - Search Results View (Integrated into AddFriendView)
-    private var searchResultsView: some View {
-        VStack {
-            if isSearching {
-                ProgressView()
-                    .tint(.white)
-                    .scaleEffect(1.5)
-                    .padding()
-            } else if let error = errorMessage {
-                Text(error)
-                    .foregroundColor(.red)
-                    .padding()
-                    .background(AppColors.cardBackground)
-                    .cornerRadius(10)
-            } else if let result = searchResult {
-                HStack {
-                    // Avatar or initials
-                    ZStack {
-                        Circle()
-                            .fill(AppColors.avatarGradient(for: result.name ?? "User"))
-                            .frame(width: 50, height: 50)
-                        
-                        if let profileImageURL = result.profileImageURL, 
-                           let url = URL(string: profileImageURL) {
-                            AsyncImage(url: url) { image in
-                                image
-                                    .resizable()
-                                    .aspectRatio(contentMode: .fill)
-                                    .frame(width: 50, height: 50)
-                                    .clipShape(Circle())
-                            } placeholder: {
-                                Text(AppColors.avatarEmoji(for: result.name ?? "User"))
-                                    .font(.system(size: 24))
-                                    .frame(width: 50, height: 50)
-                            }
-                        } else {
-                            Text(AppColors.avatarEmoji(for: result.name ?? "User"))
-                                .font(.system(size: 24))
-                        }
-                    }
-                    
-                    // User info
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(result.name ?? "Unknown User")
-                            .font(.system(size: 16))
-                            .foregroundColor(.white)
-                        
-                        if let email = result.email {
-                            Text(email)
-                                .font(.system(size: 12))
-                                .foregroundColor(.white.opacity(0.6))
-                        }
-                    }
-                    
-                    Spacer()
-                    
-                    // Add Button
-                    Button(action: {
-                        addFriend()
-                    }) {
-                        Text("add")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 20)
-                            .padding(.vertical, 8)
-                            .background(AppColors.accentGradient1)
-                            .cornerRadius(20)
-                            .shadow(color: AppColors.accent.opacity(0.3), radius: 4, x: 0, y: 2)
-                    }
-                }
-                .padding(.vertical, 10)
-                .padding(.horizontal, 12)
-                .background(AppColors.cardBackground)
-                .cornerRadius(20)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 20)
-                        .stroke(Color.white.opacity(0.1), lineWidth: 1)
-                )
-                .padding(.horizontal, 20)
-            }
-        }
-    }
-    
-    // MARK: - Search & Friend Functions
-    private func searchForUser() {
-        guard !searchQuery.isEmpty else { return }
-        
-        isSearching = true
-        errorMessage = nil
-        searchResult = nil
-        
-        let db = Firestore.firestore()
-        let usersCollection = db.collection("users")
-        
-        // Try to search by email first
-        let emailQuery = usersCollection.whereField("email", isEqualTo: searchQuery)
-        
-        Task {
-            do {
-                let snapshot = try await emailQuery.getDocuments()
-                
-                if !snapshot.documents.isEmpty {
-                    // Process first matching user
-                    if let userData = snapshot.documents.first?.data(),
-                       let userId = userData["id"] as? String {
-                        let name = userData["name"] as? String
-                        let email = userData["email"] as? String
-                        let phoneNumber = userData["phoneNumber"] as? String
-                        let bio = userData["bio"] as? String
-                        let profileImageURL = userData["profileImageURL"] as? String
-                        
-                        // Skip if it's the current user
-                        if userId == profileManager.currentUserProfile?.id {
-                            await MainActor.run {
-                                isSearching = false
-                                errorMessage = "You cannot add yourself as a friend."
-                            }
-                            return
-                        }
-                        
-                        let userProfile = UserProfile(
-                            id: userId,
-                            name: name,
-                            email: email,
-                            phoneNumber: phoneNumber,
-                            bio: bio,
-                            profileImageURL: profileImageURL
-                        )
-                        
-                        await MainActor.run {
-                            searchResult = userProfile
-                            isSearching = false
-                        }
-                    }
-                } else {
-                    // If not found by email, try phone number
-                    let phoneQuery = usersCollection.whereField("phoneNumber", isEqualTo: searchQuery)
-                    let phoneSnapshot = try await phoneQuery.getDocuments()
-                    
-                    if !phoneSnapshot.documents.isEmpty {
-                        // Process first matching user
-                        if let userData = phoneSnapshot.documents.first?.data(),
-                           let userId = userData["id"] as? String {
-                            let name = userData["name"] as? String
-                            let email = userData["email"] as? String
-                            let phoneNumber = userData["phoneNumber"] as? String
-                            let bio = userData["bio"] as? String
-                            let profileImageURL = userData["profileImageURL"] as? String
-                            
-                            // Skip if it's the current user
-                            if userId == profileManager.currentUserProfile?.id {
-                                await MainActor.run {
-                                    isSearching = false
-                                    errorMessage = "You cannot add yourself as a friend."
-                                }
-                                return
-                            }
-                            
-                            let userProfile = UserProfile(
-                                id: userId,
-                                name: name,
-                                email: email,
-                                phoneNumber: phoneNumber,
-                                bio: bio,
-                                profileImageURL: profileImageURL
-                            )
-                            
-                            await MainActor.run {
-                                searchResult = userProfile
-                                isSearching = false
-                            }
-                        }
-                    } else {
-                        await MainActor.run {
-                            isSearching = false
-                            errorMessage = "No user found with that email or phone number."
-                        }
-                    }
-                }
-            } catch {
-                await MainActor.run {
-                    isSearching = false
-                    errorMessage = "Error searching for user: \(error.localizedDescription)"
-                }
-            }
-        }
-    }
-    
-    private func addFriend() {
-        guard let userToAdd = searchResult else { return }
-        
-        // Create a Friend object and add it to SwiftData using the convenience initializer
-        let newFriend = Friend(from: userToAdd)
-        
-        modelContext.insert(newFriend)
-        
-        // Show confirmation
-        friendAdded = true
-        alertMessage = "Friend added successfully!"
-        showAlert = true
-    }
-    
-    private func getInitials(from name: String) -> String {
-        name.components(separatedBy: " ")
-            .compactMap { $0.first }
-            .prefix(2)
-            .map(String.init)
-            .joined()
     }
 }
 
-// MARK: - Supporting Views
-struct ContactRowView: View {
-    let contact: ContactPerson
-    var onAddAction: () -> Void
+// MARK: - Contact Row Component
+struct ContactRow: View {
+    let name: String
+    let phone: String
+    var emoji: String?
+    var initials: String?
+    var gradientColors: [Color]?
+    @State private var buttonType: AddFriendViewColors.ButtonType
+    @State private var showToast = false
+    @State private var toastMessage = ""
+    
+    init(name: String, phone: String, emoji: String? = nil, initials: String? = nil, gradientColors: [Color]? = nil, buttonType: AddFriendViewColors.ButtonType) {
+        self.name = name
+        self.phone = phone
+        self.emoji = emoji
+        self.initials = initials
+        self.gradientColors = gradientColors
+        self._buttonType = State(initialValue: buttonType)
+    }
+    
+    var body: some View {
+        ZStack {
+            HStack {
+                // Profile circle
+                ZStack {
+                    if let emoji = emoji, let gradientColors = gradientColors {
+                        Circle()
+                            .fill(
+                                LinearGradient(
+                                    gradient: Gradient(colors: gradientColors),
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .frame(width: 50, height: 50)
+                        
+                        Circle()
+                            .fill(AddFriendViewColors.cardBackground.opacity(0.7))
+                            .frame(width: 40, height: 40)
+                        
+                        Text(emoji)
+                            .font(.system(size: 18))
+                    } else if let initials = initials {
+                        Circle()
+                            .stroke(AddFriendViewColors.outline, lineWidth: 1)
+                            .background(Circle().fill(AddFriendViewColors.cardBackground.opacity(0.7)))
+                            .frame(width: 50, height: 50)
+                        
+                        Text(initials)
+                            .font(.system(size: 16))
+                            .foregroundColor(AddFriendViewColors.textPrimary)
+                    }
+                }
+                
+                // Contact info
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(name)
+                        .font(.system(size: 16))
+                        .foregroundColor(AddFriendViewColors.textPrimary)
+                    
+                    Text(phone)
+                        .font(.system(size: 12))
+                        .foregroundColor(AddFriendViewColors.textSecondary)
+                }
+                .padding(.leading, 10)
+                
+                Spacer()
+                
+                // Action button
+                Button(action: {
+                    handleButtonTap()
+                }) {
+                    AddFriendViewColors.actionButton(type: buttonType)
+                }
+            }
+            .padding(.vertical, 15)
+            .padding(.horizontal, 20)
+            .background(
+                AddFriendViewColors.contactCard()
+            )
+            
+            // Toast notification
+            if showToast {
+                VStack {
+                    Spacer()
+                    Text(toastMessage)
+                        .font(.system(size: 14))
+                        .foregroundColor(AddFriendViewColors.textPrimary)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
+                        .background(
+                            Capsule()
+                                .fill(AddFriendViewColors.cardBackground)
+                                .overlay(
+                                    Capsule()
+                                        .stroke(AddFriendViewColors.separator, lineWidth: 1)
+                                )
+                        )
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
+                .padding(.bottom, 5)
+            }
+        }
+    }
+    
+    private func handleButtonTap() {
+        switch buttonType {
+        case .add:
+            // When "Add" is tapped, change to "Added" and show success toast
+            buttonType = .added
+            showSuccessToast("\(name) added to your friends!")
+            
+            // Here you would typically make an API call to add the friend
+            
+        case .invite:
+            // When "Invite" is tapped, show invitation sent toast
+            // In a full implementation, this would change to "Invited" state
+            showSuccessToast("Invitation sent to \(name)!")
+            
+            // Here you would typically make an API call to send the invitation
+            
+        case .added:
+            // Already added, do nothing or show already added toast
+            showSuccessToast("\(name) is already your friend!")
+        }
+    }
+    
+    private func showSuccessToast(_ message: String) {
+        toastMessage = message
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+            showToast = true
+        }
+        
+        // Auto-hide toast after 3 seconds
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+            withAnimation(.easeOut(duration: 0.5)) {
+                showToast = false
+            }
+        }
+    }
+}
+
+// MARK: - Bottom Tab Bar
+struct BottomTabBar: View {
+    let selectedTab: Int
     
     var body: some View {
         HStack {
-            // Profile Image/Avatar
-            ZStack {
-                Circle()
-                    .fill(contact.isOnApp ? AppColors.avatarGradient(for: contact.name) : Color.clear)
-                    .frame(width: 50, height: 50)
-                
-                if contact.isOnApp {
-                    Text(AppColors.avatarEmoji(for: contact.name))
-                        .font(.system(size: 24))
-                } else {
-                    Circle()
-                        .fill(AppColors.cardBackground)
-                        .frame(width: 50, height: 50)
-                        .overlay(
-                            Circle()
-                                .stroke(Color.white.opacity(0.2), lineWidth: 1)
-                        )
+            ForEach(0..<4) { index in
+                VStack(spacing: 2) {
+                    if index == selectedTab {
+                        Rectangle()
+                            .fill(
+                                AddFriendViewColors.pinkOrangeGradient
+                            )
+                            .frame(width: 36, height: 5)
+                            .cornerRadius(2.5)
+                            .padding(.bottom, 4)
+                    } else {
+                        Rectangle()
+                            .fill(Color.clear)
+                            .frame(width: 36, height: 5)
+                            .padding(.bottom, 4)
+                    }
                     
-                    Text(contact.initials)
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(.white)
+                    Text(getTabIcon(for: index))
+                        .font(.system(size: 24))
+                        .foregroundColor(index == selectedTab ? AddFriendViewColors.textPrimary : AddFriendViewColors.textPrimary.opacity(0.5))
+                    
+                    Text(getTabName(for: index))
+                        .font(.system(size: 11))
+                        .foregroundColor(index == selectedTab ? AddFriendViewColors.textPrimary : AddFriendViewColors.textPrimary.opacity(0.5))
                 }
-            }
-            
-            // Contact Info
-            VStack(alignment: .leading, spacing: 4) {
-                Text(contact.name)
-                    .font(.system(size: 16))
-                    .foregroundColor(.white)
-                
-                Text(contact.phoneNumber)
-                    .font(.system(size: 12))
-                    .foregroundColor(.white.opacity(0.6))
-            }
-            
-            Spacer()
-            
-            // Add/Invite Button
-            Button(action: {
-                onAddAction()
-            }) {
-                Text(contact.isOnApp ? "add" : "invite")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 8)
-                    .background(
-                        contact.isOnApp ?
-                        AppColors.accentGradient1 :
-                        AppColors.cardBackground
-                    )
-                    .cornerRadius(20)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 20)
-                            .stroke(contact.isOnApp ? Color.clear : Color.white.opacity(0.1), lineWidth: 1)
-                    )
-                    .shadow(color: contact.isOnApp ? AppColors.accent.opacity(0.3) : .clear, radius: 4, x: 0, y: 2)
+                .frame(maxWidth: .infinity)
             }
         }
         .padding(.vertical, 10)
-        .padding(.horizontal, 12)
-        .background(AppColors.cardBackground)
-        .cornerRadius(20)
-        .overlay(
-            RoundedRectangle(cornerRadius: 20)
-                .stroke(Color.white.opacity(0.1), lineWidth: 1)
-        )
+        .background(AddFriendViewColors.backgroundDark.opacity(0.9))
+    }
+    
+    func getTabIcon(for index: Int) -> String {
+        switch index {
+        case 0: return "🏠"
+        case 1: return "📅"
+        case 2: return "✨"
+        case 3: return "😎"
+        default: return ""
+        }
+    }
+    
+    func getTabName(for index: Int) -> String {
+        switch index {
+        case 0: return "home"
+        case 1: return "hangouts"
+        case 2: return "create"
+        case 3: return "profile"
+        default: return ""
+        }
     }
 }
 
-// MARK: - Model
-struct ContactPerson: Identifiable {
-    let id = UUID()
+// MARK: - Models
+struct SimpleFriend: Identifiable {
+    let id: String
     let name: String
+    let email: String
     let phoneNumber: String
-    let isOnApp: Bool
     
     var initials: String {
-        name.components(separatedBy: " ")
-            .compactMap { $0.first }
-            .prefix(2)
-            .map(String.init)
-            .joined()
+        let components = name.components(separatedBy: " ")
+        return components.prefix(2).compactMap { $0.first }.map(String.init).joined()
     }
 }
 
-// MARK: - Preview
+// MARK: - Helper Extensions
+// Helper extension for placeholder text
+extension View {
+    func placeholder<Content: View>(
+        when shouldShow: Bool,
+        alignment: Alignment = .leading,
+        @ViewBuilder placeholder: () -> Content) -> some View {
+        
+        ZStack(alignment: alignment) {
+            placeholder().opacity(shouldShow ? 1 : 0)
+            self
+        }
+    }
+}
+
+// MARK: - Coming Soon Popup
+struct ComingSoonPopupView: View {
+    let message: String
+    @Binding var isShowing: Bool
+    
+    var body: some View {
+        ZStack {
+            // Semi-transparent background
+            Color.black.opacity(0.5)
+                .edgesIgnoringSafeArea(.all)
+                .onTapGesture {
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        isShowing = false
+                    }
+                }
+            
+            // Popup card
+            VStack(spacing: 20) {
+                // Title
+                HStack {
+                    Text("🚀")
+                        .font(.system(size: 24))
+                    
+                    Text("Coming Soon!")
+                        .font(.system(size: 20, weight: .bold, design: .rounded))
+                        .foregroundColor(AddFriendViewColors.textPrimary)
+                    
+                    Spacer()
+                    
+                    // Close button
+                    Button(action: {
+                        withAnimation(.easeInOut(duration: 0.3)) {
+                            isShowing = false
+                        }
+                    }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 22))
+                            .foregroundColor(AddFriendViewColors.textSecondary)
+                    }
+                }
+                
+                // Message
+                Text(message)
+                    .font(.system(size: 16))
+                    .foregroundColor(AddFriendViewColors.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.bottom, 10)
+                
+                // Got it button
+                Button(action: {
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        isShowing = false
+                    }
+                }) {
+                    Text("Got it!")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(AddFriendViewColors.textPrimary)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 50)
+                        .background(
+                            AddFriendViewColors.purplePinkGradient
+                                .cornerRadius(25)
+                        )
+                        .glow(color: AddFriendViewColors.purple, radius: 8, opacity: 0.5)
+                }
+            }
+            .padding(24)
+            .background(
+                RoundedRectangle(cornerRadius: 30)
+                    .fill(AddFriendViewColors.cardBackground)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 30)
+                            .stroke(AddFriendViewColors.separator, lineWidth: 1)
+                    )
+            )
+            .shadow(color: Color.black.opacity(0.3), radius: 20, x: 0, y: 10)
+            .padding(.horizontal, 40)
+            .transition(.scale.combined(with: .opacity))
+        }
+        .zIndex(100) // Ensure popup appears above everything else
+    }
+}
+
+// MARK: - Previews
 #Preview {
-    AddFriendView()
-        .modelContainer(for: [Friend.self], inMemory: true)
-        .preferredColorScheme(.dark)
-} 
-
-
-*/
+    NavigationStack {
+        AddFriendView()
+    }
+}

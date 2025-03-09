@@ -192,11 +192,11 @@ struct SettingsView: View {
         .alert("Reset Onboarding", isPresented: $showingResetOnboardingAlert) {
             Button("Cancel", role: .cancel) { }
             Button("Reset", role: .destructive) {
-                onboardingManager.resetOnboarding()
+                onboardingManager.resetOnboardingAndNavigateToOnboarding()
                 dismiss()
             }
         } message: {
-            Text("This will reset the onboarding flow and show it again the next time you open the app.")
+            Text("This will reset the onboarding flow and take you to the onboarding process immediately.")
         }
     }
     

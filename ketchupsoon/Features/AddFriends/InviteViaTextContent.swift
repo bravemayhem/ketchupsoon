@@ -2,7 +2,7 @@ import SwiftUI
 
 // MARK: - Invite Via Text Content Component
 /// This component contains just the invite via text content without full screen navigation elements.
-/// It can be reused in other views like AddFriendViewOne for dynamic tab content.
+/// It can be reused in other views like AddFriendView for dynamic tab content.
 public struct InviteViaTextContent: View {
     // State variables
     @State private var searchText = ""
