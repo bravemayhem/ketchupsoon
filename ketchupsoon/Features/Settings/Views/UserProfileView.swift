@@ -89,6 +89,7 @@ struct UserProfileView: View {
             }
             .foregroundColor(.white)
         }
+        .padding(.bottom, 80)
         .onAppear {
             Task {
                 if let userId = Auth.auth().currentUser?.uid {

@@ -31,12 +31,13 @@ struct PulseView: View {
                     }
                     .padding(.horizontal, 20)
                     .padding(.top, 20)
-                    .padding(.bottom, 100) // Make room for bottom nav bar
+                    .padding(.bottom, 70) // Make room for bottom nav bar
                 }
                 
                 Spacer(minLength: 0)
             }
         }
+        .padding(.bottom, 80)
         .edgesIgnoringSafeArea(.all)
     }
     

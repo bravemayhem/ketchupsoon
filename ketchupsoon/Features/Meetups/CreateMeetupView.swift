@@ -53,6 +53,7 @@ struct CreateMeetupView: View {
                 .padding(.horizontal, 20)
             }
         }
+        .padding(.bottom, 80)
         .background(AppColors.backgroundGradient.ignoresSafeArea())
         .edgesIgnoringSafeArea(.bottom)
         .sheet(isPresented: $showReviewIdeas) {
