@@ -61,7 +61,7 @@ struct ContentView: View {
                                 showingDebugAlert = true
                             }
                         ) {
-                            MeetupsView()
+                            CreateMeetupView()
                         }
                         .transition(.opacity)
                         .sheet(isPresented: $showingSettings) {

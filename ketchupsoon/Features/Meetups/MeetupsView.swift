@@ -1,3 +1,4 @@
+/*
 import SwiftUI
 
 struct MeetupsView: View {
@@ -233,3 +234,4 @@ struct MeetupsView_Previews: PreviewProvider {
         MeetupsView()
     }
 } 
+*/ 
