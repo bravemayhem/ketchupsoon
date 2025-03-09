@@ -53,39 +53,39 @@ struct UserProfileView: View {
     
     // MARK: - Body
     var body: some View {
-        ScrollView {
-            VStack(spacing: 20) {
-                // Profile header
-                profileHeaderSection
-                
-                // Stats section
-                statsSection
-                
-                // Preferences section
-                preferencesSection
-                
-                // Calendar integration
-                calendarIntegrationSection
-                
-                // Account settings
-                accountSettingsSection
-                
-                Spacer(minLength: 30)
+        ZStack {
+            // Background with decorative elements
+            AppColors.backgroundGradient
+                .ignoresSafeArea()
+            
+            // Use our shared decorative elements
+            DecorativeBubbles.profile
+            BackgroundElementFactory.profileElements()
+            
+            // Main content
+            ScrollView {
+                VStack(spacing: 20) {
+                    // Profile header
+                    profileHeaderSection
+                    
+                    // Stats section
+                    statsSection
+                    
+                    // Preferences section
+                    preferencesSection
+                    
+                    // Calendar integration
+                    calendarIntegrationSection
+                    
+                    // Account settings
+                    accountSettingsSection
+                    
+                    Spacer(minLength: 30)
+                }
+                .padding(.horizontal)
             }
-            .padding(.horizontal)
+            .foregroundColor(.white)
         }
-        .background(
-            LinearGradient(
-                gradient: Gradient(colors: [
-                    Color(red: 28/255, green: 17/255, blue: 56/255),
-                    Color(red: 15/255, green: 12/255, blue: 41/255)
-                ]),
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .ignoresSafeArea()
-        )
-        .foregroundColor(.white)
         .onAppear {
             Task {
                 if let userId = Auth.auth().currentUser?.uid {
@@ -179,18 +179,13 @@ struct UserProfileView: View {
                             .frame(width: 120, height: 120)
                             .shadow(color: AppColors.gradient2Start.opacity(0.3), radius: 8, x: 0, y: 0)
                         
-                        // Inner circle
-                        Circle()
-                            .fill(AppColors.cardBackground)
-                            .frame(width: 110, height: 110)
-                        
                         // Profile image or emoji
                         if let profileImage = profileImage {
                             // Show selected image while processing
                             Image(uiImage: profileImage)
                                 .resizable()
                                 .aspectRatio(contentMode: .fill)
-                                .frame(width: 100, height: 100)
+                                .frame(width: 110, height: 110)
                                 .clipShape(Circle())
                         } else if let photoURL = profileManager.currentUserProfile?.profileImageURL,
                            !photoURL.isEmpty {
@@ -199,24 +194,25 @@ struct UserProfileView: View {
                                 image
                                     .resizable()
                                     .aspectRatio(contentMode: .fill)
-                                    .frame(width: 100, height: 100)
+                                    .frame(width: 110, height: 110)
                                     .clipShape(Circle())
                             } placeholder: {
                                 // Show emoji placeholder while loading
                                 Text(profileEmoji)
                                     .font(.system(size: 44))
-                                    .frame(width: 100, height: 100)
+                                    .frame(width: 110, height: 110)
                             }
                         } else {
                             // Emoji placeholder when no image is available
                             Text(profileEmoji)
                                 .font(.system(size: 44))
+                                .frame(width: 110, height: 110)
                         }
                         
                         // Loading overlay when uploading
                         if isUploadingImage {
                             ProgressView()
-                                .frame(width: 100, height: 100)
+                                .frame(width: 110, height: 110)
                                 .background(Color.black.opacity(0.3))
                                 .clipShape(Circle())
                         }

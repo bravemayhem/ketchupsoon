@@ -1,11 +1,26 @@
 import SwiftUI
 
+/// A type that can represent either type of decorative elements
+enum BackgroundDecoration: View {
+    case offsetBased(DecorativeElements)
+    case positionBased(PositionedElements)
+    
+    var body: some View {
+        switch self {
+        case .offsetBased(let elements):
+            elements
+        case .positionBased(let elements):
+            elements
+        }
+    }
+}
+
 /// A complete background style that combines gradient, bubbles, and decorative elements
 struct CompleteBackground: View {
     // Background components
-    var gradient: GradientBackground
+    var gradient: ketchupsoon.KetchupGradientBackground
     var bubbles: DecorativeBubbles?
-    var elements: DecorativeElements?
+    var decoration: BackgroundDecoration?
     var noiseTexture: Bool = true
     var noiseOpacity: Double = 0.04
     
@@ -20,8 +35,8 @@ struct CompleteBackground: View {
             }
             
             // Small decorative elements
-            if let elements = elements {
-                elements
+            if let decoration = decoration {
+                decoration
             }
             
             // Optional noise texture overlay
@@ -39,7 +54,7 @@ extension CompleteBackground {
     /// Standard onboarding background
     static var onboarding: CompleteBackground {
         CompleteBackground(
-            gradient: GradientBackground(
+            gradient: ketchupsoon.KetchupGradientBackground(
                 colors: [
                     AppColors.backgroundPrimary,
                     AppColors.backgroundSecondary
@@ -48,14 +63,14 @@ extension CompleteBackground {
                 endPoint: .bottomTrailing
             ),
             bubbles: DecorativeBubbles.onboarding,
-            elements: BackgroundElementFactory.onboardingElements()
+            decoration: BackgroundDecoration.positionBased(PositionedElementFactory.onboardingElements())
         )
     }
     
     /// Home screen background
     static var home: CompleteBackground {
         CompleteBackground(
-            gradient: GradientBackground(
+            gradient: ketchupsoon.KetchupGradientBackground(
                 colors: [
                     AppColors.backgroundPrimary,
                     AppColors.backgroundSecondary
@@ -64,14 +79,14 @@ extension CompleteBackground {
                 endPoint: .bottomTrailing
             ),
             bubbles: DecorativeBubbles.home,
-            elements: BackgroundElementFactory.homeElements()
+            decoration: BackgroundDecoration.positionBased(PositionedElementFactory.homeElements())
         )
     }
     
     /// Profile screen background
     static var profile: CompleteBackground {
         CompleteBackground(
-            gradient: GradientBackground(
+            gradient: ketchupsoon.KetchupGradientBackground(
                 colors: [
                     AppColors.backgroundPrimary,
                     AppColors.backgroundSecondary.opacity(0.9)
@@ -80,14 +95,14 @@ extension CompleteBackground {
                 endPoint: .bottom
             ),
             bubbles: DecorativeBubbles.profile,
-            elements: BackgroundElementFactory.profileElements()
+            decoration: BackgroundDecoration.positionBased(PositionedElementFactory.profileElements())
         )
     }
     
     /// Card background (smaller, more subtle)
     static var card: CompleteBackground {
         CompleteBackground(
-            gradient: GradientBackground(
+            gradient: ketchupsoon.KetchupGradientBackground(
                 colors: [
                     AppColors.cardBackground,
                     AppColors.cardBackground.opacity(0.8)
@@ -96,7 +111,7 @@ extension CompleteBackground {
                 endPoint: .bottomTrailing
             ),
             bubbles: DecorativeBubbles.card,
-            elements: nil,
+            decoration: nil as BackgroundDecoration?,
             noiseTexture: false
         )
     }
@@ -104,7 +119,7 @@ extension CompleteBackground {
     /// Simple gradient background without bubbles or elements
     static var simple: CompleteBackground {
         CompleteBackground(
-            gradient: GradientBackground(
+            gradient: ketchupsoon.KetchupGradientBackground(
                 colors: [
                     AppColors.backgroundPrimary,
                     AppColors.backgroundSecondary
@@ -112,8 +127,8 @@ extension CompleteBackground {
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             ),
-            bubbles: nil,
-            elements: nil,
+            bubbles: nil as DecorativeBubbles?,
+            decoration: nil as BackgroundDecoration?,
             noiseTexture: true,
             noiseOpacity: 0.02
         )

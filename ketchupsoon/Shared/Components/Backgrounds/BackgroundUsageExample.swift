@@ -49,44 +49,29 @@ struct CustomBackgroundExample: View {
         }
         .padding(.horizontal)
         .background(
-            ZStack {
-                // Custom gradient
-                GradientBackground(
+            // Example of creating a CompleteBackground with different options
+            CompleteBackground(
+                gradient: KetchupGradientBackground(
                     colors: [
                         AppColors.backgroundPrimary,
                         AppColors.purple.opacity(0.3)
-                    ]
-                )
-                
-                // Custom bubble
-                DecorativeBubble(
-                    color: AppColors.mint.opacity(0.2),
-                    width: 300,
-                    height: 300,
-                    offset: CGPoint(x: 100, y: -50),
-                    blurRadius: 50
-                )
-                
-                // Custom decorative elements
-                CircleElement(
-                    position: CGPoint(x: 40, y: 200),
-                    color: AppColors.accent,
-                    size: 8
-                )
-                
-                RectangleElement(
-                    position: CGPoint(x: UIScreen.main.bounds.width - 50, y: 300),
-                    color: AppColors.accentSecondary,
-                    width: 14,
-                    height: 14,
-                    rotation: Angle(degrees: 45)
-                )
-                
-                // Noise texture
-                Rectangle()
-                    .fill(Color.white.opacity(0.04))
-                    .ignoresSafeArea()
-            }
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                ),
+                bubbles: DecorativeBubbles(bubbles: [
+                    DecorativeBubble(
+                        color: AppColors.mint.opacity(0.2),
+                        width: 300,
+                        height: 300,
+                        offset: CGPoint(x: 100, y: -50),
+                        blurRadius: 50
+                    )
+                ]),
+                decoration: .offsetBased(BackgroundElementFactory.homeElements()),
+                noiseTexture: true,
+                noiseOpacity: 0.04
+            )
         )
     }
 }
@@ -174,6 +159,41 @@ struct MigrationExample: View {
     }
 }
 
+// Alternative example with position-based elements
+struct PositionBasedBackgroundExample: View {
+    var body: some View {
+        VStack {
+            Text("Position-Based Decorative Elements")
+                .font(.title)
+                .fontWeight(.bold)
+                .foregroundColor(.white)
+                .padding(.top, 30)
+            
+            Text("Using PositionedElements with CompleteBackground")
+                .foregroundColor(.white.opacity(0.8))
+                .padding(.bottom, 30)
+            
+            Spacer()
+        }
+        .padding(.horizontal)
+        .background(
+            CompleteBackground(
+                gradient: KetchupGradientBackground(
+                    colors: [
+                        AppColors.backgroundPrimary, 
+                        AppColors.backgroundSecondary
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                ),
+                bubbles: DecorativeBubbles.profile,
+                decoration: .positionBased(PositionedElementFactory.profileElements()),
+                noiseTexture: true
+            )
+        )
+    }
+}
+
 #Preview {
     TabView {
         BackgroundUsageExample()
@@ -186,9 +206,14 @@ struct MigrationExample: View {
                 Text("Example 2")
             }
         
-        BackgroundReplacementExample()
+        PositionBasedBackgroundExample()
             .tabItem {
                 Text("Example 3")
+            }
+        
+        BackgroundReplacementExample()
+            .tabItem {
+                Text("Example 4")
             }
     }
     .preferredColorScheme(.dark)

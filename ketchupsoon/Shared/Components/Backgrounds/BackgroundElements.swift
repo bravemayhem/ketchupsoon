@@ -1,13 +1,13 @@
 import SwiftUI
 
 /// A protocol for background decoration elements
-protocol BackgroundElement: View {
+protocol PositionedElement: View {
     var position: CGPoint { get set }
     var color: Color { get set }
 }
 
 /// A circular decoration element
-struct CircleElement: BackgroundElement {
+struct PositionedCircle: PositionedElement {
     var position: CGPoint
     var color: Color
     var size: CGFloat
@@ -23,7 +23,7 @@ struct CircleElement: BackgroundElement {
 }
 
 /// A rectangular decoration element
-struct RectangleElement: BackgroundElement {
+struct PositionedRectangle: PositionedElement {
     var position: CGPoint
     var color: Color
     var width: CGFloat
@@ -42,10 +42,10 @@ struct RectangleElement: BackgroundElement {
 }
 
 /// A view that displays multiple decorative elements
-struct DecorativeElements: View {
+struct PositionedElements: View {
     var elements: [AnyView]
     
-    init<T: BackgroundElement>(elements: [T]) {
+    init<T: PositionedElement>(elements: [T]) {
         self.elements = elements.map { AnyView($0) }
     }
     
@@ -63,29 +63,29 @@ struct DecorativeElements: View {
 }
 
 /// Factory for creating common background elements
-struct BackgroundElementFactory {
+struct PositionedElementFactory {
     /// Create a set of decorative elements for the onboarding screen
-    static func onboardingElements(screenWidth: CGFloat = UIScreen.main.bounds.width) -> DecorativeElements {
+    static func onboardingElements(screenWidth: CGFloat = UIScreen.main.bounds.width) -> PositionedElements {
         let elements: [AnyView] = [
-            AnyView(CircleElement(
+            AnyView(PositionedCircle(
                 position: CGPoint(x: 40, y: 180),
                 color: AppColors.mint,
                 size: 6
             )),
             
-            AnyView(CircleElement(
+            AnyView(PositionedCircle(
                 position: CGPoint(x: screenWidth - 40, y: 400),
                 color: AppColors.accentSecondary,
                 size: 4
             )),
             
-            AnyView(CircleElement(
+            AnyView(PositionedCircle(
                 position: CGPoint(x: 70, y: 500),
                 color: AppColors.accent,
                 size: 5
             )),
             
-            AnyView(RectangleElement(
+            AnyView(PositionedRectangle(
                 position: CGPoint(x: screenWidth - 70, y: 220),
                 color: AppColors.purple,
                 width: 12,
@@ -94,25 +94,25 @@ struct BackgroundElementFactory {
             ))
         ]
         
-        return DecorativeElements(elements: elements)
+        return PositionedElements(elements: elements)
     }
     
     /// Create a set of decorative elements for the home screen
-    static func homeElements(screenWidth: CGFloat = UIScreen.main.bounds.width) -> DecorativeElements {
+    static func homeElements(screenWidth: CGFloat = UIScreen.main.bounds.width) -> PositionedElements {
         let elements: [AnyView] = [
-            AnyView(CircleElement(
+            AnyView(PositionedCircle(
                 position: CGPoint(x: screenWidth - 140, y: 180),
                 color: AppColors.mint,
                 size: 16
             )),
             
-            AnyView(CircleElement(
+            AnyView(PositionedCircle(
                 position: CGPoint(x: screenWidth - 150, y: 400),
                 color: AppColors.accentSecondary,
                 size: 10
             )),
             
-            AnyView(RectangleElement(
+            AnyView(PositionedRectangle(
                 position: CGPoint(x: screenWidth - 120, y: 220),
                 color: AppColors.purple,
                 width: 15,
@@ -121,25 +121,25 @@ struct BackgroundElementFactory {
             ))
         ]
         
-        return DecorativeElements(elements: elements)
+        return PositionedElements(elements: elements)
     }
     
     /// Create a set of decorative elements for the profile screen
-    static func profileElements(screenWidth: CGFloat = UIScreen.main.bounds.width) -> DecorativeElements {
+    static func profileElements(screenWidth: CGFloat = UIScreen.main.bounds.width) -> PositionedElements {
         let elements: [AnyView] = [
-            AnyView(CircleElement(
+            AnyView(PositionedCircle(
                 position: CGPoint(x: 60, y: 160),
                 color: AppColors.mint,
                 size: 8
             )),
             
-            AnyView(CircleElement(
+            AnyView(PositionedCircle(
                 position: CGPoint(x: screenWidth - 70, y: 380),
                 color: AppColors.accentSecondary,
                 size: 7
             )),
             
-            AnyView(RectangleElement(
+            AnyView(PositionedRectangle(
                 position: CGPoint(x: screenWidth - 50, y: 250),
                 color: AppColors.purple,
                 width: 10,
@@ -147,14 +147,14 @@ struct BackgroundElementFactory {
                 rotation: Angle(degrees: 45)
             )),
             
-            AnyView(CircleElement(
+            AnyView(PositionedCircle(
                 position: CGPoint(x: 40, y: 500),
                 color: AppColors.accent,
                 size: 6
             ))
         ]
         
-        return DecorativeElements(elements: elements)
+        return PositionedElements(elements: elements)
     }
 }
 
@@ -170,7 +170,7 @@ struct BackgroundElementFactory {
             
             ZStack {
                 Color(AppColors.backgroundPrimary).opacity(0.7)
-                BackgroundElementFactory.onboardingElements()
+                PositionedElementFactory.onboardingElements()
             }
             .frame(height: 150)
             .cornerRadius(20)
@@ -182,7 +182,7 @@ struct BackgroundElementFactory {
             
             ZStack {
                 Color(AppColors.backgroundPrimary).opacity(0.7)
-                BackgroundElementFactory.homeElements()
+                PositionedElementFactory.homeElements()
             }
             .frame(height: 150)
             .cornerRadius(20)
@@ -194,7 +194,7 @@ struct BackgroundElementFactory {
             
             ZStack {
                 Color(AppColors.backgroundPrimary).opacity(0.7)
-                BackgroundElementFactory.profileElements()
+                PositionedElementFactory.profileElements()
             }
             .frame(height: 150)
             .cornerRadius(20)

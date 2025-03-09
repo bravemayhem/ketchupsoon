@@ -40,28 +40,57 @@ DecorativeBubble(
 )
 ```
 
-### BackgroundElements
+### DecorativeElements
 
-Small decorative elements like circles and rectangles that add visual interest.
+Small decorative elements using offset-based positioning.
 
 ```swift
 // Using a predefined set of elements
-BackgroundElementFactory.onboardingElements()
+BackgroundElementFactory.homeElements()
 
 // Individual elements
-CircleElement(
+DecorativeElement(
+    shape: Circle()
+        .fill(AppColors.mint.opacity(0.8))
+        .frame(width: 16, height: 16),
+    offset: CGPoint(x: -140, y: 180)
+)
+```
+
+### PositionedElements (formerly BackgroundElements)
+
+Small decorative elements using position-based placement.
+
+```swift
+// Using a predefined set of elements
+PositionedElementFactory.onboardingElements()
+
+// Individual elements
+PositionedCircle(
     position: CGPoint(x: 40, y: 200),
     color: AppColors.accent,
     size: 8
 )
 
-RectangleElement(
+PositionedRectangle(
     position: CGPoint(x: UIScreen.main.bounds.width - 50, y: 300),
     color: AppColors.accentSecondary,
     width: 14,
     height: 14,
     rotation: Angle(degrees: 45)
 )
+```
+
+### BackgroundDecoration
+
+A wrapper type that can accommodate both types of decorative elements.
+
+```swift
+// Wrapping DecorativeElements
+BackgroundDecoration.offsetBased(BackgroundElementFactory.homeElements())
+
+// Wrapping PositionedElements
+BackgroundDecoration.positionBased(PositionedElementFactory.profileElements())
 ```
 
 ### CompleteBackground
@@ -80,7 +109,7 @@ CompleteBackground.simple
 CompleteBackground(
     gradient: GradientBackground(...),
     bubbles: DecorativeBubbles(...),
-    elements: BackgroundElementFactory.onboardingElements(),
+    decoration: .positionBased(PositionedElementFactory.onboardingElements()),
     noiseTexture: true,
     noiseOpacity: 0.04
 )

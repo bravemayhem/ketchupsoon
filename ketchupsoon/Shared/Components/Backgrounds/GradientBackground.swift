@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// A reusable component for creating customizable gradient backgrounds
-struct GradientBackground: View {
+/// Renamed the custom gradient view to resolve ambiguity
+struct KetchupGradientBackground: View {
     // Gradient colors
     var colors: [Color]
     
@@ -60,10 +60,10 @@ struct GradientBackground: View {
 }
 
 // MARK: - Predefined Backgrounds
-extension GradientBackground {
+extension KetchupGradientBackground {
     /// Main app background
-    static var main: GradientBackground {
-        GradientBackground(
+    static var main: KetchupGradientBackground {
+        KetchupGradientBackground(
             colors: [
                 AppColors.backgroundPrimary,
                 AppColors.backgroundSecondary
@@ -74,8 +74,8 @@ extension GradientBackground {
     }
     
     /// Onboarding background
-    static var onboarding: GradientBackground {
-        GradientBackground(
+    static var onboarding: KetchupGradientBackground {
+        KetchupGradientBackground(
             colors: [
                 AppColors.backgroundPrimary,
                 AppColors.backgroundSecondary
@@ -86,8 +86,8 @@ extension GradientBackground {
     }
     
     /// Card background
-    static var card: GradientBackground {
-        GradientBackground(
+    static var card: KetchupGradientBackground {
+        KetchupGradientBackground(
             colors: [
                 AppColors.cardBackground,
                 AppColors.cardBackground.opacity(0.8)
@@ -98,8 +98,8 @@ extension GradientBackground {
     }
     
     /// Profile background
-    static var profile: GradientBackground {
-        GradientBackground(
+    static var profile: KetchupGradientBackground {
+        KetchupGradientBackground(
             colors: [
                 AppColors.backgroundPrimary,
                 AppColors.backgroundSecondary.opacity(0.7)
@@ -124,14 +124,14 @@ extension View {
 
 #Preview {
     VStack {
-        GradientBackground.main
+        KetchupGradientBackground.main
         
         Text("Custom Gradient")
             .font(.headline)
             .foregroundColor(.white)
             .padding()
             .background(
-                GradientBackground(
+                KetchupGradientBackground(
                     colors: [
                         AppColors.gradient1Start,
                         AppColors.gradient1End
