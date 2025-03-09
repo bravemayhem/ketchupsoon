@@ -136,6 +136,8 @@ struct AddFriendViewOne: View {
                     }
                 }
                 .padding(.top, selectedTab == 0 ? 0 : 20)
+                .padding(.bottom, 80)
+
             }
             
             // Coming soon popup
