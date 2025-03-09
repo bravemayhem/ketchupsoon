@@ -1,9 +1,11 @@
 import SwiftUI
+import SwiftData
 
 /// A reusable navigation bar component that can be customized for different pages.
 /// Allows for optional leading and trailing buttons with custom actions.
 struct CustomNavigationBar: View {
     @State private var pendingFriendRequests: Int = 3
+    
     // Leading button (typically gear/settings)
     var showLeadingButton: Bool = true
     var leadingIcon: String = "gear"
@@ -14,12 +16,15 @@ struct CustomNavigationBar: View {
     var trailingIcon: String = "plus"
     var trailingButtonAction: () -> Void = {}
     
+    // Callback for add friend navigation
+    var onAddFriendTapped: () -> Void = {}
+    
     // Debug mode (optional long press gesture on trailing button)
     var enableDebugMode: Bool = false
     var debugModeAction: () -> Void = {}
     
     // Profile emoji
-    var showProfileEmoji: Bool = true
+    var showProfileEmoji: Bool = false
     var profileEmoji: String = "👨‍💻"
     
     var body: some View {
@@ -76,7 +81,13 @@ struct CustomNavigationBar: View {
                     }
                     
                     if showTrailingButton {
-                        Button(action: trailingButtonAction) {
+                        Button(action: {
+                            // Trigger navigation to AddFriendViewOne
+                            onAddFriendTapped()
+                            
+                            // Also call the original action if provided
+                            trailingButtonAction()
+                        }) {
                             ZStack {
                                 Circle()
                                     .fill(AppColors.circleBackground())
@@ -168,6 +179,9 @@ struct CustomNavigationBarContainer<Content: View>: View {
     let content: Content
     var profileEmoji: String = "👨‍💻"
     
+    // Navigation state
+    @State private var navigateToAddFriend = false
+    
     init(
         showLeadingButton: Bool = true,
         showTrailingButton: Bool = true,
@@ -209,6 +223,10 @@ struct CustomNavigationBarContainer<Content: View>: View {
                         showTrailingButton: showTrailingButton,
                         trailingIcon: trailingIcon,
                         trailingButtonAction: trailingButtonAction,
+                        onAddFriendTapped: {
+                            // Set the navigation flag to true
+                            navigateToAddFriend = true
+                        },
                         enableDebugMode: enableDebugMode,
                         debugModeAction: debugModeAction,
                         profileEmoji: profileEmoji
@@ -219,6 +237,9 @@ struct CustomNavigationBarContainer<Content: View>: View {
                 }
             }
             .navigationBarHidden(true)
+            .navigationDestination(isPresented: $navigateToAddFriend) {
+                AddFriendViewOne()
+            }
         }
     }
 }

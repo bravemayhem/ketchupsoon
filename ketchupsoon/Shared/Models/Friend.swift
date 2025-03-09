@@ -20,7 +20,6 @@ final class Friend {
     var firebaseUserId: String?
     
     // Relationship tracking
-    var lastContactedDate: Date?
     var createdAt: Date
     var updatedAt: Date
     
@@ -35,7 +34,6 @@ final class Friend {
         bio: String? = nil,
         birthday: Date? = nil,
         firebaseUserId: String? = nil,
-        lastContactedDate: Date? = nil,
         createdAt: Date = Date(),
         updatedAt: Date = Date()
     ) {
@@ -47,7 +45,6 @@ final class Friend {
         self.bio = bio
         self.birthday = birthday
         self.firebaseUserId = firebaseUserId
-        self.lastContactedDate = lastContactedDate
         self.createdAt = createdAt
         self.updatedAt = updatedAt
     }

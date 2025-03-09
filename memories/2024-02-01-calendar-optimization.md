@@ -19,7 +19,7 @@ The calendar view in the app was experiencing performance issues where events wo
   1. App launch
   2. App returning to foreground (using `scenePhase`)
   3. Calendar view opening (as fallback)
-- Implemented in `friendtrackerApp`:
+- Implemented in `ketchupsoonApp`:
 ```swift
 .onChange(of: scenePhase) { _, newPhase in
     if newPhase == .active {

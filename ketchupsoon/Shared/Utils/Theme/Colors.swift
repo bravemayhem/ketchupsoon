@@ -245,6 +245,140 @@ enum AppColors {
     ]
 }
 
+// MARK: - AddFriendView Colors (Experimental)
+// This enum contains all the colors used in AddFriendViewOne for experimentation
+enum AddFriendViewColors {
+    // Base Colors
+    static let backgroundDark = Color(hex: "0A0728")      // Deep blue-black (same as AppColors.backgroundPrimary)
+    static let backgroundLight = Color(hex: "1A0E35")     // Slightly lighter blue-purple (same as AppColors.backgroundSecondary)
+    static let cardBackground = Color(hex: "15103A")      // Card background color (same as AppColors.cardBackground)
+    static let purple = Color(hex: "5E17EB")              // Vibrant purple (same as AppColors.purple)
+    static let pinkRed = Color(hex: "FF2D55")             // Pink-red (same as AppColors.accent)
+    static let orange = Color(hex: "FF9500")              // Orange (same as AppColors.accentSecondary)
+    static let mint = Color(hex: "00F5A0")                // Mint green (same as AppColors.mint)
+    static let emerald = Color(hex: "00B07A")             // Deeper emerald green for success states
+    static let bluePurple = Color(hex: "6B66FF")          // Blue-purple (same as AppColors.gradient5Start)
+    
+    // Text Colors
+    static let textPrimary = Color.white
+    static let textSecondary = Color.white.opacity(0.7)
+    static let textTertiary = Color.white.opacity(0.5)
+    
+    // Border Colors
+    static let separator = Color.white.opacity(0.1)
+    static let outline = Color.white.opacity(0.2)
+    
+    // Gradients Used in AddFriendViewOne
+    static let backgroundGradient = LinearGradient(
+        gradient: Gradient(colors: [backgroundDark, backgroundLight]),
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+    )
+    
+    static let pinkOrangeGradient = LinearGradient(
+        gradient: Gradient(colors: [pinkRed, orange]),
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+    )
+    
+    static let purplePinkGradient = LinearGradient(
+        gradient: Gradient(colors: [purple, pinkRed]),
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+    )
+    
+    static let mintPurpleGradient = LinearGradient(
+        gradient: Gradient(colors: [mint, purple]),
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+    )
+    
+    static let blueMintGradient = LinearGradient(
+        gradient: Gradient(colors: [bluePurple, mint]),
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+    )
+    
+    static let successGradient = LinearGradient(
+        gradient: Gradient(colors: [mint, emerald]),
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+    )
+    
+    // Contact Avatar Styles
+    static let contactAvatarGradients = [
+        mintPurpleGradient,
+        blueMintGradient
+    ]
+    
+    static let contactAvatarEmojis = [
+        "🦋", "🔮"
+    ]
+    
+    // UI Components Examples
+    static func tabButton(isSelected: Bool) -> some View {
+        RoundedRectangle(cornerRadius: 20)
+            .fill(isSelected ? AnyShapeStyle(pinkOrangeGradient) : AnyShapeStyle(cardBackground))
+            .overlay(
+                RoundedRectangle(cornerRadius: 20)
+                    .stroke(isSelected ? Color.clear : separator, lineWidth: 1)
+            )
+            .shadow(color: isSelected ? purple.opacity(0.5) : .clear, radius: 8, x: 0, y: 0)
+    }
+    
+    static func contactCard(buttonType: ButtonType = .add) -> some View {
+        RoundedRectangle(cornerRadius: 20)
+            .fill(cardBackground)
+            .overlay(
+                RoundedRectangle(cornerRadius: 20)
+                    .stroke(separator, lineWidth: 1)
+            )
+    }
+    
+    static func actionButton(type: ButtonType) -> some View {
+        Group {
+            if type == .add {
+                Text("add")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(textPrimary)
+                    .frame(width: 60, height: 30)
+                    .background(
+                        pinkOrangeGradient
+                            .cornerRadius(15)
+                    )
+                    .shadow(color: purple.opacity(0.5), radius: 6, x: 0, y: 0)
+            } else if type == .added {
+                Text("added")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(textPrimary)
+                    .frame(width: 60, height: 30)
+                    .background(
+                        successGradient
+                            .cornerRadius(15)
+                    )
+                    .shadow(color: mint.opacity(0.5), radius: 6, x: 0, y: 0)
+            } else {
+                Text("invite")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(textSecondary)
+                    .frame(width: 60, height: 30)
+                    .background(
+                        RoundedRectangle(cornerRadius: 15)
+                            .fill(cardBackground)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 15)
+                                    .stroke(outline, lineWidth: 1)
+                            )
+                    )
+            }
+        }
+    }
+    
+    enum ButtonType {
+        case add, invite, added
+    }
+}
+
 // Helper extension to create colors from hex values
 extension Color {
     init(hex: String) {
@@ -396,6 +530,161 @@ extension View {
         .padding()
     }
     .background(AppColors.backgroundGradient)
+}
+
+// MARK: - AddFriendView Colors Preview
+#Preview("AddFriendView Colors") {
+    ScrollView {
+        VStack(alignment: .leading, spacing: 20) {
+            Group {
+                Text("AddFriendView Base Colors")
+                    .font(.headline)
+                    .foregroundColor(.white)
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 15) {
+                        colorPreview(AddFriendViewColors.backgroundDark, "Background Dark")
+                        colorPreview(AddFriendViewColors.backgroundLight, "Background Light")
+                        colorPreview(AddFriendViewColors.cardBackground, "Card")
+                        colorPreview(AddFriendViewColors.purple, "Purple")
+                        colorPreview(AddFriendViewColors.pinkRed, "Pink-Red")
+                        colorPreview(AddFriendViewColors.orange, "Orange")
+                        colorPreview(AddFriendViewColors.mint, "Mint")
+                        colorPreview(AddFriendViewColors.emerald, "Emerald")
+                        colorPreview(AddFriendViewColors.bluePurple, "Blue-Purple")
+                    }
+                    .padding(.horizontal, 10)
+                }
+            }
+            
+            Group {
+                Text("AddFriendView Gradients")
+                    .font(.headline)
+                    .foregroundColor(.white)
+                VStack(spacing: 10) {
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(AddFriendViewColors.backgroundGradient)
+                        .frame(height: 50)
+                        .overlay(Text("Background").foregroundColor(.white))
+                    
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(AddFriendViewColors.pinkOrangeGradient)
+                        .frame(height: 50)
+                        .overlay(Text("Pink-Orange").foregroundColor(.white))
+                    
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(AddFriendViewColors.purplePinkGradient)
+                        .frame(height: 50)
+                        .overlay(Text("Purple-Pink").foregroundColor(.white))
+                    
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(AddFriendViewColors.mintPurpleGradient)
+                        .frame(height: 50)
+                        .overlay(Text("Mint-Purple").foregroundColor(.white))
+                    
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(AddFriendViewColors.blueMintGradient)
+                        .frame(height: 50)
+                        .overlay(Text("Blue-Mint").foregroundColor(.white))
+                        
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(AddFriendViewColors.successGradient)
+                        .frame(height: 50)
+                        .overlay(Text("Success").foregroundColor(.white))
+                }
+            }
+            
+            Group {
+                Text("AddFriendView UI Elements")
+                    .font(.headline)
+                    .foregroundColor(.white)
+                
+                HStack {
+                    VStack {
+                        AddFriendViewColors.tabButton(isSelected: true)
+                            .frame(height: 40)
+                            .overlay(Text("Selected Tab").foregroundColor(.white))
+                        Text("Selected Tab")
+                            .font(.caption)
+                            .foregroundColor(.white)
+                    }
+                    
+                    VStack {
+                        AddFriendViewColors.tabButton(isSelected: false)
+                            .frame(height: 40)
+                            .overlay(Text("Unselected Tab").foregroundColor(.white.opacity(0.6)))
+                        Text("Unselected Tab")
+                            .font(.caption)
+                            .foregroundColor(.white)
+                    }
+                }
+                .padding(.bottom, 15)
+                
+                HStack {
+                    VStack {
+                        AddFriendViewColors.actionButton(type: .add)
+                        Text("Add Button")
+                            .font(.caption)
+                            .foregroundColor(.white)
+                    }
+                    
+                    VStack {
+                        AddFriendViewColors.actionButton(type: .invite)
+                        Text("Invite Button")
+                            .font(.caption)
+                            .foregroundColor(.white)
+                    }
+                    
+                    VStack {
+                        AddFriendViewColors.actionButton(type: .added)
+                        Text("Added Button")
+                            .font(.caption)
+                            .foregroundColor(.white)
+                    }
+                }
+                
+                VStack(spacing: 15) {
+                    Text("Contact Card")
+                        .font(.subheadline)
+                        .foregroundColor(.white)
+                    
+                    AddFriendViewColors.contactCard()
+                        .frame(height: 80)
+                        .overlay(
+                            HStack {
+                                ZStack {
+                                    Circle()
+                                        .fill(AddFriendViewColors.mintPurpleGradient)
+                                        .frame(width: 50, height: 50)
+                                    
+                                    Circle()
+                                        .fill(AddFriendViewColors.cardBackground)
+                                        .frame(width: 40, height: 40)
+                                    
+                                    Text("🦋")
+                                        .font(.system(size: 18))
+                                }
+                                
+                                VStack(alignment: .leading) {
+                                    Text("Jamie Smith")
+                                        .foregroundColor(.white)
+                                    Text("123-456-7890")
+                                        .font(.caption)
+                                        .foregroundColor(.white.opacity(0.6))
+                                }
+                                .padding(.leading, 10)
+                                
+                                Spacer()
+                                
+                                AddFriendViewColors.actionButton(type: .add)
+                            }
+                            .padding(.horizontal, 20)
+                        )
+                }
+            }
+        }
+        .padding()
+    }
+    .background(AddFriendViewColors.backgroundGradient)
 }
 
 private func colorPreview(_ color: Color, _ name: String) -> some View {

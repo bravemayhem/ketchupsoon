@@ -10,7 +10,7 @@ The friend card icons (location, frequency, and last seen) were not properly ali
 - Standardized spacing between icons and text
 
 ## Files Modified
-- `friendtracker/Shared/Components/Cards/Specialized/FriendListCard.swift`
+- `ketchupsoon/Shared/Components/Cards/Specialized/FriendListCard.swift`
 
 ## Visual Impact
 - Icons are now vertically aligned
