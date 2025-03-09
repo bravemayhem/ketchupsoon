@@ -1,7 +1,7 @@
 import Foundation
 import UIKit
 import OSLog
-import CommonCrypto
+import CryptoKit
 
 class ImageCacheManager {
     static let shared = ImageCacheManager()
@@ -92,8 +92,8 @@ class ImageCacheManager {
             return nil
         }
         
-        // Create a filename from the key using MD5 hash for consistency and safety
-        let filename = key.md5Hash + ".cache"
+        // Create a filename from the key using SHA256 hash for consistency and security
+        let filename = key.sha256Hash + ".cache"
         return cacheDirectoryURL.appendingPathComponent(filename)
     }
     
@@ -163,17 +163,10 @@ class ImageCacheManager {
 // MARK: - String Extension
 
 extension String {
-    // MD5 hash implementation using CommonCrypto
-    var md5Hash: String {
-        let data = Data(self.utf8)
-        var digest = [UInt8](repeating: 0, count: Int(CC_MD5_DIGEST_LENGTH))
-        
-        _ = data.withUnsafeBytes { bytes in
-            CC_MD5(bytes.baseAddress, CC_LONG(data.count), &digest)
-        }
-        
-        return digest.map { String(format: "%02x", $0) }.joined()
+    // SHA256 hash implementation using CryptoKit (available in iOS 13+)
+    var sha256Hash: String {
+        guard let data = self.data(using: .utf8) else { return self }
+        let hash = SHA256.hash(data: data)
+        return hash.compactMap { String(format: "%02x", $0) }.joined()
     }
-}
-
-// No need for forward declaration anymore since we import CommonCrypto 
+} 
