@@ -1,12 +1,14 @@
 import SwiftUI
 
 struct CreateMeetupView: View {
+    // Shared app state
+    @EnvironmentObject var appState: AppState
+    
     // State variables
-    @State private var selectedFriends = ["sarah", "jordan", "alex"]
     @State private var assistanceType = 2 // 0: time, 1: activities, 2: both
     @State private var searchText = ""
     @State private var selectedActivity = 0 // 0: coffee, 1: food, 2: outdoors, 3: games
-    @State private var showReviewIdeas = false // New state variable to control navigation
+    @State private var showReviewIdeas = false // State variable to control navigation
     @Environment(\.dismiss) private var dismiss
     
     // Friend emoji avatars
@@ -58,7 +60,17 @@ struct CreateMeetupView: View {
         .sheet(isPresented: $showReviewIdeas) {
             ReviewKetchupIdeasView()
         }
+        .onAppear {
+            // When the view appears, load the selected friends from AppState
+            if !appState.selectedFriendNames.isEmpty {
+                // Use the selected friends from HomeView
+                selectedFriends = appState.selectedFriendNames
+            }
+        }
     }
+    
+    // Selected friends from AppState or fallback to default
+    @State private var selectedFriends: [String] = []
     
     // MARK: - Background Layer
     private var backgroundLayer: some View {
@@ -159,10 +171,10 @@ struct CreateMeetupView: View {
                 
                 // Friend avatars
                 HStack(spacing: 30) {
-                    ForEach(0..<selectedFriends.count, id: \.self) { index in
+                    ForEach(0..<min(selectedFriends.count, 3), id: \.self) { index in
                         // FriendAvatarView is now moved to a shared component at Shared/Components/FriendAvatarView.swift
                         FriendAvatarView(
-                            emoji: friendEmojis[index],
+                            emoji: friendEmojis[index % friendEmojis.count],
                             name: selectedFriends[index],
                             gradient: AppColors.avatarGradients[index % AppColors.avatarGradients.count]
                         )
@@ -517,5 +529,6 @@ struct ActivityButton: View {
 struct CreateMeetupView_Previews: PreviewProvider {
     static var previews: some View {
         CreateMeetupView()
+            .environmentObject(AppState())
     }
 } 

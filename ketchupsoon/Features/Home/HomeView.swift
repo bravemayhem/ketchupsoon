@@ -5,8 +5,10 @@ import SwiftData
 import SwiftUI
 
 struct HomeView: View {
-    // State for selected friends
-    @State private var selectedFriends: Set<String> = []
+    // Shared app state
+    @EnvironmentObject var appState: AppState
+    
+    // Local state for UI
     @State private var searchText: String = ""
     @State private var pendingFriendRequests: Int = 3
     
@@ -21,6 +23,11 @@ struct HomeView: View {
         FriendItem(id: "7", name: "sofia", emoji: "🏄", lastHangout: "8 months", gradient: [AppColors.gradient2Start, AppColors.gradient2End]),
         FriendItem(id: "8", name: "noah", emoji: "🎭", lastHangout: "5 months", gradient: [AppColors.gradient3Start, AppColors.gradient3End])
     ]
+    
+    // Computed property to access selected friends from appState
+    private var selectedFriends: Set<String> {
+        appState.selectedFriendIds
+    }
     
     var body: some View {
         ZStack(alignment: .bottom) { // Use ZStack for layering with alignment at bottom
@@ -111,7 +118,7 @@ struct HomeView: View {
                                 // Cancel button
                                 Button(action: {
                                     // Cancel action
-                                    selectedFriends.removeAll()
+                                    appState.updateSelectedFriends(ids: [], friendsData: friends)
                                 }) {
                                     Text("X")
                                         .font(.system(size: 14))
@@ -138,7 +145,7 @@ struct HomeView: View {
                                         }
                                     )
                                 }
-                        
+                            
                             }
                             .padding(.top, 10)
                             
@@ -166,7 +173,8 @@ struct HomeView: View {
                     
                     // Schedule button
                     Button(action: {
-                        // Schedule action
+                        // Navigate to the CreateMeetup tab using shared state
+                        appState.navigateToCreateMeetup()
                     }) {
                         HStack {                            
                             Text("schedule meetup")
@@ -198,11 +206,13 @@ struct HomeView: View {
     
     // Toggle friend selection
     private func toggleFriendSelection(_ id: String) {
-        if selectedFriends.contains(id) {
-            selectedFriends.remove(id)
+        var updatedSelection = selectedFriends
+        if updatedSelection.contains(id) {
+            updatedSelection.remove(id)
         } else {
-            selectedFriends.insert(id)
+            updatedSelection.insert(id)
         }
+        appState.updateSelectedFriends(ids: updatedSelection, friendsData: friends)
     }
 }
 
@@ -210,5 +220,6 @@ struct HomeView: View {
 struct HomeView_Previews: PreviewProvider {
     static var previews: some View {
         HomeView()
+            .environmentObject(AppState())
     }
 }

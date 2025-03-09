@@ -150,6 +150,8 @@ struct ketchupsoonApp: App {
     let container: ModelContainer
     @StateObject private var colorSchemeManager = ColorSchemeManager.shared
     @StateObject private var profileManager = UserProfileManager.shared  // Initialize UserProfileManager
+    @StateObject private var appState = AppState()  // Add shared app state
+    @State private var onboardingComplete = UserDefaults.standard.bool(forKey: "onboardingComplete")  // Add onboarding state
     @Environment(\.scenePhase) private var scenePhase
     
     init() {
@@ -265,17 +267,38 @@ struct ketchupsoonApp: App {
     
     var body: some Scene {
         WindowGroup {
-            SplashScreenView()
-                .modelContainer(for: [], inMemory: false)
-                .preferredColorScheme(colorSchemeManager.currentAppearanceMode == .system ? nil : colorSchemeManager.colorScheme)
-                .environment(\.colorScheme, colorSchemeManager.colorScheme)
-                .onAppear {
-                    // Verify font registration on startup (DEBUG only)
-                    #if DEBUG
-                    verifyFontRegistration()
-                    #endif
-                }
+            // Main content view of the app
+            if onboardingComplete {
+                ContentView()
+                    .modelContainer(for: [])
+                    .environmentObject(appState)  // Inject the app state
+                    .environmentObject(OnboardingManager.shared)  // Use shared instance
+                    .preferredColorScheme(colorSchemeManager.currentAppearanceMode == .system ? nil : colorSchemeManager.colorScheme)
+                    .environment(\.colorScheme, colorSchemeManager.colorScheme)
+                    .onAppear {
+                        // Verify font registration on startup (DEBUG only)
+                        #if DEBUG
+                        verifyFontRegistration()
+                        #endif
+                    }
+            } else {
+                KetchupSoonOnboardingView()
+                    .modelContainer(for: [])
+                    .environmentObject(appState)  // Inject the app state
+                    .environmentObject(OnboardingManager.shared)  // Use shared instance
+                    .preferredColorScheme(colorSchemeManager.currentAppearanceMode == .system ? nil : colorSchemeManager.colorScheme)
+                    .environment(\.colorScheme, colorSchemeManager.colorScheme)
+                    .onReceive(OnboardingManager.shared.$isOnboardingComplete) { completed in
+                        if completed {
+                            onboardingComplete = true
+                        }
+                    }
+            }
         }
-        .modelContainer(container)
+        .onChange(of: onboardingComplete) {
+            // Save onboarding state when it changes
+            UserDefaults.standard.set(onboardingComplete, forKey: "onboardingComplete")
+        }
+        .modelContainer(for: [])
     }
 }
