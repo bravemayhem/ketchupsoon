@@ -169,7 +169,7 @@ struct HomeView: View {
                         // Schedule action
                     }) {
                         HStack {                            
-                            Text("schedule ketchup")
+                            Text("schedule meetup")
                                 .font(.system(size: 16, weight: .semibold))
                                 .foregroundColor(.white)
                         }

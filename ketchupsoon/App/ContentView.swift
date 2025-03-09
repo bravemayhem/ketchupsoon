@@ -82,9 +82,7 @@ struct ContentView: View {
                                 showingDebugAlert = true
                             }
                         ) {
-                            Text("Pulse View Coming Soon")
-                                .foregroundColor(.white)
-                                .font(.title)
+                            PulseView()
                         }
                         .transition(.opacity)
                         .sheet(isPresented: $showingSettings) {

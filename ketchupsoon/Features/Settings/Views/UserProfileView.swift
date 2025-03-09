@@ -9,6 +9,9 @@ struct UserProfileView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var profileManager = UserProfileManager.shared
     
+    // Cache-related state
+    @State private var cachedProfileImage: UIImage? = nil
+    
     // Mock data for UI display - some will be replaced with real data when available
     @State private var userName = "User"
     @State private var userStatus = "available"
@@ -96,6 +99,7 @@ struct UserProfileView: View {
                 // Then load it into the view
                 await MainActor.run {
                     loadProfileData()
+                    preloadProfileImage()
                 }
             }
         }
@@ -187,20 +191,29 @@ struct UserProfileView: View {
                                 .aspectRatio(contentMode: .fill)
                                 .frame(width: 110, height: 110)
                                 .clipShape(Circle())
+                        } else if let cachedImage = cachedProfileImage {
+                            // Show cached image
+                            Image(uiImage: cachedImage)
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                                .frame(width: 110, height: 110)
+                                .clipShape(Circle())
                         } else if let photoURL = profileManager.currentUserProfile?.profileImageURL,
-                           !photoURL.isEmpty {
-                            // Profile image from URL
-                            AsyncImage(url: URL(string: photoURL)) { image in
-                                image
-                                    .resizable()
-                                    .aspectRatio(contentMode: .fill)
-                                    .frame(width: 110, height: 110)
-                                    .clipShape(Circle())
-                            } placeholder: {
+                                  !photoURL.isEmpty {
+                            // Profile image from URL with loading indicator
+                            ZStack {
                                 // Show emoji placeholder while loading
                                 Text(profileEmoji)
                                     .font(.system(size: 44))
                                     .frame(width: 110, height: 110)
+                                
+                                // Add a progress indicator
+                                ProgressView()
+                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                            }
+                            .onAppear {
+                                // Trigger preload if not already done
+                                preloadProfileImage()
                             }
                         } else {
                             // Emoji placeholder when no image is available
@@ -528,6 +541,9 @@ struct UserProfileView: View {
                 userBio = profileBio
             }
             
+            // Preload the profile image for faster display
+            preloadProfileImage()
+            
             // Keep other mock data for now until we have real data for these
         }
     }
@@ -629,6 +645,37 @@ struct UserProfileView: View {
                 showAlert = true
             }
         }
+    }
+    
+    private func preloadProfileImage() {
+        guard let photoURL = profileManager.currentUserProfile?.profileImageURL,
+              !photoURL.isEmpty,
+              let url = URL(string: photoURL) else {
+            return
+        }
+        
+        // Check if image is already in cache
+        if let cachedImage = ImageCacheManager.shared.getImage(for: photoURL) {
+            self.cachedProfileImage = cachedImage
+            return
+        }
+        
+        // Not in cache, start downloading
+        URLSession.shared.dataTask(with: url) { data, response, error in
+            guard let data = data,
+                  error == nil,
+                  let downloadedImage = UIImage(data: data) else {
+                return
+            }
+            
+            // Cache the image
+            ImageCacheManager.shared.storeImage(downloadedImage, for: photoURL)
+            
+            // Update UI on main thread
+            DispatchQueue.main.async {
+                self.cachedProfileImage = downloadedImage
+            }
+        }.resume()
     }
 }
 
