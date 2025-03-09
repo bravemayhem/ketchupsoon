@@ -16,6 +16,13 @@ struct UserProfile: Codable {
     var isSocialProfileActive: Bool
     var socialAuthProvider: String?  // Added to track which auth provider is used
     
+    // User preferences fields
+    var availabilityTimes: [String]?  // e.g. ["mornings", "evenings", "weekends"]
+    var availableDays: [String]?      // e.g. ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+    var favoriteActivities: [String]? // e.g. ["coffee", "food", "outdoors", "games"]
+    var calendarConnections: [String]? // e.g. ["Google"]
+    var travelRadius: String?         // e.g. "5 miles"
+    
     // Initialize from Firebase User
     init(from user: User, additionalData: [String: Any] = [:]) {
         self.id = user.uid
@@ -44,6 +51,13 @@ struct UserProfile: Codable {
         // Initialize social profile fields
         self.isSocialProfileActive = additionalData["isSocialProfileActive"] as? Bool ?? false
         self.socialAuthProvider = additionalData["socialAuthProvider"] as? String
+        
+        // Initialize preference fields
+        self.availabilityTimes = additionalData["availabilityTimes"] as? [String]
+        self.availableDays = additionalData["availableDays"] as? [String]
+        self.favoriteActivities = additionalData["favoriteActivities"] as? [String]
+        self.calendarConnections = additionalData["calendarConnections"] as? [String]
+        self.travelRadius = additionalData["travelRadius"] as? String
     }
     
     // Custom Decodable initializer
@@ -75,6 +89,13 @@ struct UserProfile: Codable {
         // Decode social profile fields
         isSocialProfileActive = try container.decodeIfPresent(Bool.self, forKey: .isSocialProfileActive) ?? false
         socialAuthProvider = try container.decodeIfPresent(String.self, forKey: .socialAuthProvider)
+        
+        // Decode preference fields
+        availabilityTimes = try container.decodeIfPresent([String].self, forKey: .availabilityTimes)
+        availableDays = try container.decodeIfPresent([String].self, forKey: .availableDays)
+        favoriteActivities = try container.decodeIfPresent([String].self, forKey: .favoriteActivities)
+        calendarConnections = try container.decodeIfPresent([String].self, forKey: .calendarConnections)
+        travelRadius = try container.decodeIfPresent(String.self, forKey: .travelRadius)
     }
     
     // Custom Encodable implementation
@@ -97,6 +118,13 @@ struct UserProfile: Codable {
         // Encode social profile fields
         try container.encode(isSocialProfileActive, forKey: .isSocialProfileActive)
         try container.encodeIfPresent(socialAuthProvider, forKey: .socialAuthProvider)
+        
+        // Encode preference fields
+        try container.encodeIfPresent(availabilityTimes, forKey: .availabilityTimes)
+        try container.encodeIfPresent(availableDays, forKey: .availableDays)
+        try container.encodeIfPresent(favoriteActivities, forKey: .favoriteActivities)
+        try container.encodeIfPresent(calendarConnections, forKey: .calendarConnections)
+        try container.encodeIfPresent(travelRadius, forKey: .travelRadius)
     }
     
     // Initialize with custom data
@@ -110,7 +138,12 @@ struct UserProfile: Codable {
          createdAt: Date = Date(),
          updatedAt: Date = Date(),
          isSocialProfileActive: Bool = false,
-         socialAuthProvider: String? = nil) {
+         socialAuthProvider: String? = nil,
+         availabilityTimes: [String]? = nil,
+         availableDays: [String]? = nil,
+         favoriteActivities: [String]? = nil,
+         calendarConnections: [String]? = nil,
+         travelRadius: String? = nil) {
         self.id = id
         self.name = name
         self.email = email
@@ -122,6 +155,11 @@ struct UserProfile: Codable {
         self.updatedAt = updatedAt
         self.isSocialProfileActive = isSocialProfileActive
         self.socialAuthProvider = socialAuthProvider
+        self.availabilityTimes = availabilityTimes
+        self.availableDays = availableDays
+        self.favoriteActivities = favoriteActivities
+        self.calendarConnections = calendarConnections
+        self.travelRadius = travelRadius
     }
     
     // Convert to dictionary for Firestore
@@ -141,6 +179,13 @@ struct UserProfile: Codable {
         if let birthday = birthday { dict["birthday"] = birthday.timeIntervalSince1970 }
         if let socialAuthProvider = socialAuthProvider { dict["socialAuthProvider"] = socialAuthProvider }
         
+        // Add preference fields to dictionary
+        if let availabilityTimes = availabilityTimes { dict["availabilityTimes"] = availabilityTimes }
+        if let availableDays = availableDays { dict["availableDays"] = availableDays }
+        if let favoriteActivities = favoriteActivities { dict["favoriteActivities"] = favoriteActivities }
+        if let calendarConnections = calendarConnections { dict["calendarConnections"] = calendarConnections }
+        if let travelRadius = travelRadius { dict["travelRadius"] = travelRadius }
+        
         return dict
     }
     
@@ -157,5 +202,10 @@ struct UserProfile: Codable {
         case updatedAt
         case isSocialProfileActive
         case socialAuthProvider
+        case availabilityTimes
+        case availableDays
+        case favoriteActivities
+        case calendarConnections
+        case travelRadius
     }
 } 

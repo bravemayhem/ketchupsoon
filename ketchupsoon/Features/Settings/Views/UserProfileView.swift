@@ -338,9 +338,19 @@ struct UserProfileView: View {
     // MARK: - Preferences Section
     private var preferencesSection: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("preferences")
-                .font(.system(size: 18, weight: .bold))
-                .padding(.leading, 4)
+            HStack {
+                Text("preferences")
+                    .font(.system(size: 18, weight: .bold))
+                    .padding(.leading, 4)
+                
+                Spacer()
+                
+                NavigationLink(destination: PreferencesEditView()) {
+                    Image(systemName: "pencil.circle.fill")
+                        .font(.system(size: 20))
+                        .foregroundColor(Color(red: 140/255, green: 69/255, blue: 250/255))
+                }
+            }
             
             ZStack {
                 RoundedRectangle(cornerRadius: 20)
@@ -419,9 +429,19 @@ struct UserProfileView: View {
     // MARK: - Calendar Integration Section
     private var calendarIntegrationSection: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("calendar integration")
-                .font(.system(size: 18, weight: .bold))
-                .padding(.leading, 4)
+            HStack {
+                Text("calendar integration")
+                    .font(.system(size: 18, weight: .bold))
+                    .padding(.leading, 4)
+                
+                Spacer()
+                
+                NavigationLink(destination: PreferencesEditView()) {
+                    Image(systemName: "pencil.circle.fill")
+                        .font(.system(size: 20))
+                        .foregroundColor(Color(red: 140/255, green: 69/255, blue: 250/255))
+                }
+            }
             
             ZStack {
                 RoundedRectangle(cornerRadius: 20)

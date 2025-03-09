@@ -61,9 +61,7 @@ struct ContentView: View {
                                 showingDebugAlert = true
                             }
                         ) {
-                            Text("Pulse View Coming Soon")
-                                .foregroundColor(.white)
-                                .font(.title)
+                            MeetupsView()
                         }
                         .transition(.opacity)
                         .sheet(isPresented: $showingSettings) {
@@ -84,7 +82,7 @@ struct ContentView: View {
                                 showingDebugAlert = true
                             }
                         ) {
-                            Text("Meetup View Coming Soon")
+                            Text("Pulse View Coming Soon")
                                 .foregroundColor(.white)
                                 .font(.title)
                         }

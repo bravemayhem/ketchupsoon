@@ -1,6 +1,9 @@
 import SwiftUI
 import SwiftData
 
+// Import the shared component
+import SwiftUI
+
 struct HomeView: View {
     // State for selected friends
     @State private var selectedFriends: Set<String> = []
@@ -199,84 +202,6 @@ struct HomeView: View {
             selectedFriends.remove(id)
         } else {
             selectedFriends.insert(id)
-        }
-    }
-}
-
-// Friend model - renamed to avoid conflicts with existing Friend model
-struct FriendItem: Identifiable {
-    let id: String
-    let name: String
-    let emoji: String
-    let lastHangout: String
-    let gradient: [Color]
-}
-
-// Friend Avatar View
-struct FriendAvatarView: View {
-    let friend: FriendItem
-    let isSelected: Bool
-    let onSelect: () -> Void
-    
-    var body: some View {
-        Button(action: onSelect) {
-            VStack {
-                ZStack {
-                    // Selection glow for selected friends
-                    if isSelected {
-                        Circle()
-                            .fill(LinearGradient(
-                                gradient: Gradient(colors: friend.gradient),
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            ))
-                            .opacity(0.3)
-                            .frame(width: 96, height: 96)
-                    }
-                    
-                    // Main avatar circle
-                    Circle()
-                        .fill(LinearGradient(
-                            gradient: Gradient(colors: friend.gradient),
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ))
-                        .frame(width: 90, height: 90)
-                        .shadow(color: friend.gradient[0].opacity(0.3), radius: 6, x: 0, y: 0)
-                    
-                    // Inner circle
-                    Circle()
-                        .fill(AppColors.cardBackground)
-                        .frame(width: 80, height: 80)
-                    
-                    // Emoji
-                    Text(friend.emoji)
-                        .font(.system(size: 30))
-                    
-                    // Selection indicator
-                    if isSelected {
-                        Circle()
-                            .fill(LinearGradient(
-                                gradient: Gradient(colors: friend.gradient),
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            ))
-                            .frame(width: 30, height: 30)
-                            .overlay(
-                                Text("✓")
-                                    .font(.system(size: 14, weight: .bold))
-                                    .foregroundColor(.white)
-                            )
-                            .offset(x: 30, y: -30)
-                    }
-                }
-                
-                // Friend name
-                Text(friend.name)
-                    .font(.system(size: 14))
-                    .foregroundColor(.white)
-                    .padding(.top, 5)
-            }
         }
     }
 }
