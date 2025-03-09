@@ -62,9 +62,12 @@ struct ProfileSettingsView: View {
                                 image
                                     .resizable()
                                     .aspectRatio(contentMode: .fill)
+                                    .frame(width: 100, height: 100)
+                                    .clipShape(Circle())
                             } placeholder: {
                                 Circle()
                                     .fill(Color.gray.opacity(0.2))
+                                    .frame(width: 100, height: 100)
                             }
                             .frame(width: 100, height: 100)
                             .clipShape(Circle())

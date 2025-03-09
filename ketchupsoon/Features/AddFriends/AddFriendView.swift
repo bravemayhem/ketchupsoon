@@ -433,8 +433,23 @@ struct AddFriendView: View {
                             .fill(AppColors.avatarGradient(for: result.name ?? "User"))
                             .frame(width: 50, height: 50)
                         
-                        Text(AppColors.avatarEmoji(for: result.name ?? "User"))
-                            .font(.system(size: 24))
+                        if let profileImageURL = result.profileImageURL, 
+                           let url = URL(string: profileImageURL) {
+                            AsyncImage(url: url) { image in
+                                image
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fill)
+                                    .frame(width: 50, height: 50)
+                                    .clipShape(Circle())
+                            } placeholder: {
+                                Text(AppColors.avatarEmoji(for: result.name ?? "User"))
+                                    .font(.system(size: 24))
+                                    .frame(width: 50, height: 50)
+                            }
+                        } else {
+                            Text(AppColors.avatarEmoji(for: result.name ?? "User"))
+                                .font(.system(size: 24))
+                        }
                     }
                     
                     // User info

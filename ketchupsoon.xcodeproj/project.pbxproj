@@ -10,6 +10,8 @@
 		A54A6A9A2D6D0CF600DC34A4 /* FirebaseInAppMessaging-Beta in Frameworks */ = {isa = PBXBuildFile; productRef = A54A6A992D6D0CF600DC34A4 /* FirebaseInAppMessaging-Beta */; };
 		A54A6A9C2D6D0CF600DC34A4 /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = A54A6A9B2D6D0CF600DC34A4 /* FirebaseMessaging */; };
 		A58C70022D7923EF000DDBDD /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = A58C70012D7923EF000DDBDD /* FirebaseStorage */; };
+		A5FC97302D7D39BF0096CD7F /* CropViewController in Frameworks */ = {isa = PBXBuildFile; productRef = A5FC972F2D7D39BF0096CD7F /* CropViewController */; };
+		A5FC97322D7D39BF0096CD7F /* TOCropViewController in Frameworks */ = {isa = PBXBuildFile; productRef = A5FC97312D7D39BF0096CD7F /* TOCropViewController */; };
 		F44347392D5AE4BA00D52D7A /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = F44347382D5AE4BA00D52D7A /* Auth */; };
 		F443473B2D5AE4BA00D52D7A /* Functions in Frameworks */ = {isa = PBXBuildFile; productRef = F443473A2D5AE4BA00D52D7A /* Functions */; };
 		F443473D2D5AE4BA00D52D7A /* PostgREST in Frameworks */ = {isa = PBXBuildFile; productRef = F443473C2D5AE4BA00D52D7A /* PostgREST */; };
@@ -110,7 +112,9 @@
 				F443474C2D5AEBE100D52D7A /* Supabase in Frameworks */,
 				F443473F2D5AE4BA00D52D7A /* Realtime in Frameworks */,
 				F44347392D5AE4BA00D52D7A /* Auth in Frameworks */,
+				A5FC97302D7D39BF0096CD7F /* CropViewController in Frameworks */,
 				A54A6A9C2D6D0CF600DC34A4 /* FirebaseMessaging in Frameworks */,
+				A5FC97322D7D39BF0096CD7F /* TOCropViewController in Frameworks */,
 				F443473D2D5AE4BA00D52D7A /* PostgREST in Frameworks */,
 				F4F7410D2D5D921B00217CB6 /* FirebaseFirestore in Frameworks */,
 				A58C70022D7923EF000DDBDD /* FirebaseStorage in Frameworks */,
@@ -191,6 +195,8 @@
 				A54A6A992D6D0CF600DC34A4 /* FirebaseInAppMessaging-Beta */,
 				A54A6A9B2D6D0CF600DC34A4 /* FirebaseMessaging */,
 				A58C70012D7923EF000DDBDD /* FirebaseStorage */,
+				A5FC972F2D7D39BF0096CD7F /* CropViewController */,
+				A5FC97312D7D39BF0096CD7F /* TOCropViewController */,
 			);
 			productName = ketchupsoon;
 			productReference = F4070A282D0A183C00B11C0B /* ketchupsoon.app */;
@@ -281,6 +287,7 @@
 				F44D7B972D1D24E0008C00CC /* XCRemoteSwiftPackageReference "ViewInspector" */,
 				F44347372D5AE4BA00D52D7A /* XCRemoteSwiftPackageReference "supabase-swift" */,
 				F4F741072D5D921B00217CB6 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+				A5FC972E2D7D39BF0096CD7F /* XCRemoteSwiftPackageReference "TOCropViewController" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = F4070A292D0A183C00B11C0B /* Products */;
@@ -663,6 +670,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		A5FC972E2D7D39BF0096CD7F /* XCRemoteSwiftPackageReference "TOCropViewController" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/TimOliver/TOCropViewController.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.7.4;
+			};
+		};
 		F44347372D5AE4BA00D52D7A /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/supabase-community/supabase-swift.git";
@@ -720,6 +735,16 @@
 			isa = XCSwiftPackageProductDependency;
 			package = F4F741072D5D921B00217CB6 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseStorage;
+		};
+		A5FC972F2D7D39BF0096CD7F /* CropViewController */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A5FC972E2D7D39BF0096CD7F /* XCRemoteSwiftPackageReference "TOCropViewController" */;
+			productName = CropViewController;
+		};
+		A5FC97312D7D39BF0096CD7F /* TOCropViewController */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A5FC972E2D7D39BF0096CD7F /* XCRemoteSwiftPackageReference "TOCropViewController" */;
+			productName = TOCropViewController;
 		};
 		F44347382D5AE4BA00D52D7A /* Auth */ = {
 			isa = XCSwiftPackageProductDependency;

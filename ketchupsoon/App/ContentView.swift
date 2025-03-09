@@ -71,7 +71,7 @@ struct ContentView: View {
                         }
                     }
                     else if selectedTab == 2 {
-                        // Profile tab
+                        // Meetup tab
                         CustomNavigationBarContainer(
                             leadingButtonAction: {
                                 showingSettings = true
@@ -84,7 +84,7 @@ struct ContentView: View {
                                 showingDebugAlert = true
                             }
                         ) {
-                            Text("Profile View Coming Soon")
+                            Text("Meetup View Coming Soon")
                                 .foregroundColor(.white)
                                 .font(.title)
                         }
@@ -92,6 +92,17 @@ struct ContentView: View {
                         .sheet(isPresented: $showingSettings) {
                             SettingsView()
                         }
+                    }
+                    else if selectedTab == 3 {
+                        // Profile tab
+                        CustomNavigationBarContainer(
+                            showLeadingButton: false,
+                            showTrailingButton: false,
+                            profileEmoji: "😎"
+                        ) {
+                            UserProfileView()
+                        }
+                        .transition(.opacity)
                     }
                 }
             }
