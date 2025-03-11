@@ -2,7 +2,7 @@ import Foundation
 import SwiftData
 
 @Model
-final class Friend {
+final class FriendModel {
     // Basic properties
     var id: UUID
     var name: String
@@ -50,7 +50,7 @@ final class Friend {
     }
     
     // Convenience initializer from UserProfile
-    convenience init(from userProfile: UserProfile) {
+    convenience init(from userProfile: UserProfileModel) {
         self.init(
             name: userProfile.name ?? "Unknown",
             profileImageURL: userProfile.profileImageURL,

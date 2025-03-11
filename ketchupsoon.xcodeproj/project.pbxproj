@@ -61,7 +61,6 @@
 		A58C6FEF2D78D91D000DDBDD /* Exceptions for "ketchupsoon" folder in "ketchupsoonTests" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				Features/KetchupSoonOnboarding/UserProfile.swift,
 				"GoogleService-Info.plist",
 			);
 			target = F4070A372D0A184000B11C0B /* ketchupsoonTests */;
@@ -69,7 +68,6 @@
 		A58C6FF02D78D91D000DDBDD /* Exceptions for "ketchupsoon" folder in "ketchupsoonUITests" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				Features/KetchupSoonOnboarding/UserProfile.swift,
 				"GoogleService-Info.plist",
 			);
 			target = F4070A412D0A184000B11C0B /* ketchupsoonUITests */;

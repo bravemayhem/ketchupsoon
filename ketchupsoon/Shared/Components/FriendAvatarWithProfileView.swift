@@ -38,7 +38,7 @@ struct FriendAvatarWithProfileView: View {
     // Create a Friend model from FriendItem for the profile view
     private func createFriendProfileView() -> some View {
         // Create a sample Friend with the data we have from FriendItem
-        let friend = Friend(
+        let friend = FriendModel(
             id: UUID(), // Create a new ID
             name: self.friend.name,
             profileImageURL: nil, // No URL in FriendItem

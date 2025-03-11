@@ -13,7 +13,7 @@ class FirebaseUserSearchService: ObservableObject {
     private let usersCollection = "users"
     
     @Published var isSearching = false
-    @Published var searchResults: [UserProfile] = []
+    @Published var searchResults: [UserProfileModel] = []
     @Published var error: Error?
     
     // MARK: - Search Methods
@@ -39,7 +39,7 @@ class FirebaseUserSearchService: ObservableObject {
                 try await searchByField("phoneNumber", value: query) : []
             
             // Combine results (removing duplicates) without using Set
-            var uniqueProfiles: [String: UserProfile] = [:]
+            var uniqueProfiles: [String: UserProfileModel] = [:]
             for profile in emailResults + phoneResults {
                 uniqueProfiles[profile.id] = profile
             }
@@ -66,11 +66,11 @@ class FirebaseUserSearchService: ObservableObject {
     ///   - profile: The Firebase UserProfile to convert
     ///   - modelContext: The SwiftData ModelContext to save to
     /// - Returns: The created Friend object
-    func createFriendFromFirebaseUser(_ profile: UserProfile, in modelContext: ModelContext) -> Friend {
+    func createFriendFromFirebaseUser(_ profile: UserProfileModel, in modelContext: ModelContext) -> FriendModel {
         // Check for existing friend with this Firebase ID
         // First fetch all friends with non-nil firebaseUserId
-        let nonNilDescriptor = FetchDescriptor<Friend>(
-            predicate: #Predicate<Friend> { $0.firebaseUserId != nil }
+        let nonNilDescriptor = FetchDescriptor<FriendModel>(
+            predicate: #Predicate<FriendModel> { $0.firebaseUserId != nil }
         )
         
         do {
@@ -85,7 +85,7 @@ class FirebaseUserSearchService: ObservableObject {
         }
         
         // Create new Friend using the convenience initializer
-        let friend = Friend(from: profile)
+        let friend = FriendModel(from: profile)
         
         // Handle profile image if available
         if let profileImageURLString = profile.profileImageURL, 
@@ -105,8 +105,8 @@ class FirebaseUserSearchService: ObservableObject {
     /// - Parameter modelContext: The SwiftData context containing friends
     func checkExistingFriendsForFirebaseUsers(in modelContext: ModelContext) async {
         // Get all friends without Firebase IDs
-        let descriptor = FetchDescriptor<Friend>(
-            predicate: #Predicate<Friend> { 
+        let descriptor = FetchDescriptor<FriendModel>(
+            predicate: #Predicate<FriendModel> {
                 $0.firebaseUserId == nil
             }
         )
@@ -146,11 +146,11 @@ class FirebaseUserSearchService: ObservableObject {
     
     // MARK: - Helper Methods
     
-    private func searchByField(_ field: String, value: String) async throws -> [UserProfile] {
+    private func searchByField(_ field: String, value: String) async throws -> [UserProfileModel] {
         let query = db.collection(usersCollection).whereField(field, isEqualTo: value)
         let snapshot = try await query.getDocuments()
         
-        return snapshot.documents.compactMap { document -> UserProfile? in
+        return snapshot.documents.compactMap { document -> UserProfileModel? in
             // Use explicit type annotation to ensure it's treated as optional
             let documentData: [String: Any]? = document.data()
             if documentData == nil {
@@ -167,7 +167,7 @@ class FirebaseUserSearchService: ObservableObject {
         }
     }
     
-    private func findUserByEmail(_ email: String) async throws -> UserProfile? {
+    private func findUserByEmail(_ email: String) async throws -> UserProfileModel? {
         let query = db.collection(usersCollection).whereField("email", isEqualTo: email)
         let snapshot = try await query.getDocuments()
         
@@ -188,7 +188,7 @@ class FirebaseUserSearchService: ObservableObject {
         return createUserProfile(from: data, with: userId)
     }
     
-    private func findUserByPhone(_ phone: String) async throws -> UserProfile? {
+    private func findUserByPhone(_ phone: String) async throws -> UserProfileModel? {
         let query = db.collection(usersCollection).whereField("phoneNumber", isEqualTo: phone)
         let snapshot = try await query.getDocuments()
         
@@ -209,7 +209,7 @@ class FirebaseUserSearchService: ObservableObject {
         return createUserProfile(from: data, with: userId)
     }
     
-    private func createUserProfile(from data: [String: Any], with userId: String) -> UserProfile? {
+    private func createUserProfile(from data: [String: Any], with userId: String) -> UserProfileModel? {
         let name = data["name"] as? String
         let email = data["email"] as? String
         let phoneNumber = data["phoneNumber"] as? String
@@ -227,7 +227,7 @@ class FirebaseUserSearchService: ObservableObject {
             updatedAt = Date(timeIntervalSince1970: updatedTimestamp)
         }
         
-        return UserProfile(
+        return UserProfileModel(
             id: userId,
             name: name,
             email: email,

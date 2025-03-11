@@ -1,3 +1,5 @@
+// Will use after MVP
+
 import SwiftUI
 import SwiftData
 
@@ -6,8 +8,15 @@ struct FriendProfileView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var isFavorite = false
     
-    let friend: FriendModel
+    let friend: Friend
     
+    // Mock data for UI elements not yet in the Friend model
+//  @State private var friendsSince = "Oct 2023"
+//  @State private var ketchupsCount = 8
+//  @State private var lastKetchup = "2 weeks ago"
+//  @State private var location = "San Francisco, CA"
+//  @State private var availabilityTimes = ["weekends", "weeknights"]
+//  @State private var favoriteActivities = ["🎮 gaming", "🍺 bars", "🏀 sports"]
     
     // MARK: - Body
     var body: some View {
@@ -25,7 +34,15 @@ struct FriendProfileView: View {
                     // Profile header
                     profileHeaderSection
                     
-            
+                    // Mutual friends section
+             //     mutualFriendsSection
+                    
+                    // Availability section
+             //     availabilitySection
+                    
+                    // Upcoming hangouts section
+            //      upcomingHangoutsSection
+                    
                     // Add spacer to ensure content is visible above action buttons
                     Spacer().frame(height: 60)
                 }
@@ -33,6 +50,8 @@ struct FriendProfileView: View {
                 .padding(.bottom, 100)
             }
             
+            // Action buttons (fixed at bottom)
+      //    bottomActionButtons
             
             // Back button
             backButton
@@ -58,6 +77,27 @@ struct FriendProfileView: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Text(friend.name)
                             .font(.system(size: 24, weight: .bold))
+                        // Location
+                        HStack {
+                            Text("📍")
+                            Text(location)
+                        }
+                        .font(.system(size: 14))
+                        .foregroundColor(Color.white.opacity(0.6))
+                        
+                        // Friends since
+                        HStack {
+                            Text("🤝")
+                            Text("friends since \(friendsSince)")
+                        }
+                        .font(.system(size: 14))
+                        .foregroundColor(Color.white.opacity(0.6))
+                        
+                        // Ketchup count
+                        HStack {
+                            Text("🍅")
+                            Text("\(ketchupsCount) ketchups together")
+                        }
                         .font(.system(size: 14))
                         .foregroundColor(Color.white.opacity(0.6))
                     }
@@ -70,6 +110,21 @@ struct FriendProfileView: View {
                         .foregroundColor(Color.white.opacity(0.8))
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.top, 8)
+                }
+                
+                // Last hangout and favorite badges
+                HStack {
+                    Text("last ketchup: \(lastKetchup)")
+                        .font(.system(size: 12))
+                        .foregroundColor(Color.white.opacity(0.7))
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .background(Color(red: 21/255, green: 17/255, blue: 50/255))
+                        .cornerRadius(15)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 15)
+                                .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                    )
                 }
             }
             .padding(20)
@@ -486,7 +541,7 @@ struct NoUpcomingHangoutsView: View {
 // MARK: - Preview
 #Preview {
     // Create a sample friend for preview
-    let sampleFriend = FriendModel(
+    let sampleFriend = Friend(
         name: "Jordan Chen",
         profileImageURL: nil,
         email: "jordan@example.com",
@@ -497,4 +552,4 @@ struct NoUpcomingHangoutsView: View {
     
     return FriendProfileView(friend: sampleFriend)
         .preferredColorScheme(.dark)
-} 
+}

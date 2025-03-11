@@ -11,7 +11,7 @@ class UserProfileManager: ObservableObject {
     private let db = Firestore.firestore()
     private let usersCollection = "users"
     
-    @Published var currentUserProfile: UserProfile?
+    @Published var currentUserProfile: UserProfileModel?
     @Published var isLoading = false
     @Published var error: Error?
     
@@ -63,7 +63,7 @@ class UserProfileManager: ObservableObject {
             } else {
                 // Profile doesn't exist, create one from Auth data
                 if let user = Auth.auth().currentUser {
-                    let newProfile = UserProfile(from: user)
+                    let newProfile = UserProfileModel(from: user)
                     try await createUserProfile(profile: newProfile)
                     self.currentUserProfile = newProfile
                     self.logger.info("Created new user profile for \(userId)")
@@ -78,7 +78,7 @@ class UserProfileManager: ObservableObject {
     }
     
     /// Creates a new user profile in Firestore
-    func createUserProfile(profile: UserProfile) async throws {
+    func createUserProfile(profile: UserProfileModel) async throws {
         guard Auth.auth().currentUser != nil else {
             throw NSError(domain: "UserProfileManager", code: 1, userInfo: [NSLocalizedDescriptionKey: "No authenticated user"])
         }
@@ -148,6 +148,32 @@ class UserProfileManager: ObservableObject {
                 updatedProfile.socialAuthProvider = nil
             }
             
+            // Handle location and personal info updates
+            if let location = updates["location"] as? String {
+                updatedProfile.location = location
+            }
+            
+            // Handle user preference updates
+            if let availabilityTimes = updates["availabilityTimes"] as? [String] {
+                updatedProfile.availabilityTimes = availabilityTimes
+            }
+            
+            if let availableDays = updates["availableDays"] as? [String] {
+                updatedProfile.availableDays = availableDays
+            }
+            
+            if let favoriteActivities = updates["favoriteActivities"] as? [String] {
+                updatedProfile.favoriteActivities = favoriteActivities
+            }
+            
+            if let calendarConnections = updates["calendarConnections"] as? [String] {
+                updatedProfile.calendarConnections = calendarConnections
+            }
+            
+            if let travelRadius = updates["travelRadius"] as? String {
+                updatedProfile.travelRadius = travelRadius
+            }
+            
             updatedProfile.updatedAt = Date()
             self.currentUserProfile = updatedProfile
             
@@ -163,7 +189,7 @@ class UserProfileManager: ObservableObject {
     
     // MARK: - Helpers
     
-    private func createUserProfile(from data: [String: Any], with userId: String) -> UserProfile? {
+    private func createUserProfile(from data: [String: Any], with userId: String) -> UserProfileModel? {
         let name = data["name"] as? String
         let email = data["email"] as? String
         let phoneNumber = data["phoneNumber"] as? String
@@ -171,6 +197,17 @@ class UserProfileManager: ObservableObject {
         let profileImageURL = data["profileImageURL"] as? String
         let isSocialProfileActive = data["isSocialProfileActive"] as? Bool ?? false
         let socialAuthProvider = data["socialAuthProvider"] as? String
+        
+        // Location and personal info fields
+        let location = data["location"] as? String
+      
+        
+        // User preferences
+        let availabilityTimes = data["availabilityTimes"] as? [String]
+        let availableDays = data["availableDays"] as? [String]
+        let favoriteActivities = data["favoriteActivities"] as? [String]
+        let calendarConnections = data["calendarConnections"] as? [String]
+        let travelRadius = data["travelRadius"] as? String
         
         // Handle birthday
         var birthday: Date? = nil
@@ -190,7 +227,7 @@ class UserProfileManager: ObservableObject {
             updatedAt = Date(timeIntervalSince1970: updatedTimestamp)
         }
         
-        return UserProfile(
+        return UserProfileModel(
             id: userId,
             name: name,
             email: email,
@@ -198,10 +235,16 @@ class UserProfileManager: ObservableObject {
             bio: bio,
             profileImageURL: profileImageURL,
             birthday: birthday,
+            location: location,            
             createdAt: createdAt,
             updatedAt: updatedAt,
             isSocialProfileActive: isSocialProfileActive,
-            socialAuthProvider: socialAuthProvider
+            socialAuthProvider: socialAuthProvider,
+            availabilityTimes: availabilityTimes,
+            availableDays: availableDays,
+            favoriteActivities: favoriteActivities,
+            calendarConnections: calendarConnections,
+            travelRadius: travelRadius
         )
     }
     

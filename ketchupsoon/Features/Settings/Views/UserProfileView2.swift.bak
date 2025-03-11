@@ -1,3 +1,6 @@
+// Will use after MVP
+
+
 import SwiftUI
 import FirebaseAuth
 import PhotosUI
@@ -683,4 +686,4 @@ struct UserProfileView: View {
 #Preview {
     UserProfileView()
         .preferredColorScheme(.dark)
-} 
+}

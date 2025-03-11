@@ -59,7 +59,7 @@ struct SettingsView: View {
                         
                         VStack(spacing: 0) {
                             NavigationLink {
-                                ProfileSettingsView()
+                                UserProfileView()
                             } label: {
                                 menuItem(
                                     title: "Profile Settings",
