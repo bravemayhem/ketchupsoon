@@ -6,10 +6,15 @@ struct FriendProfileView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var isFavorite = false
     
-    let friend: FriendModel
+    let friend: UserModel
     
-    // Profile appearance (using a default gradient for the ring)
-    private let profileRingGradient: LinearGradient = AppColors.accentGradient2
+    // Profile appearance (using the friend's gradient index)
+    private var profileRingGradient: LinearGradient {
+        // Safely access the avatar gradients array
+        let gradients = AppColors.avatarGradients
+        let safeIndex = min(max(friend.gradientIndex, 0), gradients.count - 1)
+        return gradients[safeIndex]
+    }
     
     // MARK: - Body
     var body: some View {
@@ -36,7 +41,7 @@ struct FriendProfileView: View {
             .foregroundColor(.white)
             
             // Action buttons at bottom
-            bottomActionButtons
+         //   bottomActionButtons
             
             // Back button
             backButton
@@ -57,8 +62,8 @@ struct FriendProfileView: View {
                     .shadow(color: AppColors.purple.opacity(0.5), radius: 8, x: 0, y: 0)
                 
                 // Profile image or emoji
-                if let profileImageURL = friend.profileImageURL, !profileImageURL.isEmpty {
-                    AsyncImage(url: URL(string: profileImageURL)) { image in
+                if let profileImageURL = friend.profileImageURL, !profileImageURL.isEmpty, let url = URL(string: profileImageURL) {
+                    AsyncImage(url: url) { image in
                         image
                             .resizable()
                             .aspectRatio(contentMode: .fill)
@@ -86,7 +91,7 @@ struct FriendProfileView: View {
             .padding(.top, 20)
             
             // User name
-            Text(friend.name)
+            Text(friend.name ?? "Friend")
                 .font(.system(size: 30, weight: .bold))
                 .foregroundColor(.white)
                 .multilineTextAlignment(.center)
@@ -133,7 +138,11 @@ struct FriendProfileView: View {
         .padding(.horizontal, 10)
     }
     
+    
+    
     // MARK: - Bottom Action Buttons
+    //Removing for MVP
+    /*
     private var bottomActionButtons: some View {
         VStack {
             Spacer()
@@ -185,6 +194,8 @@ struct FriendProfileView: View {
             .padding(.bottom, 80)
         }
     }
+    
+    */
     
     // MARK: - Back Button
     private var backButton: some View {
@@ -270,7 +281,8 @@ struct FriendProfileView: View {
 // MARK: - Preview
 #Preview {
     // Create a sample friend for preview
-    let sampleFriend = FriendModel(
+    let sampleFriend = UserModel(
+        id: "123456",
         name: "Jordan Chen",
         profileImageURL: nil,
         email: "jordan@example.com",

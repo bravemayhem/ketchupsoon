@@ -37,20 +37,50 @@ struct FriendAvatarWithProfileView: View {
     
     // Create a Friend model from FriendItem for the profile view
     private func createFriendProfileView() -> some View {
+        // Determine gradient index based on the colors
+        let gradientIndex = determineGradientIndex(friend.gradient)
+        
         // Create a Friend with all available data from FriendItem
-        let friend = FriendModel(
-            id: UUID(), // Create a new ID
+        let user = UserModel(
+            id: friend.id, // Use the string ID directly
             name: self.friend.name,
             profileImageURL: nil, // No URL in FriendItem
             email: self.friend.email,
             phoneNumber: self.friend.phoneNumber,
             bio: self.friend.bio,
             birthday: self.friend.birthday,
+            gradientIndex: gradientIndex,
             createdAt: Date(), 
             updatedAt: Date()
         )
         
-        return FriendProfileView(friend: friend)
+        return FriendProfileView(friend: user)
+    }
+    
+    // Helper function to determine which predefined gradient is being used
+    private func determineGradientIndex(_ colors: [Color]) -> Int {
+        // Return early if invalid colors array
+        guard colors.count >= 2 else { return 0 }
+        
+        // Check against predefined gradient colors
+        let startColor = colors[0]
+        let endColor = colors[1]
+        
+        // Compare with known gradients
+        if startColor == AppColors.gradient1Start && endColor == AppColors.gradient1End {
+            return 0
+        } else if startColor == AppColors.gradient2Start && endColor == AppColors.gradient2End {
+            return 1
+        } else if startColor == AppColors.gradient3Start && endColor == AppColors.gradient3End {
+            return 2
+        } else if startColor == AppColors.gradient4Start && endColor == AppColors.gradient4End {
+            return 3
+        } else if startColor == AppColors.gradient5Start && endColor == AppColors.gradient5End {
+            return 4
+        }
+        
+        // Default to the first gradient if no match is found
+        return 0
     }
 }
 

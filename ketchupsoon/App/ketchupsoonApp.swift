@@ -163,6 +163,7 @@ struct ketchupsoonApp: App {
         do {
             print("🏗 Creating schema...")
             let schema = Schema([
+                UserModel.self
             ])
             
             print("📦 Creating ModelContainer...")

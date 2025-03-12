@@ -1,7 +1,17 @@
 import SwiftUI
 import FirebaseAuth
+import FirebaseFirestore
+import FirebaseStorage
+import SwiftData
 
 class KetchupSoonOnboardingViewModel: ObservableObject {
+    private let container: ModelContainer
+    
+    // Initialize with the container
+    init(container: ModelContainer) {
+        self.container = container
+    }
+
     // Current step in the onboarding flow
     @Published var currentStep = 0
     
@@ -15,6 +25,9 @@ class KetchupSoonOnboardingViewModel: ObservableObject {
     @Published var showVerificationView = false
     @Published var authError: Error?
     @Published var showingError = false
+    
+    // Processing state
+    @Published var isProcessingProfile = false
     
     // Image picker state
     @Published var showImagePicker = false
@@ -186,4 +199,94 @@ class KetchupSoonOnboardingViewModel: ObservableObject {
         sourceType = .photoLibrary
         showImagePicker = true
     }
-} 
+    
+    // MARK: - Profile Creation
+    
+    /// Create and save user profile to both SwiftData and Firebase
+    @MainActor // Mark this method as running on the Main actor
+    func completeOnboarding() async throws {
+        guard let userId = Auth.auth().currentUser?.uid else {
+            throw NSError(domain: "com.ketchupsoon", code: 3, 
+                         userInfo: [NSLocalizedDescriptionKey: "User not authenticated"])
+        }
+        
+        // Create UserModel from collected data
+        let newUser = UserModel(
+            id: userId,
+            name: self.profileData.name,
+            profileImageURL: nil, // Will be updated after image upload if needed
+            email: self.profileData.email,
+            phoneNumber: self.phoneNumber,
+            bio: self.profileData.bio,
+            birthday: self.profileData.birthday,
+            isSocialProfileActive: false
+        )
+        
+        // Upload profile image if needed
+        if self.profileData.useImageAvatar, let image = self.profileData.avatarImage {
+            // Compress image
+            guard let compressedImage = image.jpegData(compressionQuality: 0.7) else {
+                throw NSError(domain: "com.ketchupsoon", code: 4, 
+                             userInfo: [NSLocalizedDescriptionKey: "Failed to compress image"])
+            }
+            
+            // Upload to Firebase Storage
+            let storageRef = Storage.storage().reference().child("profile_images/\(userId).jpg")
+            _ = try await storageRef.putDataAsync(compressedImage)
+            
+            // Get download URL
+            let downloadURL = try await storageRef.downloadURL()
+            
+            // Update model with image URL
+            newUser.profileImageURL = downloadURL.absoluteString
+        }
+        
+        // Access modelContext on the Main actor
+        let modelContext = container.mainContext
+        
+        // Save to SwiftData
+        modelContext.insert(newUser)
+        try modelContext.save()
+        
+        // Save to Firebase
+        let userData = newUser.toFirebaseDictionary()
+        let db = Firestore.firestore()
+        try await db.collection("users").document(userId).setData(userData)
+        
+        // Update UserSettings with additional user info
+        if !self.profileData.name.isEmpty {
+            UserSettings.shared.updateName(self.profileData.name)
+        }
+        
+        if !self.profileData.email.isEmpty {
+            UserSettings.shared.updateEmail(self.profileData.email)
+        }
+        // Phone number already saved in savePhoneNumber()
+    }
+    
+    /// UI-facing function to start the profile creation process
+    func finishOnboarding() {
+        // Set processing state
+        isProcessingProfile = true
+        
+        Task {
+            do {
+                try await completeOnboarding()
+                
+                // Update UI on success
+                await MainActor.run {
+                    isProcessingProfile = false
+                    // Here you could navigate to main app or show success message
+                    // For example: appState.onboardingComplete = true
+                }
+            } catch {
+                // Handle errors
+                await MainActor.run {
+                    isProcessingProfile = false
+                    self.authError = error
+                    self.showingError = true
+                }
+            }
+        }
+    }
+}
