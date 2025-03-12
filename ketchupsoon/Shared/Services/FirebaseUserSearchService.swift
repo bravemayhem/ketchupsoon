@@ -2,6 +2,7 @@ import Foundation
 import FirebaseFirestore
 import SwiftData
 import OSLog
+import FirebaseAuth
 
 /// A service for searching for and managing Firebase user profiles
 @MainActor
@@ -13,7 +14,7 @@ class FirebaseUserSearchService: ObservableObject {
     private let usersCollection = "users"
     
     @Published var isSearching = false
-    @Published var searchResults: [UserProfileModel] = []
+    @Published var searchResults: [UserModel] = []
     @Published var error: Error?
     
     // MARK: - Search Methods
@@ -21,12 +22,11 @@ class FirebaseUserSearchService: ObservableObject {
     /// Search for users by email or phone number
     /// - Parameter query: The email or phone number to search for
     /// - Returns: True if users were found, false otherwise
-    func searchUsers(byEmailOrPhone query: String) async -> Bool {
-        guard !query.isEmpty else { return false }
+    func searchUsers(byEmailOrPhone query: String) async -> [UserModel] {
+        guard !query.isEmpty else { return [] }
         
         await MainActor.run {
             isSearching = true
-            searchResults = []
             error = nil
         }
         
@@ -39,118 +39,203 @@ class FirebaseUserSearchService: ObservableObject {
                 try await searchByField("phoneNumber", value: query) : []
             
             // Combine results (removing duplicates) without using Set
-            var uniqueProfiles: [String: UserProfileModel] = [:]
+            var uniqueProfiles: [String: UserModel] = [:]
             for profile in emailResults + phoneResults {
                 uniqueProfiles[profile.id] = profile
             }
             let allResults = Array(uniqueProfiles.values)
             
             await MainActor.run {
-                searchResults = allResults
                 isSearching = false
             }
             
-            return !allResults.isEmpty
+            return allResults
         } catch {
             await MainActor.run {
                 self.error = error
                 isSearching = false
                 logger.error("Error searching for users: \(error.localizedDescription)")
             }
-            return false
+            return []
         }
     }
     
-    /// Creates a Friend object from a UserProfile, with firebaseUserId linked
+    /// Creates a FriendshipModel from a UserProfileModel, with Firebase relationship
     /// - Parameters:
     ///   - profile: The Firebase UserProfile to convert
     ///   - modelContext: The SwiftData ModelContext to save to
-    /// - Returns: The created Friend object
-    func createFriendFromFirebaseUser(_ profile: UserProfileModel, in modelContext: ModelContext) -> FriendModel {
-        // Check for existing friend with this Firebase ID
-        // First fetch all friends with non-nil firebaseUserId
-        let nonNilDescriptor = FetchDescriptor<FriendModel>(
-            predicate: #Predicate<FriendModel> { $0.firebaseUserId != nil }
+    /// - Returns: The created FriendshipModel object
+    func createFriendFromFirebaseUser(_ profile: UserProfileModel, in modelContext: ModelContext) -> FriendshipModel {
+        // First get the current user ID - we need this to establish the relationship
+        guard let currentUser = Auth.auth().currentUser else {
+            logger.error("No current user logged in, cannot create friendship")
+            fatalError("Cannot create friendship without current user")
+        }
+        
+        let currentUserID = currentUser.uid
+        
+        // Check for existing friendship with this Firebase user
+        let friendshipDescriptor = FetchDescriptor<FriendshipModel>(
+            predicate: #Predicate<FriendshipModel> { 
+                $0.userID == currentUserID && $0.friendID == profile.id 
+            }
         )
         
         do {
-            // Then manually filter for the matching ID
-            let potentialFriends = try modelContext.fetch(nonNilDescriptor)
-            if let existingFriend = potentialFriends.first(where: { $0.firebaseUserId == profile.id }) {
-                logger.info("Found existing friend with Firebase ID \(profile.id)")
-                return existingFriend
+            let existingFriendships = try modelContext.fetch(friendshipDescriptor)
+            if let existingFriendship = existingFriendships.first {
+                logger.info("Found existing friendship with Firebase user \(profile.id)")
+                return existingFriendship
             }
         } catch {
-            logger.error("Error fetching existing friends: \(error.localizedDescription)")
+            logger.error("Error fetching existing friendships: \(error.localizedDescription)")
         }
         
-        // Create new Friend using the convenience initializer
-        let friend = FriendModel(from: profile)
-        
-        // Handle profile image if available
-        if let profileImageURLString = profile.profileImageURL, 
-           let url = URL(string: profileImageURLString) {
-            // This is just a placeholder - you'd implement image loading separately
-            // using URLSession or a library like Kingfisher
-            logger.info("Profile image available at: \(url)")
-        }
-        
-        modelContext.insert(friend)
-        logger.info("Created new friend from Firebase user: \(profile.id)")
-        
-        return friend
-    }
-    
-    /// Checks if any of the user's existing friends could be linked to Firebase users
-    /// - Parameter modelContext: The SwiftData context containing friends
-    func checkExistingFriendsForFirebaseUsers(in modelContext: ModelContext) async {
-        // Get all friends without Firebase IDs
-        let descriptor = FetchDescriptor<FriendModel>(
-            predicate: #Predicate<FriendModel> {
-                $0.firebaseUserId == nil
-            }
+        // Create UserModel for the friend if it doesn't exist
+        let userDescriptor = FetchDescriptor<UserModel>(
+            predicate: #Predicate<UserModel> { $0.id == profile.id }
         )
         
-        guard let friends = try? modelContext.fetch(descriptor) else {
-            logger.error("Failed to fetch friends from model context")
+        do {
+            let users = try modelContext.fetch(userDescriptor)
+            if users.isEmpty {
+                // Create new UserModel
+                let user = convertToUserModel(from: profile)
+                modelContext.insert(user)
+                logger.info("Created new user from Firebase profile: \(profile.id)")
+            }
+        } catch {
+            logger.error("Error checking for existing user: \(error.localizedDescription)")
+        }
+        
+        // Create new FriendshipModel
+        let friendship = FriendshipModel(
+            userID: currentUserID,
+            friendID: profile.id
+        )
+        
+        modelContext.insert(friendship)
+        logger.info("Created new friendship with Firebase user: \(profile.id)")
+        
+        return friendship
+    }
+    
+    /// Checks for existing friendships that could be linked to Firebase users
+    /// - Parameter modelContext: The SwiftData context containing friendships and users
+    func checkExistingFriendsForFirebaseUsers(in modelContext: ModelContext) async {
+        // First, get the current user - we need this to establish relationships
+        guard let currentUser = try? await Auth.auth().currentUser else {
+            logger.error("No current user logged in, cannot check for Firebase users")
             return
         }
         
-        // Filter friends with email or phone in-memory instead of in the predicate
-        let friendsToCheck = friends.filter { 
-            ($0.email != nil && !($0.email?.isEmpty ?? true)) || 
-            ($0.phoneNumber != nil && !($0.phoneNumber?.isEmpty ?? true)) 
+        let currentUserID = currentUser.uid
+        logger.info("Checking for Firebase users for current user: \(currentUserID)")
+        
+        // Find all user entries in SwiftData that aren't the current user
+        // and have email or phone but no corresponding friendship
+        let localUserDescriptor = FetchDescriptor<UserModel>(
+            predicate: #Predicate<UserModel> {
+                $0.id != currentUserID && 
+                ($0.email != nil || $0.phoneNumber != nil)
+            }
+        )
+        
+        guard let localUsers = try? modelContext.fetch(localUserDescriptor) else {
+            logger.error("Failed to fetch local users from model context")
+            return
         }
         
-        logger.info("Checking \(friendsToCheck.count) existing friends for Firebase user profiles")
-        
-        for friend in friendsToCheck {
-            // Check by email
-            if let email = friend.email, !email.isEmpty {
-                if let profile = try? await findUserByEmail(email) {
-                    friend.firebaseUserId = profile.id
-                    logger.info("Linked friend \(friend.name) with Firebase user \(profile.id) by email")
+        // For each local user, check if we already have a friendship
+        for localUser in localUsers {
+            // Skip users without contact info
+            guard localUser.email != nil || localUser.phoneNumber != nil else {
+                continue
+            }
+            
+            // Check if we already have a friendship with this user
+            let friendshipDescriptor = FetchDescriptor<FriendshipModel>(
+                predicate: #Predicate<FriendshipModel> {
+                    $0.userID == currentUserID && $0.friendID == localUser.id
+                }
+            )
+            
+            guard let existingFriendships = try? modelContext.fetch(friendshipDescriptor),
+                  existingFriendships.isEmpty else {
+                // We already have a friendship with this user, skip
+                continue
+            }
+            
+            // We don't have a friendship yet, check if this user exists in Firebase
+            if let email = localUser.email, !email.isEmpty {
+                if let firebaseUser = try? await findUserByEmail(email) {
+                    // Create a friendship
+                    createFriendship(
+                        currentUserID: currentUserID,
+                        friendID: firebaseUser.id, 
+                        in: modelContext
+                    )
+                    logger.info("Created friendship with Firebase user \(firebaseUser.id) by email")
                     continue
                 }
             }
             
-            // Check by phone if email didn't match
-            if let phone = friend.phoneNumber, !phone.isEmpty {
-                if let profile = try? await findUserByPhone(phone) {
-                    friend.firebaseUserId = profile.id
-                    logger.info("Linked friend \(friend.name) with Firebase user \(profile.id) by phone")
+            // Try by phone if email didn't match
+            if let phone = localUser.phoneNumber, !phone.isEmpty {
+                if let firebaseUser = try? await findUserByPhone(phone) {
+                    // Create a friendship
+                    createFriendship(
+                        currentUserID: currentUserID,
+                        friendID: firebaseUser.id, 
+                        in: modelContext
+                    )
+                    logger.info("Created friendship with Firebase user \(firebaseUser.id) by phone")
                 }
             }
         }
+        
+        // Also check for incomplete friendships (ones with empty friendID)
+        let incompleteFriendshipDescriptor = FetchDescriptor<FriendshipModel>(
+            predicate: #Predicate<FriendshipModel> {
+                $0.userID == currentUserID && $0.friendID.isEmpty
+            }
+        )
+        
+        guard let incompleteFriendships = try? modelContext.fetch(incompleteFriendshipDescriptor) else {
+            logger.error("Failed to fetch incomplete friendships from model context")
+            return
+        }
+        
+        logger.info("Found \(incompleteFriendships.count) incomplete friendships to resolve")
+        
+        // For each incomplete friendship, we need the friend's details to search Firebase
+        // This assumes there's some other identifier stored that we can use to find the user
+        // Since FriendshipModel doesn't contain this info directly, we'd need to adapt this part
+        // based on how your app actually tracks unresolved friendships
+    }
+    
+    /// Creates a friendship between the current user and a friend
+    /// - Parameters:
+    ///   - currentUserID: The ID of the current user
+    ///   - friendID: The ID of the friend (Firebase user ID)
+    ///   - modelContext: The SwiftData context to save to
+    private func createFriendship(currentUserID: String, friendID: String, in modelContext: ModelContext) {
+        let friendship = FriendshipModel(
+            userID: currentUserID,
+            friendID: friendID
+        )
+        
+        modelContext.insert(friendship)
+        logger.info("Created friendship between \(currentUserID) and \(friendID)")
     }
     
     // MARK: - Helper Methods
     
-    private func searchByField(_ field: String, value: String) async throws -> [UserProfileModel] {
+    private func searchByField(_ field: String, value: String) async throws -> [UserModel] {
         let query = db.collection(usersCollection).whereField(field, isEqualTo: value)
         let snapshot = try await query.getDocuments()
         
-        return snapshot.documents.compactMap { document -> UserProfileModel? in
+        return snapshot.documents.compactMap { document -> UserModel? in
             // Use explicit type annotation to ensure it's treated as optional
             let documentData: [String: Any]? = document.data()
             if documentData == nil {
@@ -163,11 +248,17 @@ class FirebaseUserSearchService: ObservableObject {
                 return nil
             }
             
-            return createUserProfile(from: data, with: userId)
+            // First try to create a UserProfileModel
+            guard let profile = createUserProfile(from: data, with: userId) else {
+                return nil
+            }
+            
+            // Then convert to UserModel
+            return convertToUserModel(from: profile)
         }
     }
     
-    private func findUserByEmail(_ email: String) async throws -> UserProfileModel? {
+    private func findUserByEmail(_ email: String) async throws -> UserModel? {
         let query = db.collection(usersCollection).whereField("email", isEqualTo: email)
         let snapshot = try await query.getDocuments()
         
@@ -185,10 +276,14 @@ class FirebaseUserSearchService: ObservableObject {
             return nil
         }
         
-        return createUserProfile(from: data, with: userId)
+        guard let profile = createUserProfile(from: data, with: userId) else {
+            return nil
+        }
+        
+        return convertToUserModel(from: profile)
     }
     
-    private func findUserByPhone(_ phone: String) async throws -> UserProfileModel? {
+    private func findUserByPhone(_ phone: String) async throws -> UserModel? {
         let query = db.collection(usersCollection).whereField("phoneNumber", isEqualTo: phone)
         let snapshot = try await query.getDocuments()
         
@@ -206,7 +301,11 @@ class FirebaseUserSearchService: ObservableObject {
             return nil
         }
         
-        return createUserProfile(from: data, with: userId)
+        guard let profile = createUserProfile(from: data, with: userId) else {
+            return nil
+        }
+        
+        return convertToUserModel(from: profile)
     }
     
     private func createUserProfile(from data: [String: Any], with userId: String) -> UserProfileModel? {
@@ -237,5 +336,21 @@ class FirebaseUserSearchService: ObservableObject {
             createdAt: createdAt,
             updatedAt: updatedAt
         )
+    }
+    
+    // Conversion of UserProfileModel to UserModel
+    private func convertToUserModel(from profile: UserProfileModel) -> UserModel {
+        let user = UserModel(
+            id: profile.id,
+            name: profile.name,
+            profileImageURL: profile.profileImageURL,
+            email: profile.email,
+            phoneNumber: profile.phoneNumber,
+            bio: profile.bio,
+            createdAt: profile.createdAt,
+            updatedAt: profile.updatedAt
+        )
+        
+        return user
     }
 } 
