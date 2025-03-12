@@ -21,7 +21,9 @@ struct UserProfileView: View {
     @State private var phoneNumber: String = ""
     @State private var email: String = ""
     @State private var birthday: Date? = nil
-    @State private var location: String = ""
+    
+    // Profile appearance (using a default gradient for the ring)
+    @State private var profileRingGradient: LinearGradient = AppColors.accentGradient2
     
     // UI elements (these can stay as emojis since they're UI elements, not data)
     @State private var profileEmoji = "😎"
@@ -76,17 +78,19 @@ struct UserProfileView: View {
             
             // Main content
             ScrollView {
-                VStack(spacing: 20) {
-                    // Profile header
-                    profileHeaderSection
-                    
-                    if isEditMode {
+                VStack(spacing: 24) {
+                    if !isEditMode {
+                        // Profile content in view mode
+                        profileContentView
+                    } else {
+                        // Edit form when in edit mode
                         editFormSection
                     }
                     
                     Spacer(minLength: 30)
                 }
                 .padding(.horizontal)
+                .padding(.top, 20)
             }
             .foregroundColor(.white)
         }
@@ -170,378 +174,303 @@ struct UserProfileView: View {
         }
     }
     
-    // MARK: - Profile Header Section
-    private var profileHeaderSection: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 20)
-                .fill(
-                    LinearGradient(
-                        gradient: Gradient(colors: [
-                            Color(red: 35/255, green: 28/255, blue: 65/255, opacity: 0.85),
-                            Color(red: 31/255, green: 24/255, blue: 59/255, opacity: 0.8)
-                        ]),
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 20)
-                        .stroke(
-                            LinearGradient(
-                                gradient: Gradient(colors: [
-                                    Color.white.opacity(0.2),
-                                    Color.white.opacity(0.05)
-                                ]),
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            ),
-                            lineWidth: 1
-                        )
-                )
-                .shadow(color: Color.black.opacity(0.12), radius: 10, x: 0, y: 5)
-            
-            VStack(spacing: 12) {
-                // Profile picture and edit button row
-                HStack {
-                    Spacer()
-                    
-                    // Profile image with data-aware display
-                    ZStack {
-                        // Main avatar circle with gradient ring
-                        Circle()
-                            .fill(LinearGradient(
-                                gradient: Gradient(colors: [AppColors.gradient2Start, AppColors.gradient2End]),
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            ))
-                            .frame(width: 120, height: 120)
-                            .shadow(color: AppColors.gradient2Start.opacity(0.3), radius: 8, x: 0, y: 0)
-                        
-                        // Profile image or emoji
-                        if let profileImage = profileImage {
-                            // Show selected image while processing
-                            Image(uiImage: profileImage)
-                                .resizable()
-                                .aspectRatio(contentMode: .fill)
-                                .frame(width: 110, height: 110)
-                                .clipShape(Circle())
-                        } else if let cachedImage = cachedProfileImage {
-                            // Show cached image
-                            Image(uiImage: cachedImage)
-                                .resizable()
-                                .aspectRatio(contentMode: .fill)
-                                .frame(width: 110, height: 110)
-                                .clipShape(Circle())
-                        } else if let photoURL = profileManager.currentUserProfile?.profileImageURL,
-                                  !photoURL.isEmpty {
-                            // Profile image from URL with loading indicator
-                            ZStack {
-                                // Show emoji placeholder while loading
-                                Text(profileEmoji)
-                                    .font(.system(size: 44))
-                                    .frame(width: 110, height: 110)
-                                
-                                // Add a progress indicator
-                                ProgressView()
-                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                            }
-                            .onAppear {
-                                // Trigger preload if not already done
-                                preloadProfileImage()
-                            }
-                        } else {
-                            // Emoji placeholder when no image is available
-                            Text(profileEmoji)
-                                .font(.system(size: 44))
-                                .frame(width: 110, height: 110)
-                        }
-                        
-                        // Loading overlay when uploading
-                        if isUploadingImage {
-                            ProgressView()
-                                .frame(width: 110, height: 110)
-                                .background(Color.black.opacity(0.3))
-                                .clipShape(Circle())
-                        }
-                        
-                        // Camera button
-                        ZStack {
-                            Circle()
-                                .fill(Color.white.opacity(0.2))
-                                .frame(width: 36, height: 36)
-                            
-                            Text(cameraEmoji)
-                                .font(.system(size: 18))
-                        }
-                        .offset(x: 30, y: 30)
-                        .onTapGesture {
-                            // Show action sheet to choose image source
-                            showSourceTypeActionSheet = true
-                        }
-                    }
-                    
-                    Spacer()
-                }
-                .padding(.top, 20)
+    // MARK: - Profile Content View
+    private var profileContentView: some View {
+        VStack(spacing: 20) {
+            // Profile picture
+            ZStack {
+                // Gradient ring with glow effect
+                Circle()
+                    .fill(profileRingGradient)
+                    .frame(width: 150, height: 150)
+                    .glow(color: AppColors.purple, radius: 10, opacity: 0.6)
                 
-                // Name 
-                if !isEditMode {
-                    Text(userName)
-                        .font(.system(size: 26, weight: .bold))
-                        .foregroundColor(.white)
-                        .shadow(color: AppColors.gradient1Start.opacity(0.5), radius: 2, x: 0, y: 0)
-                    
-                    // Edit button
-                    HStack(spacing: 30) {
-                        Text(isEditMode ? "save" : "edit")
-                            .font(.system(size: 14, weight: .medium))
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 6)
-                            .background(
-                                LinearGradient(
-                                    gradient: Gradient(colors: [
-                                        Color(red: 44/255, green: 35/255, blue: 75/255),
-                                        Color(red: 54/255, green: 45/255, blue: 85/255)
-                                    ]),
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 999)
-                                    .stroke(Color.white.opacity(0.15), lineWidth: 1)
-                            )
-                            .cornerRadius(999)
-                            .shadow(color: Color.black.opacity(0.15), radius: 3, x: 0, y: 2)
-                            .onTapGesture {
-                                isEditMode.toggle()
-                            }
-                    }
-                    
-                    // Bio with subtle highlight
-                    if !userBio.isEmpty {
-                        Text(userBio)
-                            .font(.system(size: 16))
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal)
-                            .padding(.top, 4)
-                            .padding(.bottom, 8)
-                            .foregroundColor(.white.opacity(0.9))
-                            .lineSpacing(4)
-                    } else {
-                        Text("Add a bio to tell others about yourself")
-                            .font(.system(size: 14, weight: .medium))
-                            .italic()
-                            .foregroundColor(.white.opacity(0.5))
-                            .padding(.horizontal)
-                            .padding(.top, 4)
-                            .padding(.bottom, 8)
-                    }
-                    
-                    // Subtle divider
-                    Rectangle()
-                        .fill(
-                            LinearGradient(
-                                gradient: Gradient(colors: [
-                                    Color.white.opacity(0),
-                                    Color.white.opacity(0.15),
-                                    Color.white.opacity(0)
-                                ]),
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
-                        .frame(height: 0.5)
-                        .padding(.horizontal, 40)
-                        .padding(.vertical, 10)
-                    
-                    // User info cards - replacing the single line text
-                    userInfoCardView
-                }
-            }
-        }
-        .padding(.top, 15)
-    }
-    
-    // New view for displaying user info in cards
-    private var userInfoCardView: some View {
-        VStack(spacing: 12) {
-            // Only show this section if we have any information to display
-            if !location.isEmpty || !phoneNumber.isEmpty || birthday != nil {
-                // If we have both location and phone, use an HStack
-                // If we have just one, center it
-                if !location.isEmpty && !phoneNumber.isEmpty {
-                    HStack(spacing: 12) {
-                        // Location Card
-                        infoCard(icon: "📍", label: "Location", value: location)
-                            .frame(maxWidth: .infinity)
+                // Profile image or emoji
+                if let profileImage = profileImage {
+                    // Show selected image while processing
+                    Image(uiImage: profileImage)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: 140, height: 140)
+                        .clipShape(Circle())
+                } else if let cachedImage = cachedProfileImage {
+                    // Show cached image
+                    Image(uiImage: cachedImage)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: 140, height: 140)
+                        .clipShape(Circle())
+                } else if let photoURL = profileManager.currentUserProfile?.profileImageURL,
+                          !photoURL.isEmpty {
+                    // Profile image from URL with loading indicator
+                    ZStack {
+                        // Show emoji placeholder while loading
+                        Text(profileEmoji)
+                            .font(.system(size: 50))
+                            .frame(width: 140, height: 140)
                         
-                        // Phone Card
-                        infoCard(icon: "📱", label: "Phone", value: formatPhoneForDisplay(phoneNumber))
-                            .frame(maxWidth: .infinity)
+                        // Add a progress indicator
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                    }
+                    .onAppear {
+                        preloadProfileImage()
                     }
                 } else {
-                    // If only one of them exists, display it centered
-                    if !location.isEmpty {
-                        infoCard(icon: "📍", label: "Location", value: location)
-                            .frame(maxWidth: .infinity)
-                            .padding(.horizontal, 20)
-                    }
+                    // Emoji placeholder when no image is available
+                    Text(profileEmoji)
+                        .font(.system(size: 50))
+                        .frame(width: 140, height: 140)
+                }
+                
+                // Loading overlay when uploading
+                if isUploadingImage {
+                    ProgressView()
+                        .frame(width: 140, height: 140)
+                        .background(Color.black.opacity(0.3))
+                        .clipShape(Circle())
+                }
+                
+                // Camera button
+                ZStack {
+                    Circle()
+                        .fill(Color.white.opacity(0.2))
+                        .frame(width: 36, height: 36)
                     
-                    if !phoneNumber.isEmpty {
-                        infoCard(icon: "📱", label: "Phone", value: formatPhoneForDisplay(phoneNumber))
-                            .frame(maxWidth: .infinity)
-                            .padding(.horizontal, 20)
-                    }
+                    Text(cameraEmoji)
+                        .font(.system(size: 18))
                 }
-                
-                // Birthday Card - on its own row for better layout
-                if let birthday = birthday {
-                    infoCard(icon: "🎂", label: "Birthday", value: formatBirthdayForDisplay(birthday))
-                        .frame(maxWidth: .infinity)
-                        .padding(.horizontal, 20)
+                .offset(x: 45, y: 45)
+                .onTapGesture {
+                    showSourceTypeActionSheet = true
                 }
             }
-        }
-        .padding(.bottom, 20)
-    }
-    
-    // Helper view for creating consistent info cards
-    private func infoCard(icon: String, label: String, value: String) -> some View {
-        HStack(spacing: 12) {
-            // Icon circle
-            ZStack {
-                Circle()
-                    .fill(LinearGradient(
-                        gradient: Gradient(colors: [AppColors.gradient1Start.opacity(0.6), AppColors.gradient1End.opacity(0.6)]),
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ))
-                    .frame(width: 36, height: 36)
-                    .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
-                
-                Text(icon)
+            .padding(.top, 20)
+            
+            // User name
+            Text(userName)
+                .font(.system(size: 30, weight: .bold))
+                .foregroundColor(.white)
+                .multilineTextAlignment(.center)
+                .shadow(color: Color.black.opacity(0.3), radius: 2, x: 0, y: 1)
+                .padding(.top, 10)
+            
+            // User bio (as regular text)
+            if !userBio.isEmpty {
+                Text(userBio)
                     .font(.system(size: 16))
+                    .foregroundColor(.white.opacity(0.9))
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(4)
+                    .padding(.horizontal, 20)
+                    .padding(.top, 2)
             }
             
-            // Info content
-            VStack(alignment: .leading, spacing: 2) {
-                Text(label)
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(.white.opacity(0.6))
+            // User info as simple text lines with emoji
+            VStack(spacing: 12) {
+                if !phoneNumber.isEmpty {
+                    HStack(spacing: 8) {
+                        Text("📱")
+                        Text(formatPhoneForDisplay(phoneNumber))
+                            .font(.system(size: 16))
+                    }
+                    .frame(maxWidth: .infinity, alignment: .center)
+                }
                 
-                Text(value)
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(.white)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
+                if let birthday = birthday {
+                    HStack(spacing: 8) {
+                        Text("🎂")
+                        Text(formatBirthdayForDisplay(birthday))
+                            .font(.system(size: 16))
+                    }
+                    .frame(maxWidth: .infinity, alignment: .center)
+                }
             }
+            .padding(.top, 10)
             
-            Spacer()
+            // Edit profile button
+            Button(action: {
+                isEditMode.toggle()
+            }) {
+                Text("edit profile")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(.white)
+                    .frame(width: 200, height: 44)
+                    .background(
+                        RoundedRectangle(cornerRadius: 22)
+                            .fill(Color.white.opacity(0.15))
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 22)
+                            .stroke(Color.white.opacity(0.25), lineWidth: 1)
+                    )
+                    .shadow(color: Color.black.opacity(0.2), radius: 3, x: 0, y: 2)
+            }
+            .padding(.top, 20)
+            .padding(.bottom, 30)
         }
-        .padding(.vertical, 10)
-        .padding(.horizontal, 14)
-        .background(
-            RoundedRectangle(cornerRadius: 14)
-                .fill(Color.white.opacity(0.08))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 14)
-                        .stroke(Color.white.opacity(0.12), lineWidth: 1)
-                )
-                .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
-        )
+        .padding(.horizontal, 20)
+        .padding(.vertical, 20)
+        .clayMorphism(cornerRadius: 30)
+        .padding(.horizontal, 10)
     }
     
     // MARK: - Edit Form Section
     private var editFormSection: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 20)
-                .fill(Color(red: 31/255, green: 24/255, blue: 59/255, opacity: 0.7))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 20)
-                        .stroke(Color.white.opacity(0.1), lineWidth: 1)
-                )
-            
-            VStack(spacing: 16) {
-                // Edit button at top
-                HStack {
-                    Spacer()
-                    Text("save")
-                        .font(.system(size: 14, weight: .medium))
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 6)
-                        .background(Color(red: 44/255, green: 35/255, blue: 75/255))
-                        .cornerRadius(999)
-                        .onTapGesture {
-                            isEditMode.toggle()
-                        }
+        VStack(spacing: 20) {
+            // Navigation bar with save/back buttons
+            HStack {
+                Button(action: {
+                    isEditMode.toggle()
+                }) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "chevron.left")
+                        Text("Back")
+                    }
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(.white.opacity(0.8))
                 }
-                .padding([.top, .trailing], 16)
                 
-                // Form-like fields
-                VStack(spacing: 16) {
+                Spacer()
+                
+                // Save button
+                Button(action: {
+                    saveProfile()
+                    hasChanges = false // Prevent double save from onChange handler
+                    isEditMode.toggle()
+                }) {
+                    Text("Save")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .background(Color.white.opacity(0.2))
+                        .cornerRadius(16)
+                }
+            }
+            .padding(.top, 10)
+            
+            // Form fields
+            VStack(spacing: 24) {
+                // Profile image display at top
+                ZStack {
+                    // Avatar circle with gradient and glow
+                    Circle()
+                        .fill(profileRingGradient)
+                        .frame(width: 120, height: 120)
+                        .glow(color: AppColors.purple, radius: 8, opacity: 0.6)
+                    
+                    // Profile image or emoji
+                    if let profileImage = profileImage {
+                        Image(uiImage: profileImage)
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(width: 110, height: 110)
+                            .clipShape(Circle())
+                    } else if let cachedImage = cachedProfileImage {
+                        Image(uiImage: cachedImage)
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(width: 110, height: 110)
+                            .clipShape(Circle())
+                    } else {
+                        Text(profileEmoji)
+                            .font(.system(size: 40))
+                            .frame(width: 110, height: 110)
+                    }
+                    
+                    // Camera button
+                    ZStack {
+                        Circle()
+                            .fill(Color.white.opacity(0.2))
+                            .frame(width: 36, height: 36)
+                        
+                        Text(cameraEmoji)
+                            .font(.system(size: 18))
+                    }
+                    .offset(x: 35, y: 35)
+                    .onTapGesture {
+                        showSourceTypeActionSheet = true
+                    }
+                }
+                .padding(.bottom, 10)
+                
+                // Form fields in a card
+                VStack(spacing: 20) {
                     // Name field
-                    HStack {
+                    VStack(alignment: .leading, spacing: 8) {
                         Text("Name")
-                            .foregroundColor(.white)
-                        Spacer()
-                        TextField("Not set", text: $userName)
-                            .multilineTextAlignment(.trailing)
-                            .textContentType(.name)
-                            .foregroundColor(.white)
-                            .padding(8)
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(.white.opacity(0.7))
+                        
+                        TextField("Your name", text: $userName)
+                            .font(.system(size: 16))
+                            .padding(12)
                             .background(Color.white.opacity(0.1))
-                            .cornerRadius(8)
+                            .cornerRadius(10)
                             .onChange(of: userName) { oldValue, newValue in
                                 triggerAutoSave()
                             }
                     }
                     
-                    // Email field
-                    HStack {
-                        Text("Email")
+                    // Bio field
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Bio")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(.white.opacity(0.7))
+                        
+                        TextEditor(text: $userBio)
+                            .font(.system(size: 16))
                             .foregroundColor(.white)
-                        Spacer()
-                        TextField("Not set", text: $email)
-                            .multilineTextAlignment(.trailing)
+                            .scrollContentBackground(.hidden)
+                            .background(Color.white.opacity(0.1))
+                            .frame(minHeight: 80)
+                            .cornerRadius(10)
+                            .onChange(of: userBio) { oldValue, newValue in
+                                triggerAutoSave()
+                            }
+                    }
+                    
+                    // Email field
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Email")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(.white.opacity(0.7))
+                        
+                        TextField("email@example.com", text: $email)
+                            .font(.system(size: 16))
                             .textContentType(.emailAddress)
                             .keyboardType(.emailAddress)
                             .autocapitalization(.none)
                             .autocorrectionDisabled()
-                            .foregroundColor(.white)
-                            .padding(8)
+                            .padding(12)
                             .background(Color.white.opacity(0.1))
-                            .cornerRadius(8)
+                            .cornerRadius(10)
                             .onChange(of: email) { oldValue, newValue in
                                 triggerAutoSave()
                             }
                     }
                     
-                    // Phone field
-                    HStack {
+                    // Phone field (non-editable display)
+                    VStack(alignment: .leading, spacing: 8) {
                         Text("Phone")
-                            .foregroundColor(.white)
-                        Spacer()
-                        HStack {
-                            Text(phoneNumber.isEmpty ? "Not set" : phoneNumber)
-                                .foregroundColor(.white.opacity(0.7))
-                                .multilineTextAlignment(.trailing)
-                                .frame(maxWidth: .infinity, alignment: .trailing)
-                            
-                            Image(systemName: "lock.fill")
-                                .foregroundColor(.gray)
-                                .font(.system(size: 12))
-                        }
-                        .padding(8)
-                        .background(Color.white.opacity(0.05))
-                        .cornerRadius(8)
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(.white.opacity(0.7))
+                        
+                        Text(phoneNumber.isEmpty ? "Not set" : formatPhoneForDisplay(phoneNumber))
+                            .font(.system(size: 16))
+                            .padding(12)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(Color.white.opacity(0.05))
+                            .cornerRadius(10)
                     }
                     
                     // Birthday field
-                    HStack {
+                    VStack(alignment: .leading, spacing: 8) {
                         Text("Birthday")
-                            .foregroundColor(.white)
-                        Spacer()
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(.white.opacity(0.7))
+                        
                         DatePicker(
                             "",
                             selection: Binding(
@@ -556,58 +485,24 @@ struct UserProfileView: View {
                         .labelsHidden()
                         .colorScheme(.dark)
                         .padding(8)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                         .background(Color.white.opacity(0.1))
-                        .cornerRadius(8)
-                    }
-                    
-                    // Location field
-                    HStack {
-                        Text("Location")
-                            .foregroundColor(.white)
-                        Spacer()
-                        TextField("City, Country", text: $location)
-                            .multilineTextAlignment(.trailing)
-                            .textContentType(.addressCity)
-                            .foregroundColor(.white)
-                            .padding(8)
-                            .background(Color.white.opacity(0.1))
-                            .cornerRadius(8)
-                            .onChange(of: location) { oldValue, newValue in
-                                triggerAutoSave()
-                            }
-                    }
-                    
-                    // Bio field
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Bio")
-                            .foregroundColor(.white)
-                        TextEditor(text: $userBio)
-                            .foregroundColor(.white)
-                            .scrollContentBackground(.hidden)
-                            .background(Color.white.opacity(0.1))
-                            .frame(minHeight: 80)
-                            .padding(4)
-                            .cornerRadius(8)
-                            .onChange(of: userBio) { oldValue, newValue in
-                                triggerAutoSave()
-                            }
+                        .cornerRadius(10)
                     }
                 }
-                .padding(.horizontal, 16)
-                .padding(.bottom, 20)
+                .padding(.horizontal, 5)
                 
                 if saveInProgress {
-                    HStack {
-                        Spacer()
-                        ProgressView()
-                            .scaleEffect(0.8)
-                        Spacer()
-                    }
-                    .padding(.bottom, 16)
+                    ProgressView()
+                        .scaleEffect(0.8)
+                        .padding(.top, 10)
                 }
             }
         }
-        .padding(.top, 15)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 20)
+        .clayMorphism(cornerRadius: 30)
+        .padding(.horizontal, 10)
     }
     
     // MARK: - Auto Save Functionality
@@ -669,12 +564,7 @@ struct UserProfileView: View {
             updates["birthday"] = birthday.timeIntervalSince1970
             logger.info("📸 Adding birthday to updates: \(birthday)")
         }
-        
-        // Add location
-        if !location.isEmpty {
-            updates["location"] = location
-            logger.info("📸 Adding location to updates: \(location)")
-        }
+                      
         
         if !userBio.isEmpty {
             updates["bio"] = userBio
@@ -742,11 +632,15 @@ struct UserProfileView: View {
             // Load birthday
             birthday = profile.birthday
             
-            // Load location
-            location = profile.location ?? ""
-                        
-            // Construct userInfo from location
+                                    
+            // Construct userInfo
             updateDisplayedInfo()
+            
+            // Set profile gradient based on name (for consistency)
+            if let name = profile.name, !name.isEmpty {
+                let index = abs(name.hash % AppColors.avatarGradients.count)
+                profileRingGradient = AppColors.avatarGradients[index]
+            }
             
             // Preload the profile image for faster display
             preloadProfileImage()
@@ -756,17 +650,12 @@ struct UserProfileView: View {
             userBio = ""
             userInfo = ""
             email = ""
-            phoneNumber = ""
-            location = ""
+            phoneNumber = ""         
         }
     }
     
     private func updateDisplayedInfo() {
         var infoComponents: [String] = []
-        
-        if !location.isEmpty {
-            infoComponents.append(location)
-        }
         
         // Format phone for display if available
         if !phoneNumber.isEmpty {
@@ -786,13 +675,41 @@ struct UserProfileView: View {
     
     // Helper to format phone number for display
     private func formatPhoneForDisplay(_ phone: String) -> String {
-        // If phone number has 10 digits, mask the first 6 digits
-        if phone.count >= 10 {
-            let index = phone.index(phone.endIndex, offsetBy: -4)
-            let lastFour = phone[index...]
-            return "***-***-\(lastFour)"
+        // Only keep digits
+        let cleaned = phone.filter { $0.isNumber }
+        
+        // For short numbers, just return the original
+        if cleaned.count < 10 {
+            return phone
         }
-        return phone
+        
+        var formatted = ""
+        
+        // If there are more than 10 digits, add the extra digits at the beginning
+        if cleaned.count > 10 {
+            let extraDigits = String(cleaned.prefix(cleaned.count - 10))
+            formatted += extraDigits + " "
+        }
+        
+        // Get the last 10 digits for standard formatting
+        let lastTenDigits = cleaned.count > 10 ? 
+            String(cleaned.suffix(10)) : cleaned
+        
+        // Format the last 10 digits as (XXX) XXX-XXXX
+        for (index, character) in lastTenDigits.enumerated() {
+            if index == 0 {
+                formatted += "("
+            }
+            if index == 3 {
+                formatted += ") "
+            }
+            if index == 6 {
+                formatted += "-"
+            }
+            formatted.append(character)
+        }
+        
+        return formatted
     }
     
     // Helper to format birthday for display

@@ -11,16 +11,96 @@ struct HomeView: View {
     @State private var pendingFriendRequests: Int = 3
     @State private var navigationActive = false
     
-    // Sample friends data
+    // Sample friends data with complete details
     let friends = [
-        FriendItem(id: "1", name: "sarah", emoji: "🌟", lastHangout: "3 months", gradient: [AppColors.gradient1Start, AppColors.gradient1End]),
-        FriendItem(id: "2", name: "jordan", emoji: "🎮", lastHangout: "2 weeks", gradient: [AppColors.gradient2Start, AppColors.gradient2End]),
-        FriendItem(id: "3", name: "alex", emoji: "🎵", lastHangout: "1 month", gradient: [AppColors.gradient3Start, AppColors.gradient3End]),
-        FriendItem(id: "4", name: "taylor", emoji: "🎨", lastHangout: "yesterday", gradient: [AppColors.gradient4Start, AppColors.gradient4End]),
-        FriendItem(id: "5", name: "marcus", emoji: "🚀", lastHangout: "3 weeks", gradient: [AppColors.gradient5Start, AppColors.gradient5End]),
-        FriendItem(id: "6", name: "ethan", emoji: "🌲", lastHangout: "6 months", gradient: [AppColors.gradient1Start, AppColors.gradient1End]),
-        FriendItem(id: "7", name: "sofia", emoji: "🏄", lastHangout: "8 months", gradient: [AppColors.gradient2Start, AppColors.gradient2End]),
-        FriendItem(id: "8", name: "noah", emoji: "🎭", lastHangout: "5 months", gradient: [AppColors.gradient3Start, AppColors.gradient3End])
+        FriendItem(
+            id: "1", 
+            name: "Sarah Johnson", 
+            bio: "Adventure seeker and coffee enthusiast. Always up for hiking or trying new cafes.",
+            phoneNumber: "+1 (206) 555-1234",
+            email: "sarah.j@example.com",
+            birthday: Date(timeIntervalSince1970: 791394000), // 1995-02-30
+            emoji: "🌟", 
+            lastHangout: "3 months", 
+            gradient: [AppColors.gradient1Start, AppColors.gradient1End]
+        ),
+        FriendItem(
+            id: "2", 
+            name: "Jordan Chen", 
+            bio: "Gaming enthusiast and craft beer connoisseur. Ask me about: 🎮 Elden Ring, 🏀 Warriors, 🍺 IPAs",
+            phoneNumber: "+1 (415) 555-6789",
+            email: "jordan.c@example.com",
+            birthday: Date(timeIntervalSince1970: 759931200), // 1994-01-15
+            emoji: "🎮", 
+            lastHangout: "2 weeks", 
+            gradient: [AppColors.gradient2Start, AppColors.gradient2End]
+        ),
+        FriendItem(
+            id: "3", 
+            name: "Alex Rivera", 
+            bio: "Music producer by day, foodie by night. Let's catch a show or try that new restaurant!",
+            phoneNumber: "+1 (512) 555-1212",
+            email: "alex.r@example.com",
+            birthday: Date(timeIntervalSince1970: 823046400), // 1996-01-01
+            emoji: "🎵", 
+            lastHangout: "1 month", 
+            gradient: [AppColors.gradient3Start, AppColors.gradient3End]
+        ),
+        FriendItem(
+            id: "4", 
+            name: "Taylor Smith", 
+            bio: "Artist, photographer, eternal student. Currently obsessed with watercolor and film photography.",
+            phoneNumber: "+1 (503) 555-3434",
+            email: "taylor.s@example.com",
+            birthday: Date(timeIntervalSince1970: 728265600), // 1993-02-01
+            emoji: "🎨", 
+            lastHangout: "yesterday", 
+            gradient: [AppColors.gradient4Start, AppColors.gradient4End]
+        ),
+        FriendItem(
+            id: "5", 
+            name: "Marcus Wong", 
+            bio: "Tech startup founder and space enthusiast. Always working on something new!",
+            phoneNumber: "+1 (212) 555-5678",
+            email: "marcus.w@example.com",
+            birthday: Date(timeIntervalSince1970: 696988800), // 1992-01-05
+            emoji: "🚀", 
+            lastHangout: "3 weeks", 
+            gradient: [AppColors.gradient5Start, AppColors.gradient5End]
+        ),
+        FriendItem(
+            id: "6", 
+            name: "Ethan Miller", 
+            bio: "Outdoor guide and environmental activist. Ask me about the best hiking trails!",
+            phoneNumber: "+1 (303) 555-7890",
+            email: "ethan.m@example.com",
+            birthday: Date(timeIntervalSince1970: 855360000), // 1997-02-10
+            emoji: "🌲", 
+            lastHangout: "6 months", 
+            gradient: [AppColors.gradient1Start, AppColors.gradient1End]
+        ),
+        FriendItem(
+            id: "7", 
+            name: "Sofia Rodriguez", 
+            bio: "Surf instructor and marine biology student. The ocean is my second home.",
+            phoneNumber: "+1 (619) 555-2345",
+            email: "sofia.r@example.com",
+            birthday: Date(timeIntervalSince1970: 886032000), // 1998-01-29
+            emoji: "🏄", 
+            lastHangout: "8 months", 
+            gradient: [AppColors.gradient2Start, AppColors.gradient2End]
+        ),
+        FriendItem(
+            id: "8", 
+            name: "Noah Williams", 
+            bio: "Theater director and improv coach. Life is a stage, and we're all players.",            
+            phoneNumber: "+1 (312) 555-8765",
+            email: "noah.w@example.com",
+            birthday: Date(timeIntervalSince1970: 664675200), // 1991-01-25
+            emoji: "🎭", 
+            lastHangout: "5 months", 
+            gradient: [AppColors.gradient3Start, AppColors.gradient3End]
+        )
     ]
     
     var body: some View {

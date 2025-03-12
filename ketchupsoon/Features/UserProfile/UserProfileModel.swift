@@ -12,9 +12,6 @@ struct UserProfileModel: Codable {
     var createdAt: Date
     var updatedAt: Date
     
-    // Location and personal info fields
-    var location: String?
-    
     // Social profile fields
     var isSocialProfileActive: Bool
     var socialAuthProvider: String?  // Added to track which auth provider is used
@@ -35,9 +32,7 @@ struct UserProfileModel: Codable {
         self.bio = additionalData["bio"] as? String
         self.profileImageURL = user.photoURL?.absoluteString
         
-        // Location and personal info
-        self.location = additionalData["location"] as? String
-        
+        // Personal info
         if let birthdayTimestamp = additionalData["birthday"] as? TimeInterval {
             self.birthday = Date(timeIntervalSince1970: birthdayTimestamp)
         }
@@ -79,9 +74,6 @@ struct UserProfileModel: Codable {
         profileImageURL = try container.decodeIfPresent(String.self, forKey: .profileImageURL)
         birthday = try container.decodeIfPresent(Date.self, forKey: .birthday)
         
-        // Decode location and personal info fields
-        location = try container.decodeIfPresent(String.self, forKey: .location)
-        
         // Decode dates
         if let createdTimestamp = try container.decodeIfPresent(TimeInterval.self, forKey: .createdAt) {
             createdAt = Date(timeIntervalSince1970: createdTimestamp)
@@ -120,9 +112,6 @@ struct UserProfileModel: Codable {
         try container.encodeIfPresent(profileImageURL, forKey: .profileImageURL)
         try container.encodeIfPresent(birthday, forKey: .birthday)
         
-        // Encode location and personal info fields
-        try container.encodeIfPresent(location, forKey: .location)
-        
         // Encode dates as timestamps
         try container.encode(createdAt.timeIntervalSince1970, forKey: .createdAt)
         try container.encode(updatedAt.timeIntervalSince1970, forKey: .updatedAt)
@@ -147,7 +136,6 @@ struct UserProfileModel: Codable {
          bio: String? = nil, 
          profileImageURL: String? = nil,
          birthday: Date? = nil,
-         location: String? = nil,
          createdAt: Date = Date(),
          updatedAt: Date = Date(),
          isSocialProfileActive: Bool = false,
@@ -164,7 +152,6 @@ struct UserProfileModel: Codable {
         self.bio = bio
         self.profileImageURL = profileImageURL
         self.birthday = birthday
-        self.location = location
         self.createdAt = createdAt
         self.updatedAt = updatedAt
         self.isSocialProfileActive = isSocialProfileActive
@@ -193,9 +180,6 @@ struct UserProfileModel: Codable {
         if let birthday = birthday { dict["birthday"] = birthday.timeIntervalSince1970 }
         if let socialAuthProvider = socialAuthProvider { dict["socialAuthProvider"] = socialAuthProvider }
         
-        // Add location and personal info fields
-        if let location = location { dict["location"] = location }
-        
         // Add preference fields to dictionary
         if let availabilityTimes = availabilityTimes { dict["availabilityTimes"] = availabilityTimes }
         if let availableDays = availableDays { dict["availableDays"] = availableDays }
@@ -214,8 +198,7 @@ struct UserProfileModel: Codable {
         case phoneNumber
         case bio
         case profileImageURL
-        case birthday
-        case location
+        case birthday        
         case createdAt
         case updatedAt
         case isSocialProfileActive

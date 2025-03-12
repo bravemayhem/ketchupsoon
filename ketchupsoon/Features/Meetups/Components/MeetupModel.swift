@@ -54,29 +54,29 @@ struct Meetup: Identifiable {
     static var samples: [Meetup] = [
         Meetup(
             title: "Coffee with Alex",
-            date: Date().addingTimeInterval(86400), // Tomorrow
-            location: "Blue Bottle Coffee",
+            date: Date().addingTimeInterval(86400), // Tomorrow            
+            location: "Starbucks",
             activityType: .coffee,
             participants: ["alex", "jordan"]
         ),
         Meetup(
             title: "Lunch with Sarah",
             date: Date().addingTimeInterval(172800), // Day after tomorrow
-            location: "Zazie",
+            location: "The Bistro",
             activityType: .food,
             participants: ["sarah", "alex", "jordan"]
         ),
         Meetup(
             title: "Game night",
             date: Date().addingTimeInterval(345600), // 4 days from now
-            location: "Alex's place",
+            location: "Jamie's house",
             activityType: .games,
             participants: ["alex", "jordan", "sarah", "jamie"]
         ),
         Meetup(
             title: "Hiking trip",
-            date: Date().addingTimeInterval(604800), // 1 week from now
-            location: "Mount Tam",
+            date: Date().addingTimeInterval(604800), // 1 week from now            
+            location: "Mountains",
             activityType: .outdoors,
             participants: ["sarah", "jordan"],
             notes: "Remember to bring water and snacks!"

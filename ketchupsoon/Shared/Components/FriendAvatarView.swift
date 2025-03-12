@@ -146,6 +146,10 @@ struct GlowModifier: ViewModifier {
 struct FriendItem: Identifiable {
     let id: String
     let name: String
+    let bio: String    
+    let phoneNumber: String
+    let email: String
+    let birthday: Date
     let emoji: String
     let lastHangout: String
     let gradient: [Color]

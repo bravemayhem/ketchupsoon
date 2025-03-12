@@ -37,12 +37,15 @@ struct FriendAvatarWithProfileView: View {
     
     // Create a Friend model from FriendItem for the profile view
     private func createFriendProfileView() -> some View {
-        // Create a sample Friend with the data we have from FriendItem
+        // Create a Friend with all available data from FriendItem
         let friend = FriendModel(
             id: UUID(), // Create a new ID
             name: self.friend.name,
             profileImageURL: nil, // No URL in FriendItem
-            bio: "This is \(self.friend.name)'s profile", // Sample bio
+            email: self.friend.email,
+            phoneNumber: self.friend.phoneNumber,
+            bio: self.friend.bio,
+            birthday: self.friend.birthday,
             createdAt: Date(), 
             updatedAt: Date()
         )
@@ -56,9 +59,13 @@ struct FriendAvatarWithProfileView: View {
         FriendAvatarWithProfileView(
             friend: FriendItem(
                 id: "1", 
-                name: "sarah", 
-                emoji: "🌟", 
-                lastHangout: "3 months", 
+                name: "Sarah Johnson",
+                bio: "Adventure seeker and coffee enthusiast. Always up for hiking or trying new cafes.",                
+                phoneNumber: "+1 (206) 555-1234",
+                email: "sarah.j@example.com",
+                birthday: Date(timeIntervalSince1970: 791394000), // 1995-02-30
+                emoji: "🌟",
+                lastHangout: "3 months",
                 gradient: [AppColors.gradient1Start, AppColors.gradient1End]
             )
         )

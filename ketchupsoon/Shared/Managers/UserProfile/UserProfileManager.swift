@@ -148,11 +148,6 @@ class UserProfileManager: ObservableObject {
                 updatedProfile.socialAuthProvider = nil
             }
             
-            // Handle location and personal info updates
-            if let location = updates["location"] as? String {
-                updatedProfile.location = location
-            }
-            
             // Handle user preference updates
             if let availabilityTimes = updates["availabilityTimes"] as? [String] {
                 updatedProfile.availabilityTimes = availabilityTimes
@@ -197,9 +192,7 @@ class UserProfileManager: ObservableObject {
         let profileImageURL = data["profileImageURL"] as? String
         let isSocialProfileActive = data["isSocialProfileActive"] as? Bool ?? false
         let socialAuthProvider = data["socialAuthProvider"] as? String
-        
-        // Location and personal info fields
-        let location = data["location"] as? String
+                
       
         
         // User preferences
@@ -234,8 +227,7 @@ class UserProfileManager: ObservableObject {
             phoneNumber: phoneNumber,
             bio: bio,
             profileImageURL: profileImageURL,
-            birthday: birthday,
-            location: location,            
+            birthday: birthday,                      
             createdAt: createdAt,
             updatedAt: updatedAt,
             isSocialProfileActive: isSocialProfileActive,

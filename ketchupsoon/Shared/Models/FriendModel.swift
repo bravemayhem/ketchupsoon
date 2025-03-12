@@ -32,7 +32,7 @@ final class FriendModel {
         email: String? = nil,
         phoneNumber: String? = nil,
         bio: String? = nil,
-        birthday: Date? = nil,
+        birthday: Date? = nil,        
         firebaseUserId: String? = nil,
         createdAt: Date = Date(),
         updatedAt: Date = Date()

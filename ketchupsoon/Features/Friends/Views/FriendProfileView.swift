@@ -8,6 +8,8 @@ struct FriendProfileView: View {
     
     let friend: FriendModel
     
+    // Profile appearance (using a default gradient for the ring)
+    private let profileRingGradient: LinearGradient = AppColors.accentGradient2
     
     // MARK: - Body
     var body: some View {
@@ -18,21 +20,23 @@ struct FriendProfileView: View {
             
             // Use our shared decorative elements
             DecorativeBubbles.profile
+            BackgroundElementFactory.profileElements()
             
             // Main content
             ScrollView {
-                VStack(spacing: 20) {
-                    // Profile header
-                    profileHeaderSection
+                VStack(spacing: 24) {
+                    // Profile content view
+                    friendProfileContentView
                     
-            
-                    // Add spacer to ensure content is visible above action buttons
-                    Spacer().frame(height: 60)
+                    Spacer(minLength: 30)
                 }
                 .padding(.horizontal)
-                .padding(.bottom, 100)
+                .padding(.top, 20)
             }
+            .foregroundColor(.white)
             
+            // Action buttons at bottom
+            bottomActionButtons
             
             // Back button
             backButton
@@ -40,126 +44,93 @@ struct FriendProfileView: View {
         .navigationBarHidden(true)
     }
     
-    // MARK: - Profile Header Section
-    private var profileHeaderSection: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 20)
-                .fill(Color(red: 31/255, green: 24/255, blue: 59/255, opacity: 0.7))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 20)
-                        .stroke(Color.white.opacity(0.1), lineWidth: 1)
-                )
-            
-            VStack(spacing: 16) {
-                HStack(alignment: .top, spacing: 20) {
-                    // Profile picture
-                    profileAvatarView
-                    
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(friend.name)
-                            .font(.system(size: 24, weight: .bold))
-                        .font(.system(size: 14))
-                        .foregroundColor(Color.white.opacity(0.6))
-                    }
-                }
+    // MARK: - Friend Profile Content View
+    private var friendProfileContentView: some View {
+        VStack(spacing: 20) {
+            // Profile picture
+            ZStack {
+                // Gradient ring with enhanced glow effect
+                Circle()
+                    .fill(profileRingGradient)
+                    .frame(width: 150, height: 150)
+                    .modifier(GlowModifier(color: AppColors.purple, radius: 12, opacity: 0.8))
+                    .shadow(color: AppColors.purple.opacity(0.5), radius: 8, x: 0, y: 0)
                 
-                // Bio
-                if let bio = friend.bio, !bio.isEmpty {
-                    Text(bio)
-                        .font(.system(size: 14))
-                        .foregroundColor(Color.white.opacity(0.8))
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.top, 8)
-                }
-            }
-            .padding(20)
-        }
-    }
-    
-    // MARK: - Profile Avatar
-    private var profileAvatarView: some View {
-        ZStack {
-            // Gradient background
-            Circle()
-                .fill(LinearGradient(
-                    gradient: Gradient(colors: [AppColors.gradient2Start, AppColors.gradient2End]),
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                ))
-                .frame(width: 120, height: 120)
-                .shadow(color: AppColors.gradient2Start.opacity(0.3), radius: 8, x: 0, y: 0)
-            
-            // Profile image or emoji
-            if let profileImageURL = friend.profileImageURL, !profileImageURL.isEmpty {
-                AsyncImage(url: URL(string: profileImageURL)) { image in
-                    image
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                        .frame(width: 110, height: 110)
-                        .clipShape(Circle())
-                } placeholder: {
-                    Circle()
-                        .fill(Color(red: 21/255, green: 17/255, blue: 50/255))
-                        .frame(width: 110, height: 110)
-                        .overlay(
+                // Profile image or emoji
+                if let profileImageURL = friend.profileImageURL, !profileImageURL.isEmpty {
+                    AsyncImage(url: URL(string: profileImageURL)) { image in
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(width: 140, height: 140)
+                            .clipShape(Circle())
+                    } placeholder: {
+                        ZStack {
+                            // Show emoji placeholder while loading
+                            Text("😎")
+                                .font(.system(size: 50))
+                                .frame(width: 140, height: 140)
+                            
+                            // Add a progress indicator
                             ProgressView()
                                 .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                        )
+                        }
+                    }
+                } else {
+                    // Emoji placeholder when no image is available
+                    Text("😎")
+                        .font(.system(size: 50))
+                        .frame(width: 140, height: 140)
                 }
-            } else {
-                // Default emoji placeholder
-                Circle()
-                    .fill(Color(red: 21/255, green: 17/255, blue: 50/255))
-                    .frame(width: 110, height: 110)
-                    .overlay(
-                        Text("😎")
-                            .font(.system(size: 44))
-                    )
             }
-        }
-    }
-    
-   
-    // MARK: - Mutual Friends Section
-    //Nice to have - will comment out for MVP
-   /*
-    private var mutualFriendsSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("mutual friends")
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundColor(.white)
+            .padding(.top, 20)
             
-            MutualFriendsView()
-        }
-    }
-    */
-    
-    // MARK: - Availability Section
-    //Nice to have - will comment out for MVP
-    /*
-    private var availabilitySection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("availability")
-                .font(.system(size: 16, weight: .semibold))
+            // User name
+            Text(friend.name)
+                .font(.system(size: 30, weight: .bold))
                 .foregroundColor(.white)
+                .multilineTextAlignment(.center)
+                .shadow(color: Color.black.opacity(0.3), radius: 2, x: 0, y: 1)
+                .padding(.top, 10)
             
-            AvailabilityView(
-                availabilityTimes: availabilityTimes,
-                favoriteActivities: favoriteActivities
-            )
-        }
-    }
-     */
-    
-    // MARK: - Upcoming Hangouts Section
-    private var upcomingHangoutsSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("upcoming together")
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundColor(.white)
+            // User bio (as regular text)
+            if let bio = friend.bio, !bio.isEmpty {
+                Text(bio)
+                    .font(.system(size: 16))
+                    .foregroundColor(.white.opacity(0.9))
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(4)
+                    .padding(.horizontal, 20)
+                    .padding(.top, 2)
+            }
             
-            NoUpcomingHangoutsView()
+            // User info as simple text lines with emoji
+            VStack(spacing: 12) {
+                
+                if let phoneNumber = friend.phoneNumber, !phoneNumber.isEmpty {
+                    HStack(spacing: 8) {
+                        Text("📱")
+                        Text(formatPhoneForDisplay(phoneNumber))
+                            .font(.system(size: 16))
+                    }
+                    .frame(maxWidth: .infinity, alignment: .center)
+                }
+                
+                if let birthday = friend.birthday {
+                    HStack(spacing: 8) {
+                        Text("🎂")
+                        Text(formatBirthdayForDisplay(birthday))
+                            .font(.system(size: 16))
+                    }
+                    .frame(maxWidth: .infinity, alignment: .center)
+                }
+            }
+            .padding(.top, 10)
         }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 20)
+        .clayMorphism(cornerRadius: 30)
+        .padding(.horizontal, 10)
     }
     
     // MARK: - Bottom Action Buttons
@@ -209,11 +180,9 @@ struct FriendProfileView: View {
                     .cornerRadius(25)
                     .shadow(color: AppColors.gradient2Start.opacity(0.5), radius: 5)
                 }
-                
             }
             .padding(.horizontal, 20)
             .padding(.bottom, 80)
-           
         }
     }
     
@@ -247,239 +216,54 @@ struct FriendProfileView: View {
             Spacer()
         }
     }
-}
-
-// MARK: - Mutual Friends View
-struct MutualFriendsView: View {
-    var body: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 20)
-                .fill(Color(red: 31/255, green: 24/255, blue: 59/255, opacity: 0.7))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 20)
-                        .stroke(Color.white.opacity(0.1), lineWidth: 1)
-                )
-            
-            HStack(spacing: 12) {
-                // Friend 1
-                VStack {
-                    ZStack {
-                        Circle()
-                            .fill(LinearGradient(
-                                gradient: Gradient(colors: [
-                                    Color(red: 1.0, green: 0.18, blue: 0.33),
-                                    Color(red: 1.0, green: 0.58, blue: 0.0)
-                                ]),
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            ))
-                            .frame(width: 48, height: 48)
-                            .shadow(color: Color(red: 1.0, green: 0.18, blue: 0.33, opacity: 0.5), radius: 5)
-                        
-                        Circle()
-                            .fill(Color(red: 21/255, green: 17/255, blue: 50/255))
-                            .frame(width: 40, height: 40)
-                        
-                        Text("🌟")
-                            .font(.system(size: 16))
-                    }
-                    
-                    Text("sarah")
-                        .font(.system(size: 10))
-                        .foregroundColor(.white)
-                }
-                
-                // Friend 2
-                VStack {
-                    ZStack {
-                        Circle()
-                            .fill(LinearGradient(
-                                gradient: Gradient(colors: [
-                                    Color(red: 1.0, green: 0.58, blue: 0.0),
-                                    Color(red: 1.0, green: 0.18, blue: 0.33)
-                                ]),
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            ))
-                            .frame(width: 48, height: 48)
-                            .shadow(color: Color(red: 1.0, green: 0.18, blue: 0.33, opacity: 0.5), radius: 5)
-                        
-                        Circle()
-                            .fill(Color(red: 21/255, green: 17/255, blue: 50/255))
-                            .frame(width: 40, height: 40)
-                        
-                        Text("🎵")
-                            .font(.system(size: 16))
-                    }
-                    
-                    Text("alex")
-                        .font(.system(size: 10))
-                        .foregroundColor(.white)
-                }
-                
-                // Friend 3
-                VStack {
-                    ZStack {
-                        Circle()
-                            .fill(LinearGradient(
-                                gradient: Gradient(colors: [
-                                    Color(red: 0.0, green: 0.96, blue: 0.63),
-                                    Color(red: 0.37, green: 0.09, blue: 0.92)
-                                ]),
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            ))
-                            .frame(width: 48, height: 48)
-                            .shadow(color: Color(red: 0.0, green: 0.96, blue: 0.63, opacity: 0.5), radius: 5)
-                        
-                        Circle()
-                            .fill(Color(red: 21/255, green: 17/255, blue: 50/255))
-                            .frame(width: 40, height: 40)
-                        
-                        Text("🎨")
-                            .font(.system(size: 16))
-                    }
-                    
-                    Text("taylor")
-                        .font(.system(size: 10))
-                        .foregroundColor(.white)
-                }
-                
-                // +2 more
-                VStack {
-                    ZStack {
-                        Circle()
-                            .fill(Color(red: 21/255, green: 17/255, blue: 50/255))
-                            .frame(width: 48, height: 48)
-                            .overlay(
-                                Circle()
-                                    .stroke(Color.white.opacity(0.1), lineWidth: 1)
-                            )
-                        
-                        Text("+2")
-                            .font(.system(size: 14))
-                            .foregroundColor(Color.white.opacity(0.6))
-                    }
-                    
-                    Text("more")
-                        .font(.system(size: 10))
-                        .foregroundColor(Color.white.opacity(0.6))
-                }
-                
-                Spacer()
-                
-                // See all button
-                Button(action: {
-                    // See all mutual friends
-                }) {
-                    Text("see all")
-                        .font(.system(size: 12))
-                        .foregroundColor(Color.white.opacity(0.7))
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .background(Color(red: 21/255, green: 17/255, blue: 50/255))
-                        .cornerRadius(17)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 17)
-                                .stroke(Color.white.opacity(0.1), lineWidth: 1)
-                        )
-                }
-            }
-            .padding()
-        }
-    }
-}
-
-// MARK: - Availability View
-struct AvailabilityView: View {
-    var availabilityTimes: [String]
-    var favoriteActivities: [String]
     
-    var body: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 20)
-                .fill(Color(red: 31/255, green: 24/255, blue: 59/255, opacity: 0.7))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 20)
-                        .stroke(Color.white.opacity(0.1), lineWidth: 1)
-                )
-            
-            VStack(alignment: .leading, spacing: 16) {
-                HStack {
-                    Text("Prefers hangouts on")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(.white)
-                    
-                    Spacer()
-                    
-                    Text(availabilityTimes.joined(separator: " & "))
-                        .font(.system(size: 12))
-                        .foregroundColor(Color.white.opacity(0.9))
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .background(Color(red: 21/255, green: 17/255, blue: 50/255))
-                        .cornerRadius(15)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 15)
-                                .stroke(Color.white.opacity(0.1), lineWidth: 1)
-                        )
-                }
-                
-                VStack(alignment: .leading) {
-                    Text("Favorite hangout types")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(.white)
-                    
-                    HStack {
-                        ForEach(favoriteActivities, id: \.self) { activity in
-                            // Alternate colors for variety
-                            let colorIndex = favoriteActivities.firstIndex(of: activity) ?? 0
-                            let colors: [(Color, Color)] = [
-                                (Color(red: 1.0, green: 0.18, blue: 0.33), Color(red: 1.0, green: 0.18, blue: 0.33, opacity: 0.2)),
-                                (Color(red: 0.37, green: 0.09, blue: 0.92), Color(red: 0.37, green: 0.09, blue: 0.92, opacity: 0.2)),
-                                (Color(red: 1.0, green: 0.58, blue: 0.0), Color(red: 1.0, green: 0.58, blue: 0.0, opacity: 0.2))
-                            ]
-                            let (textColor, bgColor) = colors[colorIndex % colors.count]
-                            
-                            Text(activity)
-                                .font(.system(size: 10))
-                                .foregroundColor(textColor.opacity(0.9))
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 6)
-                                .background(bgColor)
-                                .cornerRadius(10)
-                        }
-                    }
-                }
+    // MARK: - Helper Functions
+    
+    // Helper to format phone number for display
+    private func formatPhoneForDisplay(_ phone: String) -> String {
+        // Only keep digits
+        let cleaned = phone.filter { $0.isNumber }
+        
+        // For short numbers, just return the original
+        if cleaned.count < 10 {
+            return phone
+        }
+        
+        var formatted = ""
+        
+        // If there are more than 10 digits, add the extra digits at the beginning
+        if cleaned.count > 10 {
+            let extraDigits = String(cleaned.prefix(cleaned.count - 10))
+            formatted += extraDigits + " "
+        }
+        
+        // Get the last 10 digits for standard formatting
+        let lastTenDigits = cleaned.count > 10 ? 
+            String(cleaned.suffix(10)) : cleaned
+        
+        // Format the last 10 digits as (XXX) XXX-XXXX
+        for (index, character) in lastTenDigits.enumerated() {
+            if index == 0 {
+                formatted += "("
             }
-            .padding()
+            if index == 3 {
+                formatted += ") "
+            }
+            if index == 6 {
+                formatted += "-"
+            }
+            formatted.append(character)
         }
+        
+        return formatted
     }
-}
-
-// MARK: - No Upcoming Hangouts View
-struct NoUpcomingHangoutsView: View {
-    var body: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 20)
-                .fill(Color(red: 21/255, green: 17/255, blue: 50/255, opacity: 0.3))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 20)
-                        .stroke(
-                            Color.white.opacity(0.05),
-                            style: StrokeStyle(
-                                lineWidth: 1,
-                                dash: [4, 2]
-                            )
-                        )
-                )
-            
-            Text("no upcoming ketchups scheduled")
-                .font(.system(size: 14))
-                .foregroundColor(Color.white.opacity(0.5))
-                .padding()
-        }
-        .frame(height: 70)
+    
+    // Helper to format birthday for display
+    private func formatBirthdayForDisplay(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
+        return formatter.string(from: date)
     }
 }
 
@@ -497,4 +281,5 @@ struct NoUpcomingHangoutsView: View {
     
     return FriendProfileView(friend: sampleFriend)
         .preferredColorScheme(.dark)
-} 
+}
+
