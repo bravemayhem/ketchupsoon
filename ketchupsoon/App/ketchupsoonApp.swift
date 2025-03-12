@@ -150,6 +150,7 @@ struct ketchupsoonApp: App {
     let container: ModelContainer
     @StateObject private var colorSchemeManager = ColorSchemeManager.shared
     @StateObject private var profileManager = UserProfileManager.shared  // Initialize UserProfileManager
+    @StateObject private var firebaseSyncService: FirebaseSyncService?
     @Environment(\.scenePhase) private var scenePhase
     
     init() {
@@ -219,6 +220,9 @@ struct ketchupsoonApp: App {
         }
         
         configureAppearance()
+        
+        // Initialize Firebase services with the container's context
+        self.firebaseSyncService = FirebaseSyncServiceFactory.createService(modelContext: container.mainContext)
     }
     
     private func configureAppearance() {
@@ -278,5 +282,24 @@ struct ketchupsoonApp: App {
                 }
         }
         .modelContainer(container)
+        .onChange(of: scenePhase) { oldPhase, newPhase in
+            switch newPhase {
+            case .active:
+                // App became active, start Firebase services
+                print("🔥 Starting Firebase services")
+                if Auth.auth().currentUser != nil {
+                    firebaseSyncService?.startServices()
+                }
+            case .background:
+                // App entered background, stop Firebase services
+                print("🔥 Stopping Firebase services")
+                firebaseSyncService?.stopServices()
+            case .inactive:
+                // App is transitioning between states, do nothing
+                break
+            @unknown default:
+                break
+            }
+        }
     }
 }

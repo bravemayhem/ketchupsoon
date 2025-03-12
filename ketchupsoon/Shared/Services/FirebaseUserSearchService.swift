@@ -60,12 +60,12 @@ class FirebaseUserSearchService: ObservableObject {
         }
     }
     
-    /// Creates a FriendshipModel from a UserProfileModel, with Firebase relationship
+    /// Creates a FriendshipModel from a UserModel, with Firebase relationship
     /// - Parameters:
-    ///   - profile: The Firebase UserProfile to convert
+    ///   - user: The Firebase user to create a friendship with
     ///   - modelContext: The SwiftData ModelContext to save to
     /// - Returns: The created FriendshipModel object
-    func createFriendFromFirebaseUser(_ profile: UserProfileModel, in modelContext: ModelContext) -> FriendshipModel {
+    func createFriendFromFirebaseUser(_ user: UserModel, in modelContext: ModelContext) -> FriendshipModel {
         // First get the current user ID - we need this to establish the relationship
         guard let currentUser = Auth.auth().currentUser else {
             logger.error("No current user logged in, cannot create friendship")
@@ -75,34 +75,36 @@ class FirebaseUserSearchService: ObservableObject {
         let currentUserID = currentUser.uid
         
         // Check for existing friendship with this Firebase user
+        // Store the user ID in a local variable for predicate use
+        let friendUserID = user.id
         let friendshipDescriptor = FetchDescriptor<FriendshipModel>(
-            predicate: #Predicate<FriendshipModel> { 
-                $0.userID == currentUserID && $0.friendID == profile.id 
+            predicate: #Predicate { (friendship: FriendshipModel) in 
+                friendship.userID == currentUserID && friendship.friendID == friendUserID 
             }
         )
         
         do {
             let existingFriendships = try modelContext.fetch(friendshipDescriptor)
             if let existingFriendship = existingFriendships.first {
-                logger.info("Found existing friendship with Firebase user \(profile.id)")
+                logger.info("Found existing friendship with Firebase user \(user.id)")
                 return existingFriendship
             }
         } catch {
             logger.error("Error fetching existing friendships: \(error.localizedDescription)")
         }
         
-        // Create UserModel for the friend if it doesn't exist
+        // Create UserModel for the friend if it doesn't exist in local database
+        let userID = user.id
         let userDescriptor = FetchDescriptor<UserModel>(
-            predicate: #Predicate<UserModel> { $0.id == profile.id }
+            predicate: #Predicate { (localUser: UserModel) in localUser.id == userID }
         )
         
         do {
             let users = try modelContext.fetch(userDescriptor)
             if users.isEmpty {
-                // Create new UserModel
-                let user = convertToUserModel(from: profile)
+                // Insert the user into SwiftData
                 modelContext.insert(user)
-                logger.info("Created new user from Firebase profile: \(profile.id)")
+                logger.info("Created new user from Firebase profile: \(user.id)")
             }
         } catch {
             logger.error("Error checking for existing user: \(error.localizedDescription)")
@@ -111,11 +113,11 @@ class FirebaseUserSearchService: ObservableObject {
         // Create new FriendshipModel
         let friendship = FriendshipModel(
             userID: currentUserID,
-            friendID: profile.id
+            friendID: user.id
         )
         
         modelContext.insert(friendship)
-        logger.info("Created new friendship with Firebase user: \(profile.id)")
+        logger.info("Created new friendship with Firebase user: \(user.id)")
         
         return friendship
     }
@@ -124,7 +126,7 @@ class FirebaseUserSearchService: ObservableObject {
     /// - Parameter modelContext: The SwiftData context containing friendships and users
     func checkExistingFriendsForFirebaseUsers(in modelContext: ModelContext) async {
         // First, get the current user - we need this to establish relationships
-        guard let currentUser = try? await Auth.auth().currentUser else {
+        guard let currentUser = Auth.auth().currentUser else {
             logger.error("No current user logged in, cannot check for Firebase users")
             return
         }
@@ -135,9 +137,9 @@ class FirebaseUserSearchService: ObservableObject {
         // Find all user entries in SwiftData that aren't the current user
         // and have email or phone but no corresponding friendship
         let localUserDescriptor = FetchDescriptor<UserModel>(
-            predicate: #Predicate<UserModel> {
-                $0.id != currentUserID && 
-                ($0.email != nil || $0.phoneNumber != nil)
+            predicate: #Predicate { (user: UserModel) in
+                user.id != currentUserID && 
+                (user.email != nil || user.phoneNumber != nil)
             }
         )
         
@@ -154,9 +156,10 @@ class FirebaseUserSearchService: ObservableObject {
             }
             
             // Check if we already have a friendship with this user
+            let userID = localUser.id
             let friendshipDescriptor = FetchDescriptor<FriendshipModel>(
-                predicate: #Predicate<FriendshipModel> {
-                    $0.userID == currentUserID && $0.friendID == localUser.id
+                predicate: #Predicate { (friendship: FriendshipModel) in
+                    friendship.userID == currentUserID && friendship.friendID == userID
                 }
             )
             
@@ -196,8 +199,8 @@ class FirebaseUserSearchService: ObservableObject {
         
         // Also check for incomplete friendships (ones with empty friendID)
         let incompleteFriendshipDescriptor = FetchDescriptor<FriendshipModel>(
-            predicate: #Predicate<FriendshipModel> {
-                $0.userID == currentUserID && $0.friendID.isEmpty
+            predicate: #Predicate { (friendship: FriendshipModel) in
+                friendship.userID == currentUserID && friendship.friendID == ""
             }
         )
         
@@ -244,17 +247,12 @@ class FirebaseUserSearchService: ObservableObject {
             
             // Access the data safely since we've checked it's not nil
             let data = documentData!
-            guard let userId = data["id"] as? String else {
-                return nil
-            }
             
-            // First try to create a UserProfileModel
-            guard let profile = createUserProfile(from: data, with: userId) else {
-                return nil
-            }
+            // Use document ID if id field is missing
+            let userId = (data["id"] as? String) ?? document.documentID
             
-            // Then convert to UserModel
-            return convertToUserModel(from: profile)
+            // Create UserModel directly from the Firebase data
+            return createUserModelFromFirebaseData(id: userId, data: data)
         }
     }
     
@@ -272,15 +270,11 @@ class FirebaseUserSearchService: ObservableObject {
         
         // Access the data safely since we've checked it's not nil
         let data = documentData!
-        guard let userId = data["id"] as? String else {
-            return nil
-        }
         
-        guard let profile = createUserProfile(from: data, with: userId) else {
-            return nil
-        }
+        // Use document ID if id field is missing
+        let userId = (data["id"] as? String) ?? document.documentID
         
-        return convertToUserModel(from: profile)
+        return createUserModelFromFirebaseData(id: userId, data: data)
     }
     
     private func findUserByPhone(_ phone: String) async throws -> UserModel? {
@@ -297,59 +291,48 @@ class FirebaseUserSearchService: ObservableObject {
         
         // Access the data safely since we've checked it's not nil
         let data = documentData!
-        guard let userId = data["id"] as? String else {
-            return nil
-        }
         
-        guard let profile = createUserProfile(from: data, with: userId) else {
-            return nil
-        }
+        // Use document ID if id field is missing
+        let userId = (data["id"] as? String) ?? document.documentID
         
-        return convertToUserModel(from: profile)
+        return createUserModelFromFirebaseData(id: userId, data: data)
     }
     
-    private func createUserProfile(from data: [String: Any], with userId: String) -> UserProfileModel? {
-        let name = data["name"] as? String
-        let email = data["email"] as? String
-        let phoneNumber = data["phoneNumber"] as? String
-        let bio = data["bio"] as? String
-        let profileImageURL = data["profileImageURL"] as? String
+    // Create a UserModel directly from Firebase data
+    private func createUserModelFromFirebaseData(id: String, data: [String: Any]) -> UserModel {
+        let user = UserModel(
+            id: id,
+            name: data["name"] as? String,
+            profileImageURL: data["profileImageURL"] as? String,
+            email: data["email"] as? String,
+            phoneNumber: data["phoneNumber"] as? String,
+            bio: data["bio"] as? String
+        )
         
         // Handle timestamps
-        var createdAt = Date()
         if let createdTimestamp = data["createdAt"] as? TimeInterval {
-            createdAt = Date(timeIntervalSince1970: createdTimestamp)
+            user.createdAt = Date(timeIntervalSince1970: createdTimestamp)
         }
         
-        var updatedAt = Date()
         if let updatedTimestamp = data["updatedAt"] as? TimeInterval {
-            updatedAt = Date(timeIntervalSince1970: updatedTimestamp)
+            user.updatedAt = Date(timeIntervalSince1970: updatedTimestamp)
         }
         
-        return UserProfileModel(
-            id: userId,
-            name: name,
-            email: email,
-            phoneNumber: phoneNumber,
-            bio: bio,
-            profileImageURL: profileImageURL,
-            createdAt: createdAt,
-            updatedAt: updatedAt
-        )
-    }
-    
-    // Conversion of UserProfileModel to UserModel
-    private func convertToUserModel(from profile: UserProfileModel) -> UserModel {
-        let user = UserModel(
-            id: profile.id,
-            name: profile.name,
-            profileImageURL: profile.profileImageURL,
-            email: profile.email,
-            phoneNumber: profile.phoneNumber,
-            bio: profile.bio,
-            createdAt: profile.createdAt,
-            updatedAt: profile.updatedAt
-        )
+        // Handle additional fields that may be in the data
+        if let birthdayTimestamp = data["birthday"] as? TimeInterval {
+            user.birthday = Date(timeIntervalSince1970: birthdayTimestamp)
+        }
+        
+        user.isSocialProfileActive = data["isSocialProfileActive"] as? Bool ?? false
+        user.socialAuthProvider = data["socialAuthProvider"] as? String
+        user.gradientIndex = data["gradientIndex"] as? Int ?? 0
+        
+        // Set preference fields if they exist
+        user.availabilityTimes = data["availabilityTimes"] as? [String]
+        user.availableDays = data["availableDays"] as? [String]
+        user.favoriteActivities = data["favoriteActivities"] as? [String]
+        user.calendarConnections = data["calendarConnections"] as? [String]
+        user.travelRadius = data["travelRadius"] as? String
         
         return user
     }

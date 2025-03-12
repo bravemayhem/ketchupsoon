@@ -1,11 +1,17 @@
 import SwiftUI
 import FirebaseFirestore
+import FirebaseAuth
 import SwiftData
+import OSLog
+import Combine
 
 struct AddFriendView: View {
     // MARK: - Properties
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
+    
+    // Firebase sync service
+    @EnvironmentObject private var firebaseSyncService: FirebaseSyncService
     
     // Simple state properties - kept for UI display only
     @State private var searchQuery = ""
@@ -14,12 +20,15 @@ struct AddFriendView: View {
     @State private var selectedTab = 0
     @State private var showComingSoonPopup = false
     @State private var popupMessage = ""
+    @State private var showSuccessMessage = false
+    @State private var successMessage = ""
     
-    // Static mock data for UI display
-    @State private var searchResults: [SimpleFriend] = [
-        SimpleFriend(id: "1", name: "Jamie Smith", email: "jamie@example.com", phoneNumber: "123-456-7890"),
-        SimpleFriend(id: "2", name: "Alex Johnson", email: "alex@example.com", phoneNumber: "555-123-4567")
-    ]
+    // Firebase search results
+    @State private var searchResults: [UserModel] = []
+    @State private var addedFriendIds: Set<String> = []
+    
+    // Logger for debugging
+    private let logger = Logger(subsystem: "com.ketchupsoon", category: "AddFriendView")
     
     // Tab options
     let tabs = ["contacts", "qr code", "invite via text"]
@@ -104,11 +113,14 @@ struct AddFriendView: View {
                         
                         TextField("", text: $searchQuery)
                             .placeholder(when: searchQuery.isEmpty) {
-                                Text("search contacts...")
+                                Text("search ketchupsoon users...")
                                     .foregroundColor(AddFriendViewColors.textTertiary)
                             }
                             .foregroundColor(AddFriendViewColors.textPrimary)
                             .padding(.vertical, 15)
+                            .onSubmit {
+                                searchUsers()
+                            }
                     }
                     .background(
                         RoundedRectangle(cornerRadius: 25)
@@ -159,46 +171,117 @@ struct AddFriendView: View {
     private var contactsTabContent: some View {
         VStack(spacing: 10) {
             // Section Title - On KetchupSoon
-            Text("on ketchupsoon")
+            Text("search results")
                 .font(.system(size: 16, weight: .semibold))
                 .foregroundColor(AddFriendViewColors.textPrimary)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 20)
                 .padding(.top, 30)
             
-            // Contacts on app - using example data
-            ContactRow(
-                name: "Jamie Smith",
-                phone: "123-456-7890",
-                emoji: "🦋",
-                gradientColors: [AddFriendViewColors.mint, AddFriendViewColors.purple],
-                buttonType: .add
-            )
+            if isSearching {
+                // Loading indicator
+                ProgressView()
+                    .progressViewStyle(CircularProgressViewStyle(tint: AddFriendViewColors.textPrimary))
+                    .scaleEffect(1.5)
+                    .frame(maxWidth: .infinity, minHeight: 120)
+            } else if let error = errorMessage {
+                // Error message
+                Text(error)
+                    .font(.system(size: 16))
+                    .multilineTextAlignment(.center)
+                    .foregroundColor(AddFriendViewColors.pinkRed)
+                    .padding(20)
+                    .frame(maxWidth: .infinity, minHeight: 120)
+            } else if searchResults.isEmpty && !searchQuery.isEmpty {
+                // No results
+                Text("No users found matching '\(searchQuery)'")
+                    .font(.system(size: 16))
+                    .multilineTextAlignment(.center)
+                    .foregroundColor(AddFriendViewColors.textSecondary)
+                    .padding(20)
+                    .frame(maxWidth: .infinity, minHeight: 120)
+            } else if !searchResults.isEmpty {
+                // Search results
+                ForEach(searchResults) { user in
+                    ContactRow(
+                        name: user.name,
+                        phone: user.phoneNumber ?? "",
+                        email: user.email ?? "",
+                        emoji: "🌟",
+                        gradientColors: getGradientForUser(user),
+                        buttonType: addedFriendIds.contains(user.id) ? .added : .add,
+                        onButtonTap: {
+                            addFriend(user)
+                        }
+                    )
+                }
+            } else {
+                // Initial state - prompt to search
+                Text("Enter a name or email to search for users")
+                    .font(.system(size: 16))
+                    .multilineTextAlignment(.center)
+                    .foregroundColor(AddFriendViewColors.textSecondary)
+                    .padding(20)
+                    .frame(maxWidth: .infinity, minHeight: 120)
+            }
             
-            ContactRow(
-                name: "Alex Johnson",
-                phone: "555-123-4567",
-                emoji: "🔮",
-                gradientColors: [AddFriendViewColors.bluePurple, AddFriendViewColors.mint],
-                buttonType: .add
-            )
+            if showSuccessMessage {
+                // Success message
+                HStack {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundColor(AddFriendViewColors.mint)
+                    
+                    Text(successMessage)
+                        .font(.system(size: 14))
+                        .foregroundColor(AddFriendViewColors.textPrimary)
+                }
+                .padding(.vertical, 12)
+                .padding(.horizontal, 16)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(AddFriendViewColors.cardBackground.opacity(0.7))
+                )
+                .padding(.top, 20)
+            }
             
-            // Section Title - Invite to KetchupSoon
-            Text("invite to ketchupsoon")
+            // Section title for invite section
+            Text("invite others")
                 .font(.system(size: 16, weight: .semibold))
                 .foregroundColor(AddFriendViewColors.textPrimary)
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 20)
                 .padding(.top, 20)
             
-            // Contacts not on app - using example data
-            ContactRow(
-                name: "Avery Singh",
-                phone: "555-6789",
-                initials: "AS",
-                buttonType: .invite
-            )
-            
-            ContactRow(
+            // Invite button
+            Button(action: {
+                // Show the invite tab
+                withAnimation {
+                    selectedTab = 2
+                }
+            }) {
+                HStack {
+                    Image(systemName: "person.crop.circle.badge.plus")
+                        .font(.system(size: 18))
+                        .foregroundColor(AddFriendViewColors.purple)
+                    
+                    Text("Invite friends to join ketchupsoon")
+                        .font(.system(size: 16))
+                        .foregroundColor(AddFriendViewColors.textPrimary)
+                    
+                    Spacer()
+                    
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 14))
+                        .foregroundColor(AddFriendViewColors.textSecondary)
+                }
+                .padding(.vertical, 15)
+                .padding(.horizontal, 20)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(AddFriendViewColors.cardBackground.opacity(0.7))
+                )
+                .padding(.horizontal, 20)
+            }
                 name: "Jordan Lee",
                 phone: "555-4321",
                 initials: "JL",
@@ -232,10 +315,98 @@ struct AddFriendView: View {
     }
 }
 
+// MARK: - Search and Friend Management Functions
+extension AddFriendView {
+    // Search for users using FirebaseSyncService
+    private func searchUsers() {
+        guard !searchQuery.isEmpty else { return }
+        
+        isSearching = true
+        errorMessage = nil
+        searchResults = []
+        
+        Task {
+            do {
+                let results = try await firebaseSyncService.searchUsers(query: searchQuery)
+                
+                // Filter out current user from results
+                let filteredResults = results.filter { user in
+                    user.id != Auth.auth().currentUser?.uid
+                }
+                
+                await MainActor.run {
+                    searchResults = filteredResults
+                    isSearching = false
+                }
+                
+                logger.info("Found \(filteredResults.count) users matching '\(searchQuery)'")
+            } catch {
+                await MainActor.run {
+                    errorMessage = "Error searching: \(error.localizedDescription)"
+                    isSearching = false
+                }
+                
+                logger.error("Error searching users: \(error.localizedDescription)")
+            }
+        }
+    }
+    
+    // Add a friend using FirebaseSyncService
+    private func addFriend(_ user: UserModel) {
+        guard !addedFriendIds.contains(user.id) else { return }
+        
+        Task {
+            do {
+                // Create friendship with the selected user
+                try await firebaseSyncService.createFriendship(with: user.id)
+                
+                await MainActor.run {
+                    // Update UI to show the user has been added
+                    addedFriendIds.insert(user.id)
+                    
+                    // Show success message
+                    successMessage = "Added \(user.name) as a friend!"
+                    showSuccessMessage = true
+                    
+                    // Hide success message after a delay
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                        withAnimation {
+                            showSuccessMessage = false
+                        }
+                    }
+                }
+                
+                logger.info("Successfully added friend: \(user.name)")
+            } catch {
+                await MainActor.run {
+                    errorMessage = "Error adding friend: \(error.localizedDescription)"
+                }
+                
+                logger.error("Error adding friend: \(error.localizedDescription)")
+            }
+        }
+    }
+    
+    // Get gradient colors for a user based on their gradient index
+    private func getGradientForUser(_ user: UserModel) -> [Color] {
+        let index = user.gradientIndex
+        
+        switch index % 5 {
+        case 0: return [AddFriendViewColors.mint, AddFriendViewColors.purple]
+        case 1: return [AddFriendViewColors.bluePurple, AddFriendViewColors.mint]
+        case 2: return [AddFriendViewColors.pinkRed, AddFriendViewColors.purple]
+        case 3: return [AddFriendViewColors.mint, AddFriendViewColors.pinkRed]
+        case 4: return [AddFriendViewColors.purple, AddFriendViewColors.bluePurple]
+        default: return [AddFriendViewColors.mint, AddFriendViewColors.purple]
+        }
+    }
+}
+
 // MARK: - Contact Row Component
 struct ContactRow: View {
     let name: String
     let phone: String
+    var email: String = ""
     var emoji: String?
     var initials: String?
     var gradientColors: [Color]?
@@ -340,8 +511,8 @@ struct ContactRow: View {
     private func handleButtonTap() {
         switch buttonType {
         case .add:
-            // When "Add" is tapped, change to "Added" and show success toast
-            buttonType = .added
+            // Call the provided callback
+            onButtonTap?()
             showSuccessToast("\(name) added to your friends!")
             
             // Here you would typically make an API call to add the friend

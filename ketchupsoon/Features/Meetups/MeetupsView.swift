@@ -1,12 +1,21 @@
 /*
 import SwiftUI
+import SwiftData
+import Firebase
+import OSLog
 
-struct MeetupsView: View {
+struct MeetupsView: View {    
+    // Environment Objects and Injection
+    @EnvironmentObject private var firebaseSyncService: FirebaseSyncService
+    
+    // SwiftData query for meetups
+    @Query(sort: \MeetupModel.date) private var meetups: [MeetupModel]
     // State variables
-    @State private var meetups = Meetup.samples
     @State private var showCreateMeetup = false
-    @State private var selectedMeetup: Meetup?
+    @State private var selectedMeetup: MeetupModel?
     @State private var showDetailView = false
+    @State private var isLoading = false
+    @State private var errorMessage: String? = nil
     
     var body: some View {
         ZStack {
@@ -29,11 +38,16 @@ struct MeetupsView: View {
         .background(AppColors.backgroundGradient.ignoresSafeArea())
         .sheet(isPresented: $showCreateMeetup) {
             CreateMeetupView()
+                .environmentObject(firebaseSyncService)
         }
         .sheet(isPresented: $showDetailView) {
             if let selectedMeetup = selectedMeetup {
                 MeetupDetailView(meetup: selectedMeetup)
+                    .environmentObject(firebaseSyncService)
             }
+        }
+        .task {
+            await loadMeetups()
         }
     }
     
@@ -177,8 +191,23 @@ struct MeetupsView: View {
         }
     }
     
+    // MARK: - Load Meetups
+    private func loadMeetups() async {
+        isLoading = true
+        errorMessage = nil
+        
+        do {
+            try await firebaseSyncService.syncMeetups()
+            isLoading = false
+        } catch {
+            errorMessage = "Failed to load meetups: \(error.localizedDescription)"
+            isLoading = false
+            Logger.meetups.error("Failed to load meetups: \(error)")
+        }
+    }
+    
     // MARK: - Meetup Card View
-    private func meetupCardView(_ meetup: Meetup) -> some View {
+    private func meetupCardView(_ meetup: MeetupModel) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Text(meetup.title)
                 .font(.system(size: 18, weight: .semibold))
@@ -210,7 +239,7 @@ struct MeetupsView: View {
                 
                 Spacer()
                 
-                Text(meetup.activityType.emoji)
+                Text(meetup.activityTypeEnum.emoji)
                     .font(.system(size: 20))
             }
             
@@ -232,6 +261,7 @@ struct MeetupsView: View {
 struct MeetupsView_Previews: PreviewProvider {
     static var previews: some View {
         MeetupsView()
+            .environmentObject(FirebaseSyncService.preview)
     }
-} 
+}
 */ 

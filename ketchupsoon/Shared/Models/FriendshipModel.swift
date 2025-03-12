@@ -3,6 +3,11 @@
 //  ketchupsoon
 //
 //  Created by Brooklyn Beltran on 3/11/25.
+//  FriendshipModel
+//  Primary purpose: Represents relationships between users
+//  Contains metadata about user relationships
+//  Separate concern from individual user data
+
 //
 import Foundation
 import SwiftData

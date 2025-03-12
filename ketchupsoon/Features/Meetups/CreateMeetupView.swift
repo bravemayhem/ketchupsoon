@@ -1,15 +1,34 @@
 import SwiftUI
+import SwiftData
+import Firebase
+import OSLog
 
 struct CreateMeetupView: View {
+    // Environment Objects
+    @EnvironmentObject private var firebaseSyncService: FirebaseSyncService
+    @Environment(\.modelContext) private var modelContext
     // State variables
-    @State private var selectedFriends = ["sarah", "jordan", "alex"]
+    @State private var selectedFriendIDs: [String] = []
     @State private var assistanceType = 2 // 0: time, 1: activities, 2: both
     @State private var searchText = ""
     @State private var selectedActivity = 0 // 0: coffee, 1: food, 2: outdoors, 3: games
     @State private var showReviewIdeas = false // New state variable to control navigation
+    @State private var selectedDate = Date().addingTimeInterval(86400) // Default to tomorrow
+    @State private var locationText = "" // Location input
+    @State private var isLoading = false
+    @State private var errorMessage: String? = nil
+    @State private var showFriendSelector = false
     @Environment(\.dismiss) private var dismiss
     
-    // Friend emoji avatars
+    // SwiftData Queries
+    @Query private var friends: [FriendshipModel]
+    
+    // Loading current user
+    private var currentUserID: String? {
+        return Auth.auth().currentUser?.uid
+    }
+    
+    // Friend emoji avatars placeholder
     let friendEmojis = ["🌟", "🎮", "🎵"]
     
     var body: some View {
@@ -59,6 +78,16 @@ struct CreateMeetupView: View {
         .sheet(isPresented: $showReviewIdeas) {
             ReviewKetchupIdeasView()
         }
+        .sheet(isPresented: $showFriendSelector) {
+            friendSelectorView
+        }
+        .alert("Error", isPresented: .constant(errorMessage != nil), actions: {
+            Button("OK") {
+                errorMessage = nil
+            }
+        }, message: {
+            Text(errorMessage ?? "An unknown error occurred")
+        })
     }
     
     // MARK: - Background Layer
@@ -160,18 +189,22 @@ struct CreateMeetupView: View {
                 
                 // Friend avatars
                 HStack(spacing: 30) {
-                    ForEach(0..<selectedFriends.count, id: \.self) { index in
+                    ForEach(0..<selectedFriendIDs.count, id: \.self) { index in
+                        // Get friend display name if available
+                        let friendID = selectedFriendIDs[index]
+                        let friendship = friends.first(where: { $0.friendID == friendID })
+                        
                         // FriendAvatarView is now moved to a shared component at Shared/Components/FriendAvatarView.swift
                         FriendAvatarView(
-                            emoji: friendEmojis[index],
-                            name: selectedFriends[index],
+                            emoji: friendEmojis[index % friendEmojis.count],
+                            name: friendship?.displayName ?? "Friend",
                             gradient: AppColors.avatarGradients[index % AppColors.avatarGradients.count]
                         )
                     }
                     
                     // Add friend button
                     Button(action: {
-                        // Add friend action
+                        showFriendSelector = true
                     }) {
                         VStack {
                             ZStack {
@@ -377,7 +410,7 @@ struct CreateMeetupView: View {
                 .foregroundColor(.white)
             
             HStack {
-                TextField("search for a place...", text: $searchText)
+                TextField("search for a place...", text: $locationText)
                     .foregroundColor(.white)
                     .padding(.horizontal, 15)
                 
@@ -400,23 +433,30 @@ struct CreateMeetupView: View {
     // MARK: - Submit Button View
     private var submitButtonView: some View {
         Button(action: {
-            // Show the review ideas view
-            showReviewIdeas = true
+            createMeetup()
         }) {
-            Text("generate ideas 🚀")
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity)
-                .frame(height: 54)
-                .background(
-                    LinearGradient(
-                        gradient: Gradient(colors: [Color(AppColors.gradient1Start), Color(AppColors.gradient1End)]),
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
+            if isLoading {
+                ProgressView()
+                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                    .scaleEffect(1.2)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 54)
+            } else {
+                Text("create meetup 🚀")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 54)
+                    .background(
+                        LinearGradient(
+                            gradient: Gradient(colors: [Color(AppColors.gradient1Start), Color(AppColors.gradient1End)]),
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
                     )
-                )
-                .cornerRadius(27)
-                .glow(color: AppColors.accent, radius: 8, opacity: 0.6)
+                    .cornerRadius(27)
+                    .glow(color: AppColors.accent, radius: 8, opacity: 0.6)
+            }
         }
         .padding(.top, 10)
     }
@@ -425,6 +465,106 @@ struct CreateMeetupView: View {
 // MARK: - Supporting Views
 
 // FriendAvatarView is now moved to a shared component at Shared/Components/FriendAvatarView.swift
+
+    // MARK: - Friend Selector View
+    private var friendSelectorView: some View {
+        VStack(spacing: 20) {
+            Text("Select Friends")
+                .font(.title2.bold())
+                .foregroundColor(.white)
+            
+            List {
+                ForEach(friends, id: \.id) { friend in
+                    Button(action: {
+                        toggleFriendSelection(friendID: friend.friendID)
+                    }) {
+                        HStack {
+                            Text(friend.displayName ?? "Friend")
+                                .foregroundColor(.white)
+                            Spacer()
+                            if selectedFriendIDs.contains(friend.friendID) {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundColor(AppColors.accent)
+                            }
+                        }
+                    }
+                    .listRowBackground(Color(AppColors.cardBackground))
+                }
+            }
+            .listStyle(PlainListStyle())
+            .scrollContentBackground(.hidden)
+            
+            Button("Done") {
+                showFriendSelector = false
+            }
+            .font(.headline)
+            .foregroundColor(.white)
+            .padding()
+            .background(AppColors.accentGradient1)
+            .cornerRadius(10)
+        }
+        .padding()
+        .background(AppColors.backgroundGradient.ignoresSafeArea())
+    }
+    
+    // MARK: - Helper Functions
+    private func toggleFriendSelection(friendID: String) {
+        if selectedFriendIDs.contains(friendID) {
+            selectedFriendIDs.removeAll { $0 == friendID }
+        } else {
+            selectedFriendIDs.append(friendID)
+        }
+    }
+    
+    private func createMeetup() {
+        guard let currentUserID = currentUserID else {
+            errorMessage = "You must be logged in to create a meetup"
+            return
+        }
+        
+        guard !selectedFriendIDs.isEmpty else {
+            errorMessage = "Please select at least one friend"
+            return
+        }
+        
+        guard !locationText.isEmpty else {
+            errorMessage = "Please enter a location"
+            return
+        }
+        
+        isLoading = true
+        
+        // Create meetup title based on activity and friend count
+        let activityName = MeetupModel.ActivityType(rawValue: selectedActivity)?.name ?? "meetup"
+        let title = selectedFriendIDs.count > 1 ? "\(activityName) with friends" : "\(activityName) with friend"
+        
+        // Create the meetup model
+        let meetup = MeetupModel(
+            title: title,
+            date: selectedDate,
+            location: locationText,
+            activityType: selectedActivity,
+            participants: selectedFriendIDs + [currentUserID],
+            isAiGenerated: false,
+            creatorID: currentUserID
+        )
+        
+        // Save to SwiftData and Firebase
+        Task {
+            do {
+                try await firebaseSyncService.saveMeetup(meetup)
+                
+                // Success
+                isLoading = false
+                dismiss()
+            } catch {
+                isLoading = false
+                errorMessage = "Failed to create meetup: \(error.localizedDescription)"
+                Logger.meetups.error("Failed to create meetup: \(error)")
+            }
+        }
+    }
+}
 
 struct AIOptionButton: View {
     let title: String
@@ -518,5 +658,6 @@ struct ActivityButton: View {
 struct CreateMeetupView_Previews: PreviewProvider {
     static var previews: some View {
         CreateMeetupView()
+            .environmentObject(FirebaseSyncService.preview)
     }
 } 

@@ -15,7 +15,10 @@ struct UserProfileView: View {
     // Add SwiftData environment
     @Environment(\.modelContext) private var modelContext
     
-    // Repository instance using the factory
+    // Firebase sync service injected via EnvironmentObject
+    @EnvironmentObject private var firebaseSyncService: FirebaseSyncService
+    
+    // Repository instance using the factory (as backup)
     private var userRepository: UserRepository {
         UserRepositoryFactory.createRepository(modelContext: modelContext)
     }
@@ -187,6 +190,46 @@ struct UserProfileView: View {
             // When exiting edit mode, save any changes
             if oldValue == true && newValue == false && hasChanges {
                 saveProfile()
+            }
+        }
+    }
+    
+    // Save profile using FirebaseSyncService
+    private func saveProfile() {
+        if !hasChanges {
+            logger.info("No changes detected, skipping save")
+            return
+        }
+        
+        saveInProgress = true
+        
+        Task {
+            do {
+                // Use FirebaseSyncService for the update
+                try await firebaseSyncService.updateCurrentUserProfile(
+                    name: userName,
+                    bio: userBio,
+                    birthday: birthday
+                    // We could add other profile fields here as needed
+                )
+                
+                await MainActor.run {
+                    saveInProgress = false
+                    hasChanges = false
+                    isEditMode = false
+                }
+                
+                logger.info("✅ Profile saved successfully via FirebaseSyncService")
+            } catch {
+                logger.error("❌ Error saving profile: \(error.localizedDescription)")
+                
+                await MainActor.run {
+                    saveInProgress = false
+                    // Show an error alert if needed
+                    alertTitle = "Save Error"
+                    alertMessage = "Failed to save profile: \(error.localizedDescription)"
+                    showAlert = true
+                }
             }
         }
     }
@@ -558,7 +601,7 @@ struct UserProfileView: View {
         Task {
             do {
                 // Try to get the current user from repository
-                guard var user = try await userRepository.getCurrentUser() else {
+                guard let user = try await userRepository.getCurrentUser() else {
                     throw NSError(domain: "UserProfileView", code: 404, 
                                  userInfo: [NSLocalizedDescriptionKey: "User not found"])
                 }
@@ -588,7 +631,7 @@ struct UserProfileView: View {
                 user.updatedAt = Date()
                 
                 // Save using repository
-                try await userRepository.updateUser(user)
+                try await userRepository.updateUser(user: user)
                 
                 // Also update UserSettings for backward compatibility
                 logger.info("📸 Updating UserSettings")
@@ -620,6 +663,9 @@ struct UserProfileView: View {
     
     // Legacy method for backward compatibility
     private func saveProfileLegacy() async {
+        // This is the legacy method - we should prefer using FirebaseSyncService.updateCurrentUserProfile
+        // but keeping this as a fallback
+        
         // Check if we have a user profile or if the user is logged in
         if profileManager.currentUserProfile == nil {
             logger.warning("📸 Cannot save - no current user profile")
@@ -704,9 +750,15 @@ struct UserProfileView: View {
     // MARK: - Helper Methods
     private func loadProfileData() async {
         do {
-            guard let user = try await userRepository.getCurrentUser() else {
-                // No user found, set defaults
-                setDefaultValues()
+            // Try to load the user profile via FirebaseSyncService first
+            if let currentUser = Auth.auth().currentUser {
+                // Trigger a sync to ensure we have fresh data
+                await firebaseSyncService.performFullSync()
+                
+                // Now try to get the user data
+                guard let user = try await userRepository.getCurrentUser() else {
+                    // No user found, set defaults
+                    setDefaultValues()
                 return
             }
             
@@ -876,7 +928,7 @@ struct UserProfileView: View {
         
         do {
             // Get current user from repository
-            guard var user = try await userRepository.getCurrentUser() else {
+            guard let user = try await userRepository.getCurrentUser() else {
                 throw NSError(domain: "UserProfileView", code: 404, 
                              userInfo: [NSLocalizedDescriptionKey: "User not found"])
             }
@@ -912,7 +964,7 @@ struct UserProfileView: View {
             user.profileImageURL = downloadURL.absoluteString
             
             // Save using repository
-            try await userRepository.updateUser(user)
+            try await userRepository.updateUser(user: user)
             
             // Also update via legacy method for backward compatibility
             try await profileManager.updateUserProfile(updates: ["profileImageURL": downloadURL.absoluteString])

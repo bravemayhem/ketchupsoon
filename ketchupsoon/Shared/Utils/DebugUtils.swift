@@ -10,6 +10,9 @@ func debugLog(_ message: String, file: String = #file, function: String = #funct
     #endif
 }
 
+
+// MARK: - UTILITY TO VERIFY FONTS
+/* NOT NEEDED AT THE MOMENT
 // Added utility to verify font registration
 func verifyFontRegistration() {
     #if DEBUG
@@ -59,8 +62,9 @@ func verifyFontRegistration() {
     }
     #endif
 }
+*/
 
-// Performance measurement utilities
+// MARK: - PERFORMANCE MANAGEMENT
 class PerformanceMonitor {
     static let shared = PerformanceMonitor()
     private let signpostID = OSSignpostID(log: .default)

@@ -1,18 +1,57 @@
 import SwiftUI
 import SwiftData
-
-// Import the shared component
-import SwiftUI
+import FirebaseAuth
+import Combine
+import OSLog
 
 struct HomeView: View {
     // State for selected friends
     @State private var selectedFriends: Set<String> = []
     @State private var searchText: String = ""
-    @State private var pendingFriendRequests: Int = 3
+    @State private var pendingFriendRequests: Int = 0
     @State private var navigationActive = false
     
-    // Sample friends data with complete details
-    let friends = [
+    // Firebase and SwiftData integration
+    @EnvironmentObject private var firebaseSyncService: FirebaseSyncService
+    @Environment(\.modelContext) private var modelContext
+    
+    // Friendship data from Firebase
+    @State private var friends: [(FriendshipModel, UserModel)] = []
+    @State private var isLoading = false
+    @State private var errorMessage: String? = nil
+    
+    // Logger for debugging
+    private let logger = Logger(subsystem: "com.ketchupsoon", category: "HomeView")
+    
+    // Converted friends for UI display
+    private var friendItems: [FriendItem] {
+        friends.map { friendship, user in
+            return FriendItem(
+                id: user.id,
+                name: user.name,
+                bio: user.bio ?? "",
+                phoneNumber: user.phoneNumber ?? "",
+                email: user.email ?? "",
+                birthday: user.birthday ?? Date(),
+                emoji: "🌟", // Default emoji
+                lastHangout: formatLastHangout(friendship.lastHangoutDate),
+                gradient: getGradientForIndex(user.gradientIndex)
+            )
+        }
+    }
+    
+    // Filtered friends based on search text
+    private var filteredFriends: [FriendItem] {
+        if searchText.isEmpty {
+            return friendItems
+        } else {
+            return friendItems.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
+        }
+    }
+    
+    // Dummy friends data for preview only
+    #if DEBUG
+    private static let previewFriends = [
         FriendItem(
             id: "1", 
             name: "Sarah Johnson", 
@@ -102,6 +141,51 @@ struct HomeView: View {
             gradient: [AppColors.gradient3Start, AppColors.gradient3End]
         )
     ]
+    
+    // Format relative time for last hangout
+    private func formatLastHangout(_ date: Date?) -> String {
+        guard let date = date else { return "never" }
+        
+        let calendar = Calendar.current
+        let now = Date()
+        let components = calendar.dateComponents([.day, .weekOfMonth, .month], from: date, to: now)
+        
+        if let days = components.day {
+            if days == 0 {
+                return "today"
+            } else if days == 1 {
+                return "yesterday"
+            } else if days < 7 {
+                return "\(days) days"
+            }
+        }
+        
+        if let weeks = components.weekOfMonth, weeks < 4 {
+            return "\(weeks) weeks"
+        }
+        
+        if let months = components.month {
+            return "\(months) months"
+        }
+        
+        return "long time"
+    }
+    
+    // Get gradient colors based on index
+    private func getGradientForIndex(_ index: Int?) -> [Color] {
+        let defaultGradient = [AppColors.gradient1Start, AppColors.gradient1End]
+        
+        guard let index = index else { return defaultGradient }
+        
+        switch index % 5 {
+        case 0: return [AppColors.gradient1Start, AppColors.gradient1End]
+        case 1: return [AppColors.gradient2Start, AppColors.gradient2End]
+        case 2: return [AppColors.gradient3Start, AppColors.gradient3End]
+        case 3: return [AppColors.gradient4Start, AppColors.gradient4End]
+        case 4: return [AppColors.gradient5Start, AppColors.gradient5End]
+        default: return defaultGradient
+        }
+    }
     
     var body: some View {
         NavigationStack {
@@ -279,7 +363,11 @@ struct HomeView: View {
             }
             .navigationBarHidden(true)
             .onAppear {
-                print("HomeView appeared with NavigationStack")
+                loadFriendsFromFirebase()
+                logger.info("HomeView appeared with NavigationStack")
+            }
+            .refreshable {
+                await refreshFriends()
             }
         }
     }
@@ -290,6 +378,49 @@ struct HomeView: View {
             selectedFriends.remove(id)
         } else {
             selectedFriends.insert(id)
+        }
+    }
+    
+    // Load friends data from Firebase
+    private func loadFriendsFromFirebase() {
+        isLoading = true
+        errorMessage = nil
+        
+        Task {
+            do {
+                friends = try await firebaseSyncService.getFriendsWithProfiles()
+                
+                // Update pending friend requests count
+                pendingFriendRequests = try await firebaseSyncService.getPendingFriendRequestsCount()
+                
+                await MainActor.run {
+                    isLoading = false
+                }
+                
+                logger.info("Successfully loaded \(friends.count) friends from Firebase")
+            } catch {
+                await MainActor.run {
+                    isLoading = false
+                    errorMessage = error.localizedDescription
+                }
+                
+                logger.error("Error loading friends from Firebase: \(error.localizedDescription)")
+            }
+        }
+    }
+    
+    // Refresh friends data (for pull-to-refresh)
+    private func refreshFriends() async {
+        do {
+            // Trigger a full sync with Firebase
+            await firebaseSyncService.performFullSync()
+            
+            // Reload friends data
+            friends = try await firebaseSyncService.getFriendsWithProfiles()
+            logger.info("Refreshed friends data from Firebase")
+        } catch {
+            errorMessage = error.localizedDescription
+            logger.error("Error refreshing friends: \(error.localizedDescription)")
         }
     }
 }

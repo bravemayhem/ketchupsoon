@@ -1,9 +1,14 @@
+// Primary purpose: UI state management for the onboarding flow
+// Contains a temporary ProfileData struct that collects information during onboarding
+// Eventually transforms this temporary data into a UserModel at the end of the flow
+
 import SwiftUI
 import FirebaseAuth
 import FirebaseFirestore
 import FirebaseStorage
 import SwiftData
 
+@MainActor
 class UserOnboardingViewModel: ObservableObject {
     private let container: ModelContainer
     private let userRepository: UserRepository

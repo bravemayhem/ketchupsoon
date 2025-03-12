@@ -1,7 +1,13 @@
+/*
+ Long-Term Strategy
+ In the future, you might consider a more significant architectural refactoring to merge UserProfileManager functionality into FirebaseUserRepository, but this would be best approached as a separate task after you've fully transitioned to using UserModel throughout your app
+ */
+
 import Foundation
 import FirebaseAuth
 import FirebaseFirestore
 import OSLog
+import SwiftData
 
 @MainActor
 class UserProfileManager: ObservableObject {
@@ -11,7 +17,7 @@ class UserProfileManager: ObservableObject {
     private let db = Firestore.firestore()
     private let usersCollection = "users"
     
-    @Published var currentUserProfile: UserProfileModel?
+    @Published var currentUserProfile: UserModel?
     @Published var isLoading = false
     @Published var error: Error?
     
@@ -55,15 +61,15 @@ class UserProfileManager: ObservableObject {
             let document = try await db.collection(usersCollection).document(userId).getDocument()
             
             if document.exists, let data = document.data() {
-                // Convert Firestore data to UserProfile
-                if let profile = createUserProfile(from: data, with: userId) {
+                // Convert Firestore data to UserModel
+                if let profile = createUserModel(from: data, with: userId) {
                     self.currentUserProfile = profile
                     self.logger.info("Successfully fetched user profile for \(userId)")
                 }
             } else {
                 // Profile doesn't exist, create one from Auth data
                 if let user = Auth.auth().currentUser {
-                    let newProfile = UserProfileModel(from: user)
+                    let newProfile = UserModel.from(firebaseUser: user)
                     try await createUserProfile(profile: newProfile)
                     self.currentUserProfile = newProfile
                     self.logger.info("Created new user profile for \(userId)")
@@ -78,12 +84,12 @@ class UserProfileManager: ObservableObject {
     }
     
     /// Creates a new user profile in Firestore
-    func createUserProfile(profile: UserProfileModel) async throws {
+    func createUserProfile(profile: UserModel) async throws {
         guard Auth.auth().currentUser != nil else {
             throw NSError(domain: "UserProfileManager", code: 1, userInfo: [NSLocalizedDescriptionKey: "No authenticated user"])
         }
         
-        let data = profile.toDictionary()
+        let data = profile.toFirebaseDictionary()
         
         try await db.collection(usersCollection).document(profile.id).setData(data)
         self.currentUserProfile = profile
@@ -108,69 +114,69 @@ class UserProfileManager: ObservableObject {
             try await db.collection(usersCollection).document(userId).updateData(updatesWithTimestamp)
             
             // Update local profile copy
-            var updatedProfile = currentProfile
+            // Since UserModel is a class, we can directly update its properties
             
             if let name = updates["name"] as? String {
-                updatedProfile.name = name
+                currentProfile.name = name
             }
             
             if let email = updates["email"] as? String {
-                updatedProfile.email = email
+                currentProfile.email = email
             }
             
             if let phoneNumber = updates["phoneNumber"] as? String {
-                updatedProfile.phoneNumber = phoneNumber
+                currentProfile.phoneNumber = phoneNumber
             }
             
             if let bio = updates["bio"] as? String {
-                updatedProfile.bio = bio
+                currentProfile.bio = bio
             }
             
             if let profileImageURL = updates["profileImageURL"] as? String {
-                updatedProfile.profileImageURL = profileImageURL
+                currentProfile.profileImageURL = profileImageURL
             }
             
             // Handle birthday update
             if let birthdayTimestamp = updates["birthday"] as? TimeInterval {
-                updatedProfile.birthday = Date(timeIntervalSince1970: birthdayTimestamp)
-                logger.info("Updated local profile birthday: \(updatedProfile.birthday?.description ?? "nil")")
+                currentProfile.birthday = Date(timeIntervalSince1970: birthdayTimestamp)
+                logger.info("Updated local profile birthday: \(currentProfile.birthday?.description ?? "nil")")
             }
             
             // Add handling for social profile fields
             if let isSocialProfileActive = updates["isSocialProfileActive"] as? Bool {
-                updatedProfile.isSocialProfileActive = isSocialProfileActive
+                currentProfile.isSocialProfileActive = isSocialProfileActive
             }
             
             if let socialAuthProvider = updates["socialAuthProvider"] as? String {
-                updatedProfile.socialAuthProvider = socialAuthProvider
+                currentProfile.socialAuthProvider = socialAuthProvider
             } else if updates["socialAuthProvider"] is NSNull {
                 // Handle case when socialAuthProvider is set to null
-                updatedProfile.socialAuthProvider = nil
+                currentProfile.socialAuthProvider = nil
             }
             
             // Handle user preference updates
             if let availabilityTimes = updates["availabilityTimes"] as? [String] {
-                updatedProfile.availabilityTimes = availabilityTimes
+                currentProfile.availabilityTimes = availabilityTimes
             }
             
             if let availableDays = updates["availableDays"] as? [String] {
-                updatedProfile.availableDays = availableDays
+                currentProfile.availableDays = availableDays
             }
             
             if let favoriteActivities = updates["favoriteActivities"] as? [String] {
-                updatedProfile.favoriteActivities = favoriteActivities
+                currentProfile.favoriteActivities = favoriteActivities
             }
             
             if let calendarConnections = updates["calendarConnections"] as? [String] {
-                updatedProfile.calendarConnections = calendarConnections
+                currentProfile.calendarConnections = calendarConnections
             }
             
             if let travelRadius = updates["travelRadius"] as? String {
-                updatedProfile.travelRadius = travelRadius
+                currentProfile.travelRadius = travelRadius
             }
             
-            updatedProfile.updatedAt = Date()
-            self.currentUserProfile = updatedProfile
+            currentProfile.updatedAt = Date()
+            // We don't need to reassign currentUserProfile since we're updating the existing object
             
             self.logger.info("Updated user profile for \(userId)")
         } catch {
@@ -184,60 +190,41 @@ class UserProfileManager: ObservableObject {
     
     // MARK: - Helpers
     
-    private func createUserProfile(from data: [String: Any], with userId: String) -> UserProfileModel? {
-        let name = data["name"] as? String
-        let email = data["email"] as? String
-        let phoneNumber = data["phoneNumber"] as? String
-        let bio = data["bio"] as? String
-        let profileImageURL = data["profileImageURL"] as? String
-        let isSocialProfileActive = data["isSocialProfileActive"] as? Bool ?? false
-        let socialAuthProvider = data["socialAuthProvider"] as? String
-                
-      
+    private func createUserModel(from data: [String: Any], with userId: String) -> UserModel? {
+        let user = UserModel(id: userId)
+        
+        user.name = data["name"] as? String
+        user.email = data["email"] as? String
+        user.phoneNumber = data["phoneNumber"] as? String
+        user.bio = data["bio"] as? String
+        user.profileImageURL = data["profileImageURL"] as? String
+        user.isSocialProfileActive = data["isSocialProfileActive"] as? Bool ?? false
+        user.socialAuthProvider = data["socialAuthProvider"] as? String
+        user.gradientIndex = data["gradientIndex"] as? Int ?? 0
         
         // User preferences
-        let availabilityTimes = data["availabilityTimes"] as? [String]
-        let availableDays = data["availableDays"] as? [String]
-        let favoriteActivities = data["favoriteActivities"] as? [String]
-        let calendarConnections = data["calendarConnections"] as? [String]
-        let travelRadius = data["travelRadius"] as? String
+        user.availabilityTimes = data["availabilityTimes"] as? [String]
+        user.availableDays = data["availableDays"] as? [String]
+        user.favoriteActivities = data["favoriteActivities"] as? [String]
+        user.calendarConnections = data["calendarConnections"] as? [String]
+        user.travelRadius = data["travelRadius"] as? String
         
         // Handle birthday
-        var birthday: Date? = nil
         if let birthdayTimestamp = data["birthday"] as? TimeInterval {
-            birthday = Date(timeIntervalSince1970: birthdayTimestamp)
-            logger.info("Loaded birthday from Firestore: \(birthday?.description ?? "nil")")
+            user.birthday = Date(timeIntervalSince1970: birthdayTimestamp)
+            logger.info("Loaded birthday from Firestore: \(user.birthday?.description ?? "nil")")
         }
         
         // Handle timestamps
-        var createdAt = Date()
         if let createdTimestamp = data["createdAt"] as? TimeInterval {
-            createdAt = Date(timeIntervalSince1970: createdTimestamp)
+            user.createdAt = Date(timeIntervalSince1970: createdTimestamp)
         }
         
-        var updatedAt = Date()
         if let updatedTimestamp = data["updatedAt"] as? TimeInterval {
-            updatedAt = Date(timeIntervalSince1970: updatedTimestamp)
+            user.updatedAt = Date(timeIntervalSince1970: updatedTimestamp)
         }
         
-        return UserProfileModel(
-            id: userId,
-            name: name,
-            email: email,
-            phoneNumber: phoneNumber,
-            bio: bio,
-            profileImageURL: profileImageURL,
-            birthday: birthday,                      
-            createdAt: createdAt,
-            updatedAt: updatedAt,
-            isSocialProfileActive: isSocialProfileActive,
-            socialAuthProvider: socialAuthProvider,
-            availabilityTimes: availabilityTimes,
-            availableDays: availableDays,
-            favoriteActivities: favoriteActivities,
-            calendarConnections: calendarConnections,
-            travelRadius: travelRadius
-        )
+        return user
     }
     
     // MARK: - Sync with UserSettings

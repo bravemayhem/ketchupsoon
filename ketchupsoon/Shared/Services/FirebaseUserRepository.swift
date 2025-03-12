@@ -25,8 +25,9 @@ class FirebaseUserRepository: UserRepository {
     // MARK: - User Fetching Methods
 
     func getUser(id: String) async throws -> UserModel {
+        let userId = id
         // First check if user exists in SwiftData
-        let descriptor = FetchDescriptor<UserModel>(predicate: #Predicate { $0.id == id })
+        let descriptor = FetchDescriptor<UserModel>(predicate: #Predicate { (user: UserModel) -> Bool in user.id == userId })
         
         do {
             let localUsers = try modelContext.fetch(descriptor)
@@ -78,7 +79,10 @@ class FirebaseUserRepository: UserRepository {
         
         // Try to get user from local database first
         do {
-            let descriptor = FetchDescriptor<UserModel>(predicate: #Predicate { $0.id == currentUser.uid })
+            let userID = currentUser.uid // Store the ID in a local variable
+            let descriptor = FetchDescriptor<UserModel>(predicate: #Predicate { (user: UserModel) -> Bool in 
+                user.id == userID 
+            })
             let localUsers = try modelContext.fetch(descriptor)
             
             if let existingUser = localUsers.first {
@@ -170,7 +174,10 @@ class FirebaseUserRepository: UserRepository {
             try await db.collection(usersCollection).document(user.id).setData(userData)
             
             // Save to local database if not already there
-            let descriptor = FetchDescriptor<UserModel>(predicate: #Predicate { $0.id == user.id })
+            let userId = user.id
+            let descriptor = FetchDescriptor<UserModel>(predicate: #Predicate { (u: UserModel) -> Bool in
+                u.id == userId
+            })
             let existingUsers = try modelContext.fetch(descriptor)
             
             if existingUsers.isEmpty {
@@ -232,7 +239,10 @@ class FirebaseUserRepository: UserRepository {
             try await db.collection(usersCollection).document(id).delete()
             
             // Delete from local database
-            let descriptor = FetchDescriptor<UserModel>(predicate: #Predicate { $0.id == id })
+            let userId = id
+            let descriptor = FetchDescriptor<UserModel>(predicate: #Predicate { (user: UserModel) -> Bool in
+                user.id == userId
+            })
             let localUsers = try modelContext.fetch(descriptor)
             
             if let user = localUsers.first {
@@ -317,7 +327,10 @@ class FirebaseUserRepository: UserRepository {
             
             if document.exists, let data = document.data() {
                 // Update user in SwiftData
-                let descriptor = FetchDescriptor<UserModel>(predicate: #Predicate { $0.id == currentUser.uid })
+                let userId = currentUser.uid
+                let descriptor = FetchDescriptor<UserModel>(predicate: #Predicate { (user: UserModel) -> Bool in
+                    user.id == userId
+                })
                 let localUsers = try modelContext.fetch(descriptor)
                 
                 if let existingUser = localUsers.first {
@@ -345,7 +358,7 @@ class FirebaseUserRepository: UserRepository {
     func syncLocalWithRemote() async throws {
         logger.debug("Syncing local users with remote")
         
-        guard let currentUser = Auth.auth().currentUser else {
+        guard Auth.auth().currentUser != nil else {
             logger.warning("Cannot sync - no current user")
             throw NSError(domain: "com.ketchupsoon", code: 401, 
                          userInfo: [NSLocalizedDescriptionKey: "No user is currently logged in"])

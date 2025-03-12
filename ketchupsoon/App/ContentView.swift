@@ -1,10 +1,12 @@
 import SwiftUI
 import SwiftData
 import UIKit
+import FirebaseAuth
 
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     @EnvironmentObject private var onboardingManager: OnboardingManager
+    @EnvironmentObject private var firebaseSyncService: FirebaseSyncService?
     @State private var selectedTab = 0
     @State private var showingContactPicker = false
     @State private var showingDebugAlert = false
@@ -40,7 +42,11 @@ struct ContentView: View {
                                 showingDebugAlert = true
                             }
                         ) {
+                            // FIREBASE REQUIREMENT: Home tab
+                            // - Uses FirebaseSyncService for displaying friend activity
+                            // - Uses FirestoreListenerService indirectly for real-time updates
                             HomeView()
+                                .environmentObject(firebaseSyncService)
                         }
                         .transition(.opacity)
                         .sheet(isPresented: $showingSettings) {
@@ -61,7 +67,11 @@ struct ContentView: View {
                                 showingDebugAlert = true
                             }
                         ) {
+                            // FIREBASE REQUIREMENT: Create Meetup tab
+                            // - Uses FirebaseSyncService for friend selection and invitations
+                            // - Needs friends list from Firestore
                             CreateMeetupView()
+                                .environmentObject(firebaseSyncService)
                         }
                         .transition(.opacity)
                         .sheet(isPresented: $showingSettings) {
@@ -82,7 +92,11 @@ struct ContentView: View {
                                 showingDebugAlert = true
                             }
                         ) {
+                            // FIREBASE REQUIREMENT: Pulse tab
+                            // - Uses FirebaseSyncService for social activity feeds
+                            // - Uses FirestoreListenerService indirectly for real-time notifications
                             PulseView()
+                                .environmentObject(firebaseSyncService)
                         }
                         .transition(.opacity)
                         .sheet(isPresented: $showingSettings) {
@@ -96,7 +110,12 @@ struct ContentView: View {
                             showTrailingButton: false,
                             profileEmoji: "😎"
                         ) {
+                            // FIREBASE REQUIREMENT: Profile tab
+                            // - Critical: Uses FirebaseSyncService for user profile management
+                            // - Uses FirestoreListenerService indirectly for friend status updates
+                            // - Primary interface for friendship operations
                             UserProfileView()
+                                .environmentObject(firebaseSyncService)
                         }
                         .transition(.opacity)
                     }
@@ -117,13 +136,24 @@ struct ContentView: View {
         // Add back the fullScreenCover to show onboarding when isShowingOnboarding becomes true
         .fullScreenCover(isPresented: $onboardingManager.isShowingOnboarding) {
             UserOnboardingView(container: modelContext.container)
+                .environmentObject(firebaseSyncService)
                 .edgesIgnoringSafeArea(.all)
+        }
+        .onAppear {
+            // Sync Firebase data when ContentView appears if user is logged in
+            if Auth.auth().currentUser != nil {
+                Task {
+                    await firebaseSyncService?.performFullSync()
+                }
+            }
         }
     }
 }
 
 #Preview {
-    ContentView()
+    let container = try! ModelContainer(for: [UserModel.self], inMemory: true)
+    return ContentView()
         .modelContainer(for: [UserModel.self], inMemory: true)
         .environmentObject(OnboardingManager.shared)
+        .environmentObject(FirebaseSyncServiceFactory.createService(modelContext: container.mainContext))
 }

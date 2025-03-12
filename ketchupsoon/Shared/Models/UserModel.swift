@@ -3,7 +3,9 @@
 //  ketchupsoon
 //
 //  Created by Brooklyn Beltran on 3/11/25.
-//
+//  Primary purpose: Data persistence and Firebase integration
+//  Represents a complete user profile with all attributes
+//  Used for storage in SwiftData and Firebase
 
 import Foundation
 import SwiftData

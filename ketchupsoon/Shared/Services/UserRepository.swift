@@ -39,11 +39,13 @@ protocol UserRepository {
 /// Factory for creating UserRepository instances
 struct UserRepositoryFactory {
     /// Create the default repository implementation
+    @MainActor
     static func createRepository(modelContext: ModelContext) -> UserRepository {
         return FirebaseUserRepository(modelContext: modelContext)
     }
     
     /// Create a mock repository for previews or testing
+    @MainActor
     static func createMockRepository() -> UserRepository {
         // You could implement a mock version here
         let container = try! ModelContainer(for: UserModel.self)

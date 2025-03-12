@@ -108,10 +108,18 @@ struct UserRepositoryExampleView: View {
     
     /// Example of updating a user field
     private func updateUserBio() {
-        guard var user = currentUser else { return }
+        guard let user = currentUser else { return }
+        
+        // Create a mutable copy
+        let updatedUser = UserModel()
+        updatedUser.id = user.id
+        updatedUser.name = user.name
+        updatedUser.email = user.email
+        updatedUser.profileImageURL = user.profileImageURL
+        // Add other properties as needed
         
         // Update the bio
-        user.bio = "Updated at \(Date().formatted(date: .numeric, time: .shortened))"
+        updatedUser.bio = "Updated at \(Date().formatted(date: .numeric, time: .shortened))"
         
         // Save changes
         Task {
@@ -119,7 +127,7 @@ struct UserRepositoryExampleView: View {
             errorMessage = nil
             
             do {
-                try await userRepository.updateUser(user)
+                try await userRepository.updateUser(user: updatedUser)
                 await loadCurrentUser() // Reload to see changes
             } catch {
                 errorMessage = "Update error: \(error.localizedDescription)"
@@ -164,21 +172,30 @@ class ProfileViewModel: ObservableObject {
     }
     
     func updateProfile(name: String, email: String, bio: String) {
-        guard var currentUser = user else { return }
+        guard let user = self.user else { return }
         
-        // Update user properties
-        currentUser.name = name
-        currentUser.email = email
-        currentUser.bio = bio
+        // Create a new instance with updated properties
+        let updatedUser = UserModel()
+        updatedUser.id = user.id
+        // Set the updated values
+        updatedUser.name = name
+        updatedUser.email = email
+        updatedUser.bio = bio
+        // Copy other properties that should be preserved
+        updatedUser.profileImageURL = user.profileImageURL
+        // Add other properties as needed
         
         isLoading = true
         
+        // Capture a local copy for the task
+        let userToUpdate = updatedUser
+        
         Task {
             do {
-                try await userRepository.updateUser(currentUser)
+                try await userRepository.updateUser(user: userToUpdate)
                 
                 await MainActor.run {
-                    self.user = currentUser
+                    self.user = userToUpdate
                     self.isLoading = false
                 }
             } catch {
