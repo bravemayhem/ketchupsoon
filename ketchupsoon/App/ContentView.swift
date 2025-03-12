@@ -116,7 +116,7 @@ struct ContentView: View {
         }
         // Add back the fullScreenCover to show onboarding when isShowingOnboarding becomes true
         .fullScreenCover(isPresented: $onboardingManager.isShowingOnboarding) {
-            KetchupSoonOnboardingView(container: modelContext.container)
+            UserOnboardingView(container: modelContext.container)
                 .edgesIgnoringSafeArea(.all)
         }
     }

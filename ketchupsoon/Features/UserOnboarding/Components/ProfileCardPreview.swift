@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct ProfileCardPreview: View {
-    let profileData: KetchupSoonOnboardingViewModel.ProfileData
+    let profileData: UserOnboardingViewModel.ProfileData
     
     var body: some View {
         VStack(spacing: 0) {

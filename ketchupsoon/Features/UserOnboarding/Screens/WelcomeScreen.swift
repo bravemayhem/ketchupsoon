@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct WelcomeScreen: View {
-    @EnvironmentObject var viewModel: KetchupSoonOnboardingViewModel
+    @EnvironmentObject var viewModel: UserOnboardingViewModel
     
     var body: some View {
         VStack(spacing: 0) {

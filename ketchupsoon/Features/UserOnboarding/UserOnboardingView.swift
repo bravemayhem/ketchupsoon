@@ -2,14 +2,14 @@ import SwiftUI
 import FirebaseAuth
 import SwiftData
 
-struct KetchupSoonOnboardingView: View {
-    @StateObject private var viewModel: KetchupSoonOnboardingViewModel
+struct UserOnboardingView: View {
+    @StateObject private var viewModel: UserOnboardingViewModel
     @StateObject private var onboardingManager = OnboardingManager.shared
     @StateObject private var userSettings = UserSettings.shared
     @StateObject private var userProfileManager = UserProfileManager.shared
     
     init(container: ModelContainer) {
-        self._viewModel = StateObject(wrappedValue: KetchupSoonOnboardingViewModel(container: container))
+        self._viewModel = StateObject(wrappedValue: UserOnboardingViewModel(container: container))
     }    
     
     var body: some View {

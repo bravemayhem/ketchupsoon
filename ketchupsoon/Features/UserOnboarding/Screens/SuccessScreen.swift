@@ -4,7 +4,7 @@ import FirebaseStorage
 import FirebaseAuth
 
 struct SuccessScreen: View {
-    @EnvironmentObject var viewModel: KetchupSoonOnboardingViewModel
+    @EnvironmentObject var viewModel: UserOnboardingViewModel
     @EnvironmentObject var onboardingManager: OnboardingManager
     @StateObject private var userSettings = UserSettings.shared
     @StateObject private var userProfileManager = UserProfileManager.shared

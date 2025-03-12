@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct AvatarScreen: View {
-    @EnvironmentObject var viewModel: KetchupSoonOnboardingViewModel
+    @EnvironmentObject var viewModel: UserOnboardingViewModel
     @State private var tempImage: UIImage? = nil
     let emojis = ["✨", "🌟", "🚀", "🎸", "🎨", "🎮", "🎵", "💫", "😎"]
     

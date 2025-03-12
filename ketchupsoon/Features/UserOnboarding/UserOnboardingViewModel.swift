@@ -4,12 +4,14 @@ import FirebaseFirestore
 import FirebaseStorage
 import SwiftData
 
-class KetchupSoonOnboardingViewModel: ObservableObject {
+class UserOnboardingViewModel: ObservableObject {
     private let container: ModelContainer
+    private let userRepository: UserRepository
     
     // Initialize with the container
     init(container: ModelContainer) {
         self.container = container
+        self.userRepository = UserRepositoryFactory.createRepository(modelContext: container.mainContext)
     }
 
     // Current step in the onboarding flow
@@ -241,17 +243,8 @@ class KetchupSoonOnboardingViewModel: ObservableObject {
             newUser.profileImageURL = downloadURL.absoluteString
         }
         
-        // Access modelContext on the Main actor
-        let modelContext = container.mainContext
-        
-        // Save to SwiftData
-        modelContext.insert(newUser)
-        try modelContext.save()
-        
-        // Save to Firebase
-        let userData = newUser.toFirebaseDictionary()
-        let db = Firestore.firestore()
-        try await db.collection("users").document(userId).setData(userData)
+        // Use UserRepository to create the user in Firebase and SwiftData
+        try await userRepository.createUser(user: newUser)
         
         // Update UserSettings with additional user info
         if !self.profileData.name.isEmpty {

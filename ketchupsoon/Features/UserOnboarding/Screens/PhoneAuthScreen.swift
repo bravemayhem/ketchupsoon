@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct PhoneAuthScreen: View {
-    @EnvironmentObject var viewModel: KetchupSoonOnboardingViewModel
+    @EnvironmentObject var viewModel: UserOnboardingViewModel
     
     var body: some View {
         ZStack {
@@ -114,7 +114,7 @@ struct PhoneAuthScreen: View {
 
 // Phone input view
 struct PhoneInputView: View {
-    @EnvironmentObject var viewModel: KetchupSoonOnboardingViewModel
+    @EnvironmentObject var viewModel: UserOnboardingViewModel
     @FocusState private var isInputFocused: Bool
     
     var body: some View {
@@ -180,7 +180,7 @@ struct PhoneInputView: View {
 
 // Verification code view
 struct VerificationCodeView: View {
-    @EnvironmentObject var viewModel: KetchupSoonOnboardingViewModel
+    @EnvironmentObject var viewModel: UserOnboardingViewModel
     @FocusState private var isInputFocused: Bool
     
     var body: some View {

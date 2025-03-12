@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct BasicInfoScreen: View {
-    @EnvironmentObject var viewModel: KetchupSoonOnboardingViewModel
+    @EnvironmentObject var viewModel: UserOnboardingViewModel
     
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {

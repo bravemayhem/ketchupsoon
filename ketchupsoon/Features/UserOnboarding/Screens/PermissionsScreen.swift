@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct PermissionsScreen: View {
-    @EnvironmentObject var viewModel: KetchupSoonOnboardingViewModel
+    @EnvironmentObject var viewModel: UserOnboardingViewModel
     @EnvironmentObject var onboardingManager: OnboardingManager
     @StateObject private var notificationsManager = NotificationsManager.shared
     @StateObject private var contactsManager = ContactsManager.shared

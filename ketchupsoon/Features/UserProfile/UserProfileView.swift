@@ -4,12 +4,21 @@ import PhotosUI
 import FirebaseStorage
 import OSLog
 import Combine
+import SwiftData
 
 struct UserProfileView: View {
     // MARK: - Properties
     @Environment(\.dismiss) private var dismiss
     @StateObject private var profileManager = UserProfileManager.shared
     @StateObject private var userSettings = UserSettings.shared
+    
+    // Add SwiftData environment
+    @Environment(\.modelContext) private var modelContext
+    
+    // Repository instance using the factory
+    private var userRepository: UserRepository {
+        UserRepositoryFactory.createRepository(modelContext: modelContext)
+    }
     
     // Cache-related state
     @State private var cachedProfileImage: UIImage? = nil
@@ -97,17 +106,25 @@ struct UserProfileView: View {
         .padding(.bottom, 80)
         .onAppear {
             Task {
+                // Try repository approach first
+                await loadProfileData()
+                
+                // For backward compatibility, also refresh from Firebase
                 if let userId = Auth.auth().currentUser?.uid {
-                    // Refresh profile from Firestore
-                    await profileManager.fetchUserProfile(userId: userId)
+                    do {
+                        // Sync local with remote data
+                        try await userRepository.syncLocalWithRemote()
+                        logger.info("🔄 Synced user data with Firebase")
+                        
+                        // Legacy approach for backward compatibility
+                        await profileManager.fetchUserProfile(userId: userId)
+                    } catch {
+                        logger.warning("⚠️ Error syncing with Firebase: \(error.localizedDescription)")
+                    }
                 }
                 
-                // Then load it into the view
+                // Set a small delay before allowing auto-saves
                 await MainActor.run {
-                    loadProfileData()
-                    preloadProfileImage()
-                    
-                    // Set a small delay before allowing auto-saves
                     DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
                         isInitialDataLoad = false
                         logger.info("📋 Initial data load complete, auto-save enabled")
@@ -535,17 +552,85 @@ struct UserProfileView: View {
     private func saveProfile() {
         logger.info("📸 saveProfile() called")
         
+        saveInProgress = true
+        hasChanges = false
+        
+        Task {
+            do {
+                // Try to get the current user from repository
+                guard var user = try await userRepository.getCurrentUser() else {
+                    throw NSError(domain: "UserProfileView", code: 404, 
+                                 userInfo: [NSLocalizedDescriptionKey: "User not found"])
+                }
+                
+                // Update user model with form values
+                if !userName.isEmpty {
+                    user.name = userName
+                    logger.info("📸 Adding name to updates: \(userName)")
+                }
+                
+                if !email.isEmpty {
+                    user.email = email
+                    logger.info("📸 Adding email to updates: \(email)")
+                }
+                
+                if let birthday = birthday {
+                    user.birthday = birthday
+                    logger.info("📸 Adding birthday to updates: \(birthday)")
+                }
+                
+                if !userBio.isEmpty {
+                    user.bio = userBio
+                    logger.info("📸 Adding bio to updates: \(userBio)")
+                }
+                
+                // Update timestamp
+                user.updatedAt = Date()
+                
+                // Save using repository
+                try await userRepository.updateUser(user)
+                
+                // Also update UserSettings for backward compatibility
+                logger.info("📸 Updating UserSettings")
+                userSettings.updateName(userName.isEmpty ? nil : userName)
+                userSettings.updateEmail(email.isEmpty ? nil : email)
+                
+                await MainActor.run {
+                    saveInProgress = false
+                    logger.info("📸 Profile updated successfully using repository")
+                    
+                    // Show a temporary alert for debug builds
+                    #if DEBUG
+                    alertTitle = "Profile Update"
+                    alertMessage = "Profile updated successfully"
+                    showAlert = true
+                    #endif
+                    
+                    // After successful save, update the displayed info
+                    updateDisplayedInfo()
+                }
+            } catch {
+                logger.error("📸 Error updating profile with repository: \(error.localizedDescription)")
+                
+                // Fallback to old method if repository fails
+                await saveProfileLegacy()
+            }
+        }
+    }
+    
+    // Legacy method for backward compatibility
+    private func saveProfileLegacy() async {
         // Check if we have a user profile or if the user is logged in
         if profileManager.currentUserProfile == nil {
             logger.warning("📸 Cannot save - no current user profile")
-            alertTitle = "Profile Update"
-            alertMessage = "You must be logged in to update your profile"
-            showAlert = true
+            await MainActor.run {
+                alertTitle = "Profile Update"
+                alertMessage = "You must be logged in to update your profile"
+                showAlert = true
+                saveInProgress = false
+            }
             return
         }
-        
-        saveInProgress = true
-        hasChanges = false
         
         // Build updates dictionary
         var updates: [String: Any] = [:]
@@ -565,7 +650,6 @@ struct UserProfileView: View {
             logger.info("📸 Adding birthday to updates: \(birthday)")
         }
                       
-        
         if !userBio.isEmpty {
             updates["bio"] = userBio
             logger.info("📸 Adding bio to updates: \(userBio)")
@@ -576,7 +660,9 @@ struct UserProfileView: View {
         // Skip if no updates
         if updates.isEmpty {
             logger.info("📸 No updates to save, returning early")
-            saveInProgress = false
+            await MainActor.run {
+                saveInProgress = false
+            }
             return
         }
         
@@ -587,71 +673,99 @@ struct UserProfileView: View {
         
         // Update profile in Firestore
         logger.info("📸 Starting Firestore update")
-        Task {
-            do {
-                logger.info("📸 Calling profileManager.updateUserProfile")
-                try await profileManager.updateUserProfile(updates: updates)
-                await MainActor.run {
-                    saveInProgress = false
-                    logger.info("📸 Profile updated successfully")
-                    // Show a temporary alert for debug builds
-                    #if DEBUG
-                    alertTitle = "Profile Update"
-                    alertMessage = "Profile updated successfully"
-                    showAlert = true
-                    #endif
-                    
-                    // After successful save, update the displayed info
-                    updateDisplayedInfo()
-                }
-            } catch {
-                logger.error("📸 Error updating profile: \(error.localizedDescription)")
-                await MainActor.run {
-                    saveInProgress = false
-                    alertTitle = "Profile Update"
-                    alertMessage = "Error updating profile: \(error.localizedDescription)"
-                    showAlert = true
-                }
+        do {
+            logger.info("📸 Calling profileManager.updateUserProfile")
+            try await profileManager.updateUserProfile(updates: updates)
+            await MainActor.run {
+                saveInProgress = false
+                logger.info("📸 Profile updated successfully")
+                
+                // Show a temporary alert for debug builds
+                #if DEBUG
+                alertTitle = "Profile Update"
+                alertMessage = "Profile updated successfully (legacy)"
+                showAlert = true
+                #endif
+                
+                // After successful save, update the displayed info
+                updateDisplayedInfo()
+            }
+        } catch {
+            logger.error("📸 Error updating profile: \(error.localizedDescription)")
+            await MainActor.run {
+                saveInProgress = false
+                alertTitle = "Profile Update"
+                alertMessage = "Error updating profile: \(error.localizedDescription)"
+                showAlert = true
             }
         }
     }
    
     // MARK: - Helper Methods
-    private func loadProfileData() {
-        if let profile = profileManager.currentUserProfile {
-            // Use real name if available, otherwise use a sensible default
-            userName = profile.name?.isEmpty == false ? profile.name! : "User"
-            
-            // Load bio if available, otherwise use empty
-            userBio = profile.bio ?? ""
-            
-            // Load email and phone
-            email = profile.email ?? ""
-            phoneNumber = profile.phoneNumber ?? ""
-            
-            // Load birthday
-            birthday = profile.birthday
-            
-                                    
-            // Construct userInfo
-            updateDisplayedInfo()
-            
-            // Set profile gradient based on name (for consistency)
-            if let name = profile.name, !name.isEmpty {
-                let index = abs(name.hash % AppColors.avatarGradients.count)
-                profileRingGradient = AppColors.avatarGradients[index]
+    private func loadProfileData() async {
+        do {
+            guard let user = try await userRepository.getCurrentUser() else {
+                // No user found, set defaults
+                setDefaultValues()
+                return
             }
             
-            // Preload the profile image for faster display
-            preloadProfileImage()
-        } else {
-            // Set empty/default values when no profile exists
-            userName = "User"
-            userBio = ""
-            userInfo = ""
-            email = ""
-            phoneNumber = ""         
+            // Update UI with user model data
+            await MainActor.run {
+                userName = user.name ?? "User"
+                userBio = user.bio ?? ""
+                email = user.email ?? ""
+                phoneNumber = user.phoneNumber ?? ""
+                birthday = user.birthday
+                
+                // Set profile gradient based on name (for consistency)
+                if let name = user.name, !name.isEmpty {
+                    let index = abs(name.hash % AppColors.avatarGradients.count)
+                    profileRingGradient = AppColors.avatarGradients[index]
+                }
+                
+                // Update displayed info and preload profile image
+                updateDisplayedInfo()
+                if let photoURL = user.profileImageURL {
+                    preloadProfileImage(from: photoURL)
+                }
+                
+                logger.info("📋 Loaded user profile from repository")
+            }
+        } catch {
+            logger.error("❌ Error loading user profile: \(error.localizedDescription)")
+            
+            // Fallback to existing profileManager for backward compatibility
+            if let profile = profileManager.currentUserProfile {
+                userName = profile.name?.isEmpty == false ? profile.name! : "User"
+                userBio = profile.bio ?? ""
+                email = profile.email ?? ""
+                phoneNumber = profile.phoneNumber ?? ""
+                birthday = profile.birthday
+                updateDisplayedInfo()
+                
+                // Set profile gradient based on name (for consistency)
+                if let name = profile.name, !name.isEmpty {
+                    let index = abs(name.hash % AppColors.avatarGradients.count)
+                    profileRingGradient = AppColors.avatarGradients[index]
+                }
+                
+                // Preload the profile image for faster display
+                preloadProfileImage()
+            } else {
+                // Set empty/default values when no profile exists
+                setDefaultValues()
+            }
         }
+    }
+    
+    private func setDefaultValues() {
+        userName = "User"
+        userBio = ""
+        userInfo = ""
+        email = ""
+        phoneNumber = ""
+        birthday = nil
     }
     
     private func updateDisplayedInfo() {
@@ -755,21 +869,18 @@ struct UserProfileView: View {
     
     private func uploadProfileImage(_ image: UIImage) async {
         logger.info("📸 Starting profile image upload")
-        guard let userId = profileManager.currentUserProfile?.id else {
-            logger.error("📸 No user profile ID available for image upload")
-            await MainActor.run {
-                alertTitle = "Photo Error"
-                alertMessage = "You must have a profile before setting a profile picture"
-                showAlert = true
-            }
-            return
-        }
         
         await MainActor.run {
             isUploadingImage = true
         }
         
         do {
+            // Get current user from repository
+            guard var user = try await userRepository.getCurrentUser() else {
+                throw NSError(domain: "UserProfileView", code: 404, 
+                             userInfo: [NSLocalizedDescriptionKey: "User not found"])
+            }
+            
             // Resize image for storage efficiency
             guard let resizedImage = image.resized(to: CGSize(width: 500, height: 500)) else {
                 logger.error("📸 Failed to resize image")
@@ -786,7 +897,7 @@ struct UserProfileView: View {
             // Create a reference to Firebase Storage
             let storage = Storage.storage()
             let storageRef = storage.reference()
-            let profileImagesRef = storageRef.child("profile_images/\(userId).jpg")
+            let profileImagesRef = storageRef.child("profile_images/\(user.id).jpg")
             
             logger.info("📸 Uploading image to Firebase Storage")
             // Upload the image
@@ -797,8 +908,13 @@ struct UserProfileView: View {
             let downloadURL = try await profileImagesRef.downloadURL()
             logger.info("📸 Got download URL: \(downloadURL.absoluteString)")
             
-            // Update profile with new image URL
-            logger.info("📸 Updating profile with new image URL")
+            // Update user model with new image URL
+            user.profileImageURL = downloadURL.absoluteString
+            
+            // Save using repository
+            try await userRepository.updateUser(user)
+            
+            // Also update via legacy method for backward compatibility
             try await profileManager.updateUserProfile(updates: ["profileImageURL": downloadURL.absoluteString])
             
             await MainActor.run {
@@ -806,6 +922,11 @@ struct UserProfileView: View {
                 alertTitle = "Profile Photo"
                 alertMessage = "Profile photo updated successfully"
                 showAlert = true
+                
+                // Update cache
+                cachedProfileImage = resizedImage
+                ImageCacheManager.shared.storeImage(resizedImage, for: downloadURL.absoluteString)
+                
                 logger.info("📸 Profile photo update completed successfully")
             }
         } catch {
@@ -819,35 +940,48 @@ struct UserProfileView: View {
         }
     }
     
-    private func preloadProfileImage() {
-        guard let photoURL = profileManager.currentUserProfile?.profileImageURL,
-              !photoURL.isEmpty,
-              let url = URL(string: photoURL) else {
+    // New method that takes a URL string parameter
+    private func preloadProfileImage(from urlString: String) {
+        guard let url = URL(string: urlString) else {
             return
         }
         
         // Check if image is already in cache
-        if let cachedImage = ImageCacheManager.shared.getImage(for: photoURL) {
+        if let cachedImage = ImageCacheManager.shared.getImage(for: urlString) {
             self.cachedProfileImage = cachedImage
             return
         }
         
         // Not in cache, start downloading
-        URLSession.shared.dataTask(with: url) { data, response, error in
-            guard let data = data,
-                  error == nil,
-                  let downloadedImage = UIImage(data: data) else {
-                return
+        Task {
+            do {
+                let (data, _) = try await URLSession.shared.data(from: url)
+                guard let downloadedImage = UIImage(data: data) else {
+                    return
+                }
+                
+                // Cache the image
+                ImageCacheManager.shared.storeImage(downloadedImage, for: urlString)
+                
+                // Update UI on main thread
+                await MainActor.run {
+                    self.cachedProfileImage = downloadedImage
+                }
+            } catch {
+                logger.error("Error downloading profile image: \(error.localizedDescription)")
             }
-            
-            // Cache the image
-            ImageCacheManager.shared.storeImage(downloadedImage, for: photoURL)
-            
-            // Update UI on main thread
-            DispatchQueue.main.async {
-                self.cachedProfileImage = downloadedImage
-            }
-        }.resume()
+        }
+    }
+    
+    // Keep the original method for backward compatibility
+    private func preloadProfileImage() {
+        guard let photoURL = profileManager.currentUserProfile?.profileImageURL,
+              !photoURL.isEmpty else {
+            return
+        }
+        
+        // Use the new method with the URL string
+        preloadProfileImage(from: photoURL)
     }
 }
 
