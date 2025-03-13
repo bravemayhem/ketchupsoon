@@ -24,6 +24,7 @@ class FriendProfileViewModel: ObservableObject, ProfileViewModel {
     var profileEmoji: String { "😎" }
     var canEdit: Bool { false } // Users cannot edit friend profiles
     var showActions: Bool { true } // Show friend action buttons
+    var isInitialDataLoad: Bool { true } // Always load friend data initially
     
     // MARK: - Published Properties
     @Published var friend: UserModel

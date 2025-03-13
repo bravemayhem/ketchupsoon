@@ -10,6 +10,7 @@ struct HomeView: View {
     @State private var searchText: String = ""
     @State private var pendingFriendRequests: Int = 0
     @State private var navigationActive = false
+    @State private var hasLoaded = false
     
     // Firebase and SwiftData integration
     @EnvironmentObject private var firebaseSyncService: FirebaseSyncService
@@ -364,8 +365,11 @@ struct HomeView: View {
             }
             .navigationBarHidden(true)
             .onAppear {
-                loadFriendsFromFirebase()
                 logger.info("HomeView appeared with NavigationStack")
+                if !hasLoaded {
+                    loadFriendsFromFirebase()
+                    hasLoaded = true
+                }
             }
             .refreshable {
                 await refreshFriends()

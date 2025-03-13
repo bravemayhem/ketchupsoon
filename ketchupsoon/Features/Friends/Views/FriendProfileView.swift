@@ -45,11 +45,6 @@ struct FriendProfileView: View {
             
             // Main content
             ScrollView {
-                RefreshableView(isRefreshing: $isRefreshing) {
-                    // Trigger refresh action
-                    await refreshFriendData()
-                }
-                
                 VStack(spacing: 24) {
                     // Profile content view
                     friendProfileContentView
@@ -60,6 +55,12 @@ struct FriendProfileView: View {
                 .padding(.top, 20)
             }
             .foregroundColor(.white)
+            .refreshable {
+                // Using SwiftUI's native refreshable which provides better system integration
+                print("🔄 Native refreshable: Starting friend profile refresh")
+                await refreshFriendData()
+                print("✅ Native refreshable: Completed friend profile refresh")
+            }
             
             // Action buttons at bottom
          //   bottomActionButtons
@@ -418,33 +419,8 @@ extension FriendProfileView {
 }
 
 // Refreshable scroll view implementation
-struct RefreshableView: View {
-    @Binding var isRefreshing: Bool
-    let action: () async -> Void
-    
-    var body: some View {
-        GeometryReader { geometry in
-            if geometry.frame(in: .global).minY > 50 && !isRefreshing {
-                Spacer()
-                    .onAppear {
-                        isRefreshing = true
-                        Task {
-                            await action()
-                        }
-                    }
-            } else if isRefreshing {
-                HStack {
-                    Spacer()
-                    ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                    Spacer()
-                }
-                .frame(height: 50)
-            }
-        }
-        .frame(height: 50)
-    }
-}
+// RefreshableView has been moved to ImprovedRefreshableView.swift
+// as SimpleRefreshableView for better debouncing and performance
 
 // MARK: - Preview
 #Preview {

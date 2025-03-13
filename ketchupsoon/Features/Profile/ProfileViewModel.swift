@@ -27,6 +27,7 @@ protocol ProfileViewModel: ObservableObject {
     var isRefreshing: Bool { get set }
     var isLoading: Bool { get set }
     var errorMessage: String? { get set }
+    var isInitialDataLoad: Bool { get }
     
     // MARK: - Methods
     func loadProfile() async
@@ -49,27 +50,43 @@ extension ProfileViewModel {
 /// Factory for creating the appropriate profile view model
 @MainActor
 enum ProfileViewModelFactory {
+    // Track created view models to debug multiple creation
+    private static var createdViewModels: [ObjectIdentifier: String] = [:]
+    
     @MainActor
     static func createViewModel(
         for profileType: ProfileType,
         modelContext: ModelContext,
         firebaseSyncService: FirebaseSyncService
     ) -> any ProfileViewModel {
+        let factoryID = UUID().uuidString.prefix(6)
+        print("🏭 DEBUG: ProfileViewModelFactory.createViewModel called [\(factoryID)]")
+        
         switch profileType {
             case .currentUser:
-                return UserProfileViewModel(
+                let viewModel = UserProfileViewModel(
                     modelContext: modelContext, 
                     firebaseSyncService: firebaseSyncService
                 )
                 
+                let id = ObjectIdentifier(viewModel)
+                print("🏭 DEBUG: Created UserProfileViewModel [ID: \(id)] - Total created: \(createdViewModels.count + 1)")
+                createdViewModels[id] = "UserProfileViewModel"
+                return viewModel
+                
             case .friend(let friendModel):
                 let friendshipRepository = FriendshipRepositoryFactory.createRepository(modelContext: modelContext)
-                return FriendProfileViewModel(
+                let viewModel = FriendProfileViewModel(
                     friend: friendModel,
                     modelContext: modelContext,
                     firebaseSyncService: firebaseSyncService,
                     friendshipRepository: friendshipRepository
                 )
+                
+                let id = ObjectIdentifier(viewModel)
+                print("🏭 DEBUG: Created FriendProfileViewModel [ID: \(id)] - Total created: \(createdViewModels.count + 1)")
+                createdViewModels[id] = "FriendProfileViewModel"
+                return viewModel
         }
     }
 }

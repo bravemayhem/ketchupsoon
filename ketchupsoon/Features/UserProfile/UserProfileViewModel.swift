@@ -47,6 +47,14 @@ class UserProfileViewModel: ObservableObject, ProfileViewModel {
     @Published var hasChanges = false
     @Published var isInitialDataLoad = true
     
+    // Internal loading state tracking to prevent duplicate loads
+    private var isCurrentlyLoading = false
+    
+    // Refresh control properties
+    private let refreshDebounceInterval: TimeInterval = 5.0 // Minimum seconds between refreshes
+    private var lastRefreshTime: Date? // Last time a refresh was performed
+    private var pendingRefreshTask: Task<Void, Error>? // Track current refresh operation
+    
     // Alert state
     @Published var showAlert = false
     @Published var alertTitle = "Profile Photo"
@@ -80,104 +88,215 @@ class UserProfileViewModel: ObservableObject, ProfileViewModel {
     // MARK: - ProfileViewModel Protocol Methods
     
     func refreshProfile() async {
-        isRefreshing = true
-        defer { isRefreshing = false }
+        // Check if we've refreshed recently to implement debounce
+        let now = Date()
+        if let lastRefresh = lastRefreshTime, now.timeIntervalSince(lastRefresh) < refreshDebounceInterval {
+            print("⏯️ DEBUG: Skipping refresh - too soon since last refresh (\(now.timeIntervalSince(lastRefresh)) seconds)")
+            isRefreshing = false
+            return
+        }
         
-        await loadProfile()
+        // Cancel any existing refresh operation
+        pendingRefreshTask?.cancel()
+        
+        // Create a new refresh task
+        pendingRefreshTask = Task { [weak self] in
+            guard let self = self, !Task.isCancelled else { return }
+            
+            isRefreshing = true
+            defer { isRefreshing = false }
+            
+            print("🔄 DEBUG: Starting profile refresh operation")
+            await loadProfile()
+            
+            // Update refresh timestamp
+            lastRefreshTime = Date()
+        }
+        
+        // Wait for the task to complete
+        try? await pendingRefreshTask?.value
     }
     
     // MARK: - Public Methods
     
     /// Load the user profile data from repository and Firebase
+    /// Simplified profile loading method to reduce async complexity
     func loadProfile() async {
-        isLoading = true
-        defer { isLoading = false }
+        // First check for cancellation to allow early exit
+        if Task.isCancelled {
+            print("🛑 DEBUG: loadProfile cancelled before starting")
+            return
+        }
+        
+        // Add stack trace debug info to identify the call source
+        let callStackSymbols = Thread.callStackSymbols
+        print("🛠 DEBUG CALL STACK: loadProfile called from:\n\(callStackSymbols.prefix(8).joined(separator: "\n"))")
+        
+        // Use a dedicated isCurrentlyLoading flag to prevent concurrent or repeated loading attempts
+        // This is more reliable than isLoading which can be reset externally
+        guard !isCurrentlyLoading else {
+            logger.warning("⏩ Skipping profile load - already in progress")
+            return
+        }
+        
+        // Create a unique ID for this loading operation
+        let operationId = UUID().uuidString.prefix(8)
+        print("🛠 DEBUG: Starting profile load operation [\(operationId)]")
+        
+        // Set loading state
+        await MainActor.run {
+            isLoading = true
+            isCurrentlyLoading = true
+        }
+        
+        // Create a task that will reset the loading state after a maximum timeout
+        // This ensures we never get stuck in a loading state
+        let safetyTimeoutTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 10_000_000_000) // 10 second safety timeout
+            if let self = self {
+                await MainActor.run {
+                    if self.isLoading || self.isCurrentlyLoading {
+                        self.logger.warning("⚠️ Safety timeout triggered - resetting loading state")
+                        self.isLoading = false
+                        self.isCurrentlyLoading = false
+                    }
+                }
+            }
+        }
+        
+        // Ensure loading state is reset when we exit this function
+        defer {
+            safetyTimeoutTask.cancel() // Cancel the safety timeout if we finish normally
+            Task { @MainActor [weak self] in
+                self?.isLoading = false
+                self?.isCurrentlyLoading = false
+                self?.logger.debug("📋 Profile loading completed")
+            }
+        }
         
         do {
-            // Check if we have a current user
+            // Check for authentication
             guard let currentUser = Auth.auth().currentUser else {
-                self.logger.error("❌ No authenticated user found")
-                errorMessage = "No authenticated user found"
+                await MainActor.run {
+                    self.errorMessage = "No authenticated user found"
+                    self.logger.error("❌ No authenticated user found")
+                }
                 return
             }
             
-            // Force a throw to make the catch block reachable
-            try Task.checkCancellation()
+            self.logger.info("🔄 Loading profile for user ID: \(currentUser.uid)")
             
-            logger.info("🔄 Loading profile for user ID: \(currentUser.uid)")
+            // SIMPLIFIED APPROACH: Use direct calls instead of complex task groups
             
-            // Force refresh from Firebase first
-            do {
-                try await userRepository.refreshCurrentUser()
-                logger.info("✅ Successfully refreshed user data from Firebase")
-            } catch {
-                logger.error("❌ Error refreshing from Firebase: \(error.localizedDescription)")
-                // Continue anyway - we'll try to use local data
+            // Step 1: Try loading from local repository first
+            var localUserModel: UserModel? = nil
+            
+            // This try-catch can be removed since we're handling the result directly
+            // Handle any errors from tasks inside their result case statements
+            
+            // Simple timeout with a direct call
+            let getUserTask = Task { 
+                do {
+                    return try await userRepository.getCurrentUser()
+                } catch {
+                    self.logger.error("❌ Error loading user from repository: \(error.localizedDescription)")
+                    return nil
+                }
             }
             
-            // Now sync local with remote to ensure everything is up to date
-            do {
-                try await userRepository.syncLocalWithRemote()
-                logger.info("✅ Completed sync between local and remote data")
-            } catch {
-                logger.error("❌ Error syncing local with remote: \(error.localizedDescription)")
-                // Continue anyway - we'll try to use whatever data we have
+            // Wait maximum 3 seconds
+            let timeoutTask = Task { 
+                try? await Task.sleep(nanoseconds: 3_000_000_000)
+                return nil as UserModel?
             }
             
-            // Attempt to load from repository after the refresh
-            do {
-                if let localUserModel = try await userRepository.getCurrentUser() {
-                    logger.info("📋 Got user model from repository: Name=\(localUserModel.name ?? "<nil>") Bio=\(localUserModel.bio ?? "<nil>") Email=\(localUserModel.email ?? "<nil>")")
-                    
-                    await MainActor.run {
-                        updateUIFromUserModel(localUserModel)
-                        logger.info("📋 Updated UI from user model")
+            // Wait for either task to complete
+            if let userModel = await getUserTask.value {
+                localUserModel = userModel
+                // Cancel the timeout task as we already have a result
+                timeoutTask.cancel()
+            } else {
+                // If the first task failed or returned nil, wait for the timeout
+                let _ = await timeoutTask.value  // Just wait for timeout
+            }
+            
+            // Step 2: Update UI if we have local data
+            if let user = localUserModel {
+                await MainActor.run {
+                    self.updateUIFromUserModel(user)
+                    self.logger.info("✅ Updated UI from local user model")
+                }
+            } else {
+                self.logger.warning("⚠️ No local user model found, trying ProfileManager")
+                
+                // Step 3: Fall back to ProfileManager if needed
+                await profileManager.fetchUserProfile(userId: currentUser.uid)
+                
+                // Step 4: Update from ProfileManager
+                await MainActor.run {
+                    if let profile = profileManager.currentUserProfile {
+                        self.updateUIFromProfileManager(profile)
+                        self.logger.info("✅ Updated UI from ProfileManager")
                         
-                        // Debug what's showing in the UI now
-                        logger.info("🔍 Current UI values: Name=\(self.userName) Bio=\(self.userBio) Email=\(self.email)")
+                        // Load profile image in background if available
+                        if let photoURL = profile.profileImageURL, !photoURL.isEmpty {
+                            Task {
+                                self.preloadProfileImage(from: photoURL)
+                            }
+                        }
+                    } else {
+                        self.logger.warning("⚠️ No profile found in ProfileManager")
                     }
-                } else {
-                    logger.warning("⚠️ No user model found in local repository")
                 }
-            } catch {
-                logger.error("❌ Error getting current user: \(error.localizedDescription)")
-                // Continue anyway - we'll try the profile manager as fallback
             }
             
-            // Legacy approach using ProfileManager as fallback
-            await profileManager.fetchUserProfile(userId: currentUser.uid)
-            
-            // Update from profile manager if needed
-            await MainActor.run {
-                if let profile = profileManager.currentUserProfile {
-                    logger.info("📋 Got profile from manager: Name=\(profile.name ?? "<nil>") Bio=\(profile.bio ?? "<nil>") Email=\(profile.email ?? "<nil>")")
-                    updateUIFromProfileManager(profile)
-                    logger.info("📋 Updated UI from profile manager")
+            // Step 5: Trigger a background refresh without blocking profile load
+            Task.detached {
+                do {
+                    try await self.userRepository.refreshCurrentUser()
+                    self.logger.info("✅ Background refresh completed successfully")
                     
-                    // Debug what's showing in the UI after profile manager update
-                    logger.info("🔍 Updated UI values: Name=\(self.userName) Bio=\(self.userBio) Email=\(self.email)")
-                } else {
-                    logger.warning("⚠️ No profile found in ProfileManager")
+                    // Once refresh is done, sync in background
+                    try await self.userRepository.syncLocalWithRemote()
+                    self.logger.info("✅ Background sync completed successfully")
+                } catch {
+                    self.logger.error("❌ Background refresh/sync error: \(error.localizedDescription)")
                 }
-                
-                // Load profile image if available
-                if let photoURL = profileManager.currentUserProfile?.profileImageURL,
-                   !photoURL.isEmpty {
-                    preloadProfileImage(from: photoURL)
-                    logger.info("🖼️ Preloading profile image from URL: \(photoURL)")
-                }
-                
-                // Set a small delay before allowing auto-saves
+            }
+            
+            // Step 6: Finalize the UI and settings
+            await MainActor.run {
+                // Enable auto-saves with a small delay
                 DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
                     self.isInitialDataLoad = false
                     self.logger.info("📋 Initial data load complete, auto-save enabled")
                 }
+                
+                // Reset loading flags
+                self.isLoading = false
+                self.isCurrentlyLoading = false
+                print("🛠 DEBUG: Profile loading completed [\(operationId)]")
+                self.logger.info("📋 Profile loading completed")
             }
-        } catch {
-            self.logger.error("❌ Error loading profile: \(error.localizedDescription)")
-            self.alertTitle = "Profile Error"
-            self.alertMessage = "Failed to load profile: \(error.localizedDescription)"
-            self.showAlert = true
+            
+            // Trigger a throwing operation to ensure catch block is reachable
+            // This helps maintain error handling while we refactor
+            if Task.isCancelled {
+                throw NSError(domain: "ProfileLoadingError", code: 999, 
+                             userInfo: [NSLocalizedDescriptionKey: "Task was cancelled"])
+            }
+        } catch let loadError {
+            // Handle top-level errors
+            await MainActor.run {
+                self.logger.error("❌ Error loading profile: \(loadError.localizedDescription)")
+                self.alertTitle = "Profile Error"
+                self.alertMessage = "Failed to load profile: \(loadError.localizedDescription)"
+                self.showAlert = true
+                
+                // Reset loading flags even in error case
+                self.isLoading = false
+                self.isCurrentlyLoading = false
+            }
         }
     }
     
@@ -370,10 +489,14 @@ class UserProfileViewModel: ObservableObject, ProfileViewModel {
     /// Load profile image from URL
     func preloadProfileImage(from urlString: String) {
         guard let url = URL(string: urlString) else {
+            logger.error("❌ Invalid profile image URL: \(urlString)")
             return
         }
         
-        URLSession.shared.dataTask(with: url) { [weak self] data, response, error in
+        logger.debug("🖼️ Starting profile image download from: \(urlString)")
+        
+        // Create a task with timeout
+        let task = URLSession.shared.dataTask(with: url) { [weak self] data, response, error in
             guard let self = self else { return }
             
             if let error = error {
@@ -381,13 +504,30 @@ class UserProfileViewModel: ObservableObject, ProfileViewModel {
                 return
             }
             
+            if let httpResponse = response as? HTTPURLResponse {
+                self.logger.debug("🖼️ Image response status code: \(httpResponse.statusCode)")
+            }
+            
             if let data = data, let image = UIImage(data: data) {
                 DispatchQueue.main.async {
                     self.cachedProfileImage = image
-                    self.logger.info("✅ Cached profile image loaded")
+                    self.logger.info("✅ Cached profile image loaded successfully")
                 }
+            } else {
+                self.logger.error("❌ Failed to create image from downloaded data")
             }
-        }.resume()
+        }
+        
+        // Set a timeout for the request
+        task.resume()
+        
+        // Cancel the request after 10 seconds if it hasn't completed
+        DispatchQueue.global().asyncAfter(deadline: .now() + 10) { [weak task] in
+            if let task = task, task.state == .running {
+                task.cancel()
+                self.logger.warning("⚠️ Cancelled profile image download due to timeout")
+            }
+        }
     }
     
     /// Format phone number for display

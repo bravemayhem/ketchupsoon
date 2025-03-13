@@ -1,3 +1,4 @@
+/*
 import SwiftUI
 import SwiftData
 
@@ -113,3 +114,4 @@ struct UserProfileContentView: View {
     .preferredColorScheme(.dark)
     .modelContainer(container)
 }
+*/

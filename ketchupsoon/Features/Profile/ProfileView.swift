@@ -4,7 +4,7 @@ import FirebaseAuth
 import OSLog
 import PhotosUI
 
-struct ProfileView<ViewModel>: View where ViewModel: ProfileViewModel {
+struct ProfileView<ViewModel>: View where ViewModel: AnyObject & ProfileViewModel {
     // MARK: - Environment
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
@@ -38,10 +38,6 @@ struct ProfileView<ViewModel>: View where ViewModel: ProfileViewModel {
             
             // Main content
             ScrollView {
-                RefreshableView(isRefreshing: $viewModel.isRefreshing) {
-                    await viewModel.refreshProfile()
-                }
-                
                 VStack(spacing: 24) {
                     if viewModel.isEditMode && viewModel.canEdit {
                         // Edit form when in edit mode and editable
@@ -53,6 +49,13 @@ struct ProfileView<ViewModel>: View where ViewModel: ProfileViewModel {
                 }
                 .padding(.horizontal)
                 .padding(.bottom, 80) // Extra padding for bottom action buttons
+            }
+            .refreshable {
+                // Using SwiftUI's native refreshable which provides better system integration
+                // and avoids constant refresh triggers we saw with custom implementation
+                print("🔄 Native refreshable: Starting profile refresh")
+                await viewModel.refreshProfile()
+                print("✅ Native refreshable: Completed profile refresh")
             }
             
             // Conditional action buttons at bottom
@@ -93,12 +96,28 @@ struct ProfileView<ViewModel>: View where ViewModel: ProfileViewModel {
             }
         }
         .onAppear {
-            // Load profile data when view appears
-            Task {
-                await viewModel.loadProfile()
+            // Add debugging to track view lifecycle
+            // Use a UUID instead of ObjectIdentifier since 'self' is a struct
+            let viewInstanceId = UUID().uuidString.prefix(6)
+            print("🔍 DEBUG: ProfileView.onAppear - Instance: \(viewInstanceId)")
+            
+            // Only trigger a fresh load if we have no data yet to avoid unnecessary loading
+            // This works with our debouncing mechanism in UserProfileViewModel
+            if viewModel.isInitialDataLoad {
+                print("🔍 DEBUG: ProfileView triggering initial profile load - Instance: \(viewInstanceId)")
+                Task {
+                    print("🔍 DEBUG: ProfileView starting loadProfile task - Instance: \(viewInstanceId)")
+                    await viewModel.loadProfile()
+                    print("🔍 DEBUG: ProfileView completed loadProfile task - Instance: \(viewInstanceId)")
+                }
+            } else {
+                print("🔍 DEBUG: ProfileView skipping load (not initial) - Instance: \(viewInstanceId)")
             }
         }
         .onDisappear {
+            // Add debugging to track view lifecycle
+            // Use a simple string identifier since we can't use ObjectIdentifier with structs
+            print("🔍 DEBUG: ProfileView.onDisappear")
             // Additional cleanup if needed
         }
         .sheet(isPresented: $showPhotoPicker) {
@@ -306,9 +325,11 @@ struct ProfileView<ViewModel>: View where ViewModel: ProfileViewModel {
         }
     }
     
-    // These properties would need to be implemented to match your current implementations
+    // MARK: - Image Selection State
     @State private var selectedPhoto: PhotosPickerItem? = nil
     @State private var selectedImage: UIImage? = nil
+    
+    // MARK: - Alert State
     @State private var showAlert = false
     @State private var alertTitle = "Profile"
     @State private var alertMessage = ""
@@ -363,6 +384,7 @@ class PreviewProfileViewModel: ProfileViewModel {
     var errorMessage: String? = nil
     var canEdit: Bool = true
     var showActions: Bool = false
+    var isInitialDataLoad: Bool = true
     
     // Repository and services
     var userRepository: UserRepository?

@@ -82,6 +82,7 @@ class FirebaseUserRepository: UserRepository {
         }
     }
 
+    @MainActor
     func getCurrentUser() async throws -> UserModel? {
         // Check if there's a logged in user
         guard let currentUser = Auth.auth().currentUser else {
@@ -92,10 +93,18 @@ class FirebaseUserRepository: UserRepository {
         // Try to get user from local database first
         do {
             let userID = currentUser.uid // Store the ID in a local variable
-            let descriptor = FetchDescriptor<UserModel>(predicate: #Predicate { (user: UserModel) -> Bool in 
-                user.id == userID 
-            })
-            let localUsers = try modelContext.fetch(descriptor)
+            
+            // Create a simpler fetch descriptor to avoid EXC_BAD_ACCESS
+            var descriptor = FetchDescriptor<UserModel>()
+            descriptor.predicate = #Predicate<UserModel> { user in
+                user.id == userID
+            }
+            descriptor.fetchLimit = 1
+            
+            // Execute fetch on the main actor to prevent thread safety issues
+            let localUsers = try await MainActor.run {
+                try modelContext.fetch(descriptor)
+            }
             
             if let existingUser = localUsers.first {
                 logger.debug("Found current user in local database")
