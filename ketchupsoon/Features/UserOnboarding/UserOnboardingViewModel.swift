@@ -7,11 +7,13 @@ import FirebaseAuth
 import FirebaseFirestore
 import FirebaseStorage
 import SwiftData
+import OSLog
 
 @MainActor
 class UserOnboardingViewModel: ObservableObject {
     private let container: ModelContainer
     private let userRepository: UserRepository
+    private let logger = Logger(subsystem: "com.ketchupsoon", category: "UserOnboardingViewModel")
     
     // Initialize with the container
     init(container: ModelContainer) {
@@ -217,16 +219,20 @@ class UserOnboardingViewModel: ObservableObject {
                          userInfo: [NSLocalizedDescriptionKey: "User not authenticated"])
         }
         
-        // Create UserModel from collected data
+        // Create UserModel from collected data with all required fields
         let newUser = UserModel(
             id: userId,
-            name: self.profileData.name,
+            name: self.profileData.name.isEmpty ? nil : self.profileData.name,
             profileImageURL: nil, // Will be updated after image upload if needed
-            email: self.profileData.email,
-            phoneNumber: self.phoneNumber,
-            bio: self.profileData.bio,
+            email: self.profileData.email.isEmpty ? nil : self.profileData.email,
+            phoneNumber: self.phoneNumber.isEmpty ? nil : self.phoneNumber,
+            bio: self.profileData.bio.isEmpty ? nil : self.profileData.bio,
             birthday: self.profileData.birthday,
-            isSocialProfileActive: false
+            gradientIndex: Int.random(in: 0...5), // Set a default gradient
+            isSocialProfileActive: false,
+            socialAuthProvider: Auth.auth().currentUser?.providerData.first?.providerID,
+            createdAt: Date(),
+            updatedAt: Date()
         )
         
         // Upload profile image if needed
@@ -247,6 +253,8 @@ class UserOnboardingViewModel: ObservableObject {
             // Update model with image URL
             newUser.profileImageURL = downloadURL.absoluteString
         }
+        
+        logger.info("Creating user with name: \(newUser.name ?? "unnamed"), email: \(newUser.email ?? "no email"), bio: \(newUser.bio ?? "no bio")")
         
         // Use UserRepository to create the user in Firebase and SwiftData
         try await userRepository.createUser(user: newUser)

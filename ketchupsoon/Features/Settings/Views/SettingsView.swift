@@ -67,8 +67,11 @@ struct SettingsView: View {
                         
                         VStack(spacing: 0) {
                             NavigationLink {
-                                UserProfileView()
-                                    .environmentObject(firebaseSyncService)
+                                ProfileFactory.createProfileView(
+                                    for: .currentUser,
+                                    modelContext: modelContext,
+                                    firebaseSyncService: firebaseSyncService
+                                )
                             } label: {
                                 menuItem(
                                     title: "Profile Settings",

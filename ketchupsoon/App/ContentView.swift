@@ -114,8 +114,11 @@ struct ContentView: View {
                             // - Critical: Uses FirebaseSyncService for user profile management
                             // - Uses FirestoreListenerService indirectly for friend status updates
                             // - Primary interface for friendship operations
-                            UserProfileView()
-                                .environmentObject(firebaseSyncService)
+                            ProfileFactory.createProfileView(
+                                for: .currentUser,
+                                modelContext: modelContext,
+                                firebaseSyncService: firebaseSyncService
+                            )
                         }
                         .transition(.opacity)
                     }

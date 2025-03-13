@@ -139,7 +139,7 @@ struct UserRepositoryExampleView: View {
 }
 
 /// Example showing how to integrate UserRepository in a view model
-class ProfileViewModel: ObservableObject {
+class ExampleProfileViewModel: ObservableObject {
     @Published var user: UserModel?
     @Published var isLoading = false
     @Published var errorMessage: String?

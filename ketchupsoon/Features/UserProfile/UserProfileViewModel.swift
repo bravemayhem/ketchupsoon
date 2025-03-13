@@ -6,15 +6,28 @@ import OSLog
 import Combine
 import SwiftData
 
+// Import the ProfileViewModel protocol
+@_exported import class UIKit.UIImage
+
 @MainActor
-class UserProfileViewModel: ObservableObject {
+class UserProfileViewModel: ObservableObject, ProfileViewModel {
+    // MARK: - ProfileViewModel Protocol Properties
+    var id: String { Auth.auth().currentUser?.uid ?? "" }
+    @Published var userName: String = ""
+    @Published var userBio: String = ""
+    var profileImageURL: String? { nil } // Will be set during loading
+    var isLoadingImage: Bool { isUploadingImage }
+    
     // MARK: - Published Properties
-    @Published var userName = ""
-    @Published var userBio = ""
+    @Published var name = ""
+    @Published var bio = ""
     @Published var userInfo = ""
     @Published var phoneNumber: String = ""
     @Published var email: String = ""
     @Published var birthday: Date? = nil
+    @Published var isRefreshing = false
+    @Published var isLoading = false
+    @Published var errorMessage: String? = nil
     
     // Profile appearance
     @Published var profileRingGradient: LinearGradient = AppColors.accentGradient2
@@ -60,90 +73,151 @@ class UserProfileViewModel: ObservableObject {
         logger.info("Created UserProfileViewModel with full dependencies")
     }
     
+    // MARK: - ProfileViewModel Protocol Properties
+    var canEdit: Bool { true } // User can edit their own profile
+    var showActions: Bool { false } // No action buttons needed for own profile
+    
+    // MARK: - ProfileViewModel Protocol Methods
+    
+    func refreshProfile() async {
+        isRefreshing = true
+        defer { isRefreshing = false }
+        
+        await loadProfile()
+    }
+    
     // MARK: - Public Methods
     
     /// Load the user profile data from repository and Firebase
     func loadProfile() async {
+        isLoading = true
+        defer { isLoading = false }
+        
         do {
-            // Try to load the user profile via FirebaseSyncService first
-            if let currentUser = Auth.auth().currentUser {
-                // Trigger a sync to ensure we have fresh data
+            // Check if we have a current user
+            guard let currentUser = Auth.auth().currentUser else {
+                self.logger.error("❌ No authenticated user found")
+                errorMessage = "No authenticated user found"
+                return
+            }
+            
+            // Force a throw to make the catch block reachable
+            try Task.checkCancellation()
+            
+            logger.info("🔄 Loading profile for user ID: \(currentUser.uid)")
+            
+            // Force refresh from Firebase first
+            do {
+                try await userRepository.refreshCurrentUser()
+                logger.info("✅ Successfully refreshed user data from Firebase")
+            } catch {
+                logger.error("❌ Error refreshing from Firebase: \(error.localizedDescription)")
+                // Continue anyway - we'll try to use local data
+            }
+            
+            // Now sync local with remote to ensure everything is up to date
+            do {
                 try await userRepository.syncLocalWithRemote()
-                
-                // Attempt to load from local repository
+                logger.info("✅ Completed sync between local and remote data")
+            } catch {
+                logger.error("❌ Error syncing local with remote: \(error.localizedDescription)")
+                // Continue anyway - we'll try to use whatever data we have
+            }
+            
+            // Attempt to load from repository after the refresh
+            do {
                 if let localUserModel = try await userRepository.getCurrentUser() {
+                    logger.info("📋 Got user model from repository: Name=\(localUserModel.name ?? "<nil>") Bio=\(localUserModel.bio ?? "<nil>") Email=\(localUserModel.email ?? "<nil>")")
+                    
                     await MainActor.run {
                         updateUIFromUserModel(localUserModel)
-                        logger.info("📋 Loaded user data from local repository")
+                        logger.info("📋 Updated UI from user model")
+                        
+                        // Debug what's showing in the UI now
+                        logger.info("🔍 Current UI values: Name=\(self.userName) Bio=\(self.userBio) Email=\(self.email)")
                     }
+                } else {
+                    logger.warning("⚠️ No user model found in local repository")
+                }
+            } catch {
+                logger.error("❌ Error getting current user: \(error.localizedDescription)")
+                // Continue anyway - we'll try the profile manager as fallback
+            }
+            
+            // Legacy approach using ProfileManager as fallback
+            await profileManager.fetchUserProfile(userId: currentUser.uid)
+            
+            // Update from profile manager if needed
+            await MainActor.run {
+                if let profile = profileManager.currentUserProfile {
+                    logger.info("📋 Got profile from manager: Name=\(profile.name ?? "<nil>") Bio=\(profile.bio ?? "<nil>") Email=\(profile.email ?? "<nil>")")
+                    updateUIFromProfileManager(profile)
+                    logger.info("📋 Updated UI from profile manager")
+                    
+                    // Debug what's showing in the UI after profile manager update
+                    logger.info("🔍 Updated UI values: Name=\(self.userName) Bio=\(self.userBio) Email=\(self.email)")
+                } else {
+                    logger.warning("⚠️ No profile found in ProfileManager")
                 }
                 
-                // Legacy approach using ProfileManager
-                await profileManager.fetchUserProfile(userId: currentUser.uid)
+                // Load profile image if available
+                if let photoURL = profileManager.currentUserProfile?.profileImageURL,
+                   !photoURL.isEmpty {
+                    preloadProfileImage(from: photoURL)
+                    logger.info("🖼️ Preloading profile image from URL: \(photoURL)")
+                }
                 
-                // Update from profile manager if needed
-                await MainActor.run {
-                    if let profile = profileManager.currentUserProfile {
-                        updateUIFromProfileManager(profile)
-                        logger.info("📋 Updated user data from ProfileManager")
-                    }
-                    
-                    // Load profile image if available
-                    if let photoURL = profileManager.currentUserProfile?.profileImageURL,
-                       !photoURL.isEmpty {
-                        preloadProfileImage(from: photoURL)
-                    }
-                    
-                    // Set a small delay before allowing auto-saves
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                        self.isInitialDataLoad = false
-                        self.logger.info("📋 Initial data load complete, auto-save enabled")
-                    }
+                // Set a small delay before allowing auto-saves
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                    self.isInitialDataLoad = false
+                    self.logger.info("📋 Initial data load complete, auto-save enabled")
                 }
             }
         } catch {
-            logger.error("❌ Error loading profile: \(error.localizedDescription)")
-            alertTitle = "Profile Error"
-            alertMessage = "Failed to load profile: \(error.localizedDescription)"
-            showAlert = true
+            self.logger.error("❌ Error loading profile: \(error.localizedDescription)")
+            self.alertTitle = "Profile Error"
+            self.alertMessage = "Failed to load profile: \(error.localizedDescription)"
+            self.showAlert = true
         }
     }
     
     /// Save profile changes
     func saveProfile() {
-        if !hasChanges {
-            logger.info("No changes detected, skipping save")
+        if !self.hasChanges {
+            self.logger.info("No changes detected, skipping save")
             return
         }
         
-        saveInProgress = true
+        self.saveInProgress = true
         
-        Task {
+        Task { [weak self] in
+            guard let self = self else { return }
+            
             do {
                 // Use FirebaseSyncService for the update
-                try await firebaseSyncService.updateCurrentUserProfile(
-                    name: userName,
-                    bio: userBio,
-                    birthday: birthday
+                try await self.firebaseSyncService.updateCurrentUserProfile(
+                    name: self.userName,
+                    bio: self.userBio,
+                    birthday: self.birthday
                     // We could add other profile fields here as needed
                 )
                 
                 await MainActor.run {
-                    saveInProgress = false
-                    hasChanges = false
-                    isEditMode = false
+                    self.saveInProgress = false
+                    self.hasChanges = false
+                    self.isEditMode = false
                 }
                 
-                logger.info("✅ Profile saved successfully via FirebaseSyncService")
+                self.logger.info("✅ Profile saved successfully via FirebaseSyncService")
             } catch {
-                logger.error("❌ Error saving profile: \(error.localizedDescription)")
+                self.logger.error("❌ Error saving profile: \(error.localizedDescription)")
                 
                 await MainActor.run {
-                    saveInProgress = false
+                    self.saveInProgress = false
                     // Show an error alert if needed
-                    alertTitle = "Save Error"
-                    alertMessage = "Failed to save profile: \(error.localizedDescription)"
-                    showAlert = true
+                    self.alertTitle = "Save Error"
+                    self.alertMessage = "Failed to save profile: \(error.localizedDescription)"
+                    self.showAlert = true
                 }
             }
         }
@@ -358,49 +432,52 @@ class UserProfileViewModel: ObservableObject {
     
     /// Update UI elements from user model
     private func updateUIFromUserModel(_ userModel: UserModel) {
-        if !(userModel.name?.isEmpty ?? true) {
-            userName = userModel.name ?? ""
-        }
+        // Always set values to ensure UI is updated, even for empty strings
+        // This ensures we don't miss updates where fields were cleared
+        self.userName = userModel.name ?? ""
+        self.logger.debug("Setting userName to '\(self.userName)' from model")
         
-        if !(userModel.bio?.isEmpty ?? true) {
-            userBio = userModel.bio ?? ""
-        }
+        self.userBio = userModel.bio ?? ""
+        self.logger.debug("Setting userBio to '\(self.userBio)' from model")
         
         if let userBirthday = userModel.birthday {
-            birthday = userBirthday
+            self.birthday = userBirthday
+            self.logger.debug("Setting birthday to \(userBirthday)")
         }
         
-        if !(userModel.email?.isEmpty ?? true) {
-            email = userModel.email ?? ""
-        }
+        self.email = userModel.email ?? ""
+        self.logger.debug("Setting email to '\(self.email)' from model")
         
-        if !(userModel.phoneNumber?.isEmpty ?? true) {
-            phoneNumber = userModel.phoneNumber ?? ""
-        }
+        self.phoneNumber = userModel.phoneNumber ?? ""
+        self.logger.debug("Setting phoneNumber to '\(self.phoneNumber)' from model")
+        
+        // Force UI update
+        self.objectWillChange.send()
     }
     
     /// Update UI elements from profile manager
     private func updateUIFromProfileManager(_ profile: UserModel) {
-        if !(profile.name?.isEmpty ?? true) {
-            userName = profile.name ?? ""
-        }
+        // Always set values even if empty (don't skip empty values)
+        // This ensures we override any stale cached values
+        self.userName = profile.name ?? ""
+        self.logger.debug("Setting userName to '\(self.userName)' from profile manager")
         
-        if !(profile.bio?.isEmpty ?? true) {
-            userBio = profile.bio ?? ""
-        }
+        self.userBio = profile.bio ?? ""
+        self.logger.debug("Setting userBio to '\(self.userBio)' from profile manager")
         
         if let profileBirthday = profile.birthday {
-            birthday = profileBirthday
+            self.birthday = profileBirthday
+            self.logger.debug("Setting birthday to \(profileBirthday)")
         }
         
         // Email and phone from Auth if available
         if let user = Auth.auth().currentUser {
-            if !user.email.isNilOrEmpty && email.isEmpty {
-                email = user.email ?? ""
+            if !user.email.isNilOrEmpty && self.email.isEmpty {
+                self.email = user.email ?? ""
             }
             
-            if !user.phoneNumber.isNilOrEmpty && phoneNumber.isEmpty {
-                phoneNumber = user.phoneNumber ?? ""
+            if !user.phoneNumber.isNilOrEmpty && self.phoneNumber.isEmpty {
+                self.phoneNumber = user.phoneNumber ?? ""
             }
         }
     }

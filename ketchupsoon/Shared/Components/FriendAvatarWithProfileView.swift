@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import FirebaseAuth
 
 struct FriendAvatarWithProfileView: View {
     let friend: FriendItem
@@ -35,12 +36,15 @@ struct FriendAvatarWithProfileView: View {
         }
     }
     
-    // Create a Friend model from FriendItem for the profile view
+    // Create a profile view for the friend using the shared ProfileFactory
+    @Environment(\.modelContext) private var modelContext
+    @EnvironmentObject private var firebaseSyncService: FirebaseSyncService
+    
     private func createFriendProfileView() -> some View {
         // Determine gradient index based on the colors
         let gradientIndex = determineGradientIndex(friend.gradient)
         
-        // Create a Friend with all available data from FriendItem
+        // Create a UserModel with all available data from FriendItem
         let user = UserModel(
             id: friend.id, // Use the string ID directly
             name: self.friend.name,
@@ -54,7 +58,12 @@ struct FriendAvatarWithProfileView: View {
             updatedAt: Date()
         )
         
-        return FriendProfileView(friend: user)
+        // Use our new ProfileFactory to create the profile view
+        return ProfileFactory.createProfileView(
+            for: .friend(user),
+            modelContext: modelContext,
+            firebaseSyncService: firebaseSyncService
+        )
     }
     
     // Helper function to determine which predefined gradient is being used
