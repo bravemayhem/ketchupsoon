@@ -2,6 +2,7 @@ import Foundation
 import SwiftUI
 import SwiftData
 import FirebaseFirestore
+import CoreData
 
 // A model to represent a Meetup with SwiftData and Firebase compatibility
 @Model
@@ -11,6 +12,7 @@ final class MeetupModel: Identifiable {
     var date: Date
     var location: String
     var activityType: Int
+    @Attribute(.transformable(by: ArrayTransformer.self))
     var participants: [String]
     var notes: String?
     var isAiGenerated: Bool

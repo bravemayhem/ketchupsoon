@@ -10,6 +10,7 @@
 import Foundation
 import SwiftData
 import FirebaseAuth
+import CoreData
 
 @Model
 final class UserModel {
@@ -35,9 +36,16 @@ final class UserModel {
     
     // User preferences - stored as JSON string for SwiftData compatibility
     var preferencesJSON: String?
+    @Attribute(.transformable(by: ArrayTransformer.self))
     var availabilityTimes: [String]?
+    
+    @Attribute(.transformable(by: ArrayTransformer.self))
     var availableDays: [String]?
+    
+    @Attribute(.transformable(by: ArrayTransformer.self))
     var favoriteActivities: [String]?
+    
+    @Attribute(.transformable(by: ArrayTransformer.self))
     var calendarConnections: [String]?
     var travelRadius: String?
     
@@ -204,5 +212,32 @@ final class UserModel {
     // Convenience method to set preferences
     func setPreferences(_ preferences: [String: Any]?) {
         preferencesJSON = Self.encodePreferences(preferences)
+    }
+}
+
+// MARK: - Array Value Transformer
+
+@objc(ArrayTransformer)
+class ArrayTransformer: ValueTransformer {
+    override class func transformedValueClass() -> AnyClass {
+        return NSArray.self
+    }
+    
+    override class func allowsReverseTransformation() -> Bool {
+        return true
+    }
+    
+    override func transformedValue(_ value: Any?) -> Any? {
+        guard let array = value as? [String] else { return nil }
+        return try? NSKeyedArchiver.archivedData(withRootObject: array, requiringSecureCoding: true)
+    }
+    
+    override func reverseTransformedValue(_ value: Any?) -> Any? {
+        guard let data = value as? Data else { return nil }
+        return try? NSKeyedUnarchiver.unarchivedObject(ofClass: NSArray.self, from: data) as? [String]
+    }
+    
+    static func register() {
+        ValueTransformer.setValueTransformer(ArrayTransformer(), forName: NSValueTransformerName("ArrayTransformer"))
     }
 }

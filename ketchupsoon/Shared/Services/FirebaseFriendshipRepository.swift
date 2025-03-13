@@ -6,6 +6,7 @@ import OSLog
 
 /// Firebase implementation of the FriendshipRepository protocol
 /// Handles friendship data operations with Firebase and syncs with SwiftData
+@MainActor
 class FirebaseFriendshipRepository: FriendshipRepository {
     // MARK: - Properties
     
@@ -33,6 +34,14 @@ class FirebaseFriendshipRepository: FriendshipRepository {
     
     init(modelContext: ModelContext) {
         self.modelContext = modelContext
+    }
+    
+    // Helper method to perform Firebase operations on background threads
+    private func performFirebaseOperation<T>(_ operation: @escaping () async throws -> T) async throws -> T {
+        // Detach the Firebase operation from the main actor to avoid blocking UI
+        return try await Task.detached {
+            return try await operation()
+        }.value
     }
     
     // MARK: - Helper Methods
@@ -123,21 +132,21 @@ class FirebaseFriendshipRepository: FriendshipRepository {
         do {
             let localFriendships = try modelContext.fetch(descriptor)
             if let existingFriendship = localFriendships.first {
-                logger.debug("Found friendship \(id) in local database")
+                self.logger.debug("Found friendship \(id) in local database")
                 return existingFriendship
             }
         } catch {
-            logger.error("Error fetching friendship from SwiftData: \(error.localizedDescription)")
+            self.logger.error("Error fetching friendship from SwiftData: \(error.localizedDescription)")
             // Continue to fetch from Firebase rather than throwing
         }
         
         // Not found locally, fetch from Firebase
-        logger.debug("Fetching friendship \(id) from Firebase")
+        self.logger.debug("Fetching friendship \(id) from Firebase")
         
         do {
             // Query friendships by UUID (stored as a field)
             let idString = id.uuidString
-            let snapshot = try await db.collection(friendshipsCollection)
+            let snapshot = try await self.db.collection(self.friendshipsCollection)
                 .whereField("id", isEqualTo: idString)
                 .getDocuments()
             
@@ -149,22 +158,22 @@ class FirebaseFriendshipRepository: FriendshipRepository {
             let data = document.data()
             
             // Create a new friendship and save it to SwiftData
-            let friendship = createFriendshipModelFromFirebaseData(id: document.documentID, data: data)
+            let friendship = self.createFriendshipModelFromFirebaseData(id: document.documentID, data: data)
             
             // Save to local database
-            modelContext.insert(friendship)
-            try modelContext.save()
+            self.modelContext.insert(friendship)
+            try self.modelContext.save()
             
             return friendship
         } catch {
-            logger.error("Error fetching friendship from Firebase: \(error.localizedDescription)")
+            self.logger.error("Error fetching friendship from Firebase: \(error.localizedDescription)")
             throw error
         }
     }
     
     func getFriendshipsForCurrentUser() async throws -> [FriendshipModel] {
         guard let currentUser = Auth.auth().currentUser else {
-            logger.warning("No user currently logged in")
+            self.logger.warning("No user currently logged in")
             throw NSError(domain: "com.ketchupsoon", code: 401, 
                          userInfo: [NSLocalizedDescriptionKey: "User not authenticated"])
         }
@@ -179,20 +188,23 @@ class FirebaseFriendshipRepository: FriendshipRepository {
         do {
             let localFriendships = try modelContext.fetch(descriptor)
             if !localFriendships.isEmpty {
-                logger.debug("Found \(localFriendships.count) friendships in local database")
+                self.logger.debug("Found \(localFriendships.count) friendships in local database")
                 return localFriendships
             }
         } catch {
-            logger.error("Error fetching friendships from SwiftData: \(error.localizedDescription)")
+            self.logger.error("Error fetching friendships from SwiftData: \(error.localizedDescription)")
             // Continue to fetch from Firebase rather than throwing
         }
         
         // Not found locally or empty, fetch from Firebase
-        logger.debug("Fetching friendships for user \(userID) from Firebase")
+        self.logger.debug("Fetching friendships for user \(userID) from Firebase")
+        
+        // Perform Firebase operation on background thread
+        return try await performFirebaseOperation {
         
         do {
             // Query friendships where userID matches current user
-            let snapshot = try await db.collection(friendshipsCollection)
+            let snapshot = try await self.db.collection(self.friendshipsCollection)
                 .whereField("userID", isEqualTo: userID)
                 .getDocuments()
             
@@ -200,20 +212,20 @@ class FirebaseFriendshipRepository: FriendshipRepository {
             
             for document in snapshot.documents {
                 let data = document.data()
-                let friendship = createFriendshipModelFromFirebaseData(id: document.documentID, data: data)
+                let friendship = self.createFriendshipModelFromFirebaseData(id: document.documentID, data: data)
                 friendships.append(friendship)
                 
                 // Save to local database
-                modelContext.insert(friendship)
+                self.modelContext.insert(friendship)
             }
             
             if !friendships.isEmpty {
-                try modelContext.save()
+                try self.modelContext.save()
             }
             
             // Also check for friendships where the current user is the friend
             // This handles bidirectional relationship representation
-            let reverseSnapshot = try await db.collection(friendshipsCollection)
+            let reverseSnapshot = try await self.db.collection(self.friendshipsCollection)
                 .whereField("friendID", isEqualTo: userID)
                 .getDocuments()
             
@@ -221,22 +233,23 @@ class FirebaseFriendshipRepository: FriendshipRepository {
                 let data = document.data()
                 // Only add if not already added (to avoid duplicates)
                 if !friendships.contains(where: { $0.id.uuidString == document.documentID }) {
-                    let friendship = createFriendshipModelFromFirebaseData(id: document.documentID, data: data)
+                    let friendship = self.createFriendshipModelFromFirebaseData(id: document.documentID, data: data)
                     friendships.append(friendship)
                     
                     // Save to local database
-                    modelContext.insert(friendship)
+                    self.modelContext.insert(friendship)
                 }
             }
             
             if reverseSnapshot.documents.count > 0 {
-                try modelContext.save()
+                try self.modelContext.save()
             }
             
             return friendships
         } catch {
-            logger.error("Error fetching friendships from Firebase: \(error.localizedDescription)")
+            self.logger.error("Error fetching friendships from Firebase: \(error.localizedDescription)")
             throw error
+        }
         }
     }
     
@@ -250,46 +263,52 @@ class FirebaseFriendshipRepository: FriendshipRepository {
         do {
             let localFriendships = try modelContext.fetch(descriptor)
             if let existingFriendship = localFriendships.first {
-                logger.debug("Found friendship between \(currentUserID) and \(friendID) in local database")
+                self.logger.debug("Found friendship between \(currentUserID) and \(friendID) in local database")
                 return existingFriendship
             }
         } catch {
-            logger.error("Error fetching friendship from SwiftData: \(error.localizedDescription)")
+            self.logger.error("Error fetching friendship from SwiftData: \(error.localizedDescription)")
             // Continue to fetch from Firebase rather than throwing
         }
         
         // Not found locally, fetch from Firebase
-        logger.debug("Fetching friendship between \(currentUserID) and \(friendID) from Firebase")
+        self.logger.debug("Fetching friendship between \(currentUserID) and \(friendID) from Firebase")
         
-        do {
-            // Create a consistent document ID for this friendship
-            let docID = generateFirestoreDocumentID(userID: currentUserID, friendID: friendID)
-            
-            let documentSnapshot = try await db.collection(friendshipsCollection).document(docID).getDocument()
-            
-            guard documentSnapshot.exists, let data = documentSnapshot.data() else {
-                // No friendship exists
-                return nil
+        // Perform Firebase operation on background thread
+        return try await performFirebaseOperation {
+            do {
+                // Create a consistent document ID for this friendship
+                let docID = self.generateFirestoreDocumentID(userID: currentUserID, friendID: friendID)
+                
+                let documentSnapshot = try await self.db.collection(self.friendshipsCollection).document(docID).getDocument()
+                
+                guard documentSnapshot.exists, let data = documentSnapshot.data() else {
+                    // No friendship exists
+                    return nil
+                }
+                
+                // Create a new friendship
+                let friendship = self.createFriendshipModelFromFirebaseData(id: documentSnapshot.documentID, data: data)
+                
+                // Return to main thread for SwiftData operations
+                return await MainActor.run {
+                    // Save to local database
+                    self.modelContext.insert(friendship)
+                    try? self.modelContext.save()
+                    
+                    return friendship
+                }
+            } catch {
+                self.logger.error("Error fetching friendship from Firebase: \(error.localizedDescription)")
+                throw error
             }
-            
-            // Create a new friendship and save it to SwiftData
-            let friendship = createFriendshipModelFromFirebaseData(id: documentSnapshot.documentID, data: data)
-            
-            // Save to local database
-            modelContext.insert(friendship)
-            try modelContext.save()
-            
-            return friendship
-        } catch {
-            logger.error("Error fetching friendship from Firebase: \(error.localizedDescription)")
-            throw error
         }
     }
     
     // MARK: - Friendship Management Methods
     
     func createFriendship(friendship: FriendshipModel) async throws {
-        logger.debug("Creating friendship between \(friendship.userID) and \(friendship.friendID)")
+        self.logger.debug("Creating friendship between \(friendship.userID) and \(friendship.friendID)")
         
         // Ensure friendship doesn't already exist
         let existingFriendship = try await getFriendship(currentUserID: friendship.userID, friendID: friendship.friendID)
@@ -308,7 +327,7 @@ class FirebaseFriendshipRepository: FriendshipRepository {
         
         do {
             // Save to Firestore
-            try await db.collection(friendshipsCollection).document(docID).setData(firestoreData)
+            try await self.db.collection(self.friendshipsCollection).document(docID).setData(firestoreData)
             
             // Save to local database
             let targetId = friendship.id // Create a local variable for the UUID
@@ -318,19 +337,19 @@ class FirebaseFriendshipRepository: FriendshipRepository {
             let existingFriendships = try modelContext.fetch(descriptor)
             
             if existingFriendships.isEmpty {
-                modelContext.insert(friendship)
-                try modelContext.save()
+                self.modelContext.insert(friendship)
+                try self.modelContext.save()
             }
             
             logger.info("Successfully created friendship between \(friendship.userID) and \(friendship.friendID)")
         } catch {
-            logger.error("Error creating friendship in Firebase: \(error.localizedDescription)")
+            self.logger.error("Error creating friendship in Firebase: \(error.localizedDescription)")
             throw error
         }
     }
     
     func updateFriendship(friendship: FriendshipModel) async throws {
-        logger.debug("Updating friendship \(friendship.id)")
+        self.logger.debug("Updating friendship \(friendship.id)")
         
         // Create a consistent document ID for this friendship
         let docID = generateFirestoreDocumentID(userID: friendship.userID, friendID: friendship.friendID)
@@ -342,7 +361,7 @@ class FirebaseFriendshipRepository: FriendshipRepository {
         
         do {
             // Check if document exists
-            let documentSnapshot = try await db.collection(friendshipsCollection).document(docID).getDocument()
+            let documentSnapshot = try await self.db.collection(self.friendshipsCollection).document(docID).getDocument()
             
             if !documentSnapshot.exists {
                 throw NSError(domain: "com.ketchupsoon", code: 404, 
@@ -350,21 +369,21 @@ class FirebaseFriendshipRepository: FriendshipRepository {
             }
             
             // Update in Firestore
-            try await db.collection(friendshipsCollection).document(docID).updateData(firestoreData)
+            try await self.db.collection(self.friendshipsCollection).document(docID).updateData(firestoreData)
             
             // Update in SwiftData
             friendship.updatedAt = Date()
-            try modelContext.save()
+            try self.modelContext.save()
             
             logger.info("Successfully updated friendship \(friendship.id)")
         } catch {
-            logger.error("Error updating friendship in Firebase: \(error.localizedDescription)")
+            self.logger.error("Error updating friendship in Firebase: \(error.localizedDescription)")
             throw error
         }
     }
     
     func deleteFriendship(id: UUID) async throws {
-        logger.debug("Deleting friendship \(id)")
+        self.logger.debug("Deleting friendship \(id)")
         
         // First find the friendship to get the user and friend IDs
         let targetId = id // Create a local variable for the UUID
@@ -381,24 +400,24 @@ class FirebaseFriendshipRepository: FriendshipRepository {
             }
             
             // Create a consistent document ID for this friendship
-            let docID = generateFirestoreDocumentID(userID: friendship.userID, friendID: friendship.friendID)
+            let docID = self.generateFirestoreDocumentID(userID: friendship.userID, friendID: friendship.friendID)
             
             // Delete from Firestore
-            try await db.collection(friendshipsCollection).document(docID).delete()
+            try await self.db.collection(self.friendshipsCollection).document(docID).delete()
             
             // Delete from SwiftData
-            modelContext.delete(friendship)
-            try modelContext.save()
+            self.modelContext.delete(friendship)
+            try self.modelContext.save()
             
             logger.info("Successfully deleted friendship \(id)")
         } catch {
-            logger.error("Error deleting friendship: \(error.localizedDescription)")
+            self.logger.error("Error deleting friendship: \(error.localizedDescription)")
             throw error
         }
     }
     
     func removeFriendship(currentUserID: String, friendID: String) async throws {
-        logger.debug("Removing friendship between \(currentUserID) and \(friendID)")
+        self.logger.debug("Removing friendship between \(currentUserID) and \(friendID)")
         
         do {
             // Find the friendship
@@ -410,7 +429,7 @@ class FirebaseFriendshipRepository: FriendshipRepository {
             // Use the deleteFriendship method to handle both local and remote deletion
             try await deleteFriendship(id: friendship.id)
         } catch {
-            logger.error("Error removing friendship: \(error.localizedDescription)")
+            self.logger.error("Error removing friendship: \(error.localizedDescription)")
             throw error
         }
     }
@@ -422,17 +441,17 @@ class FirebaseFriendshipRepository: FriendshipRepository {
             let friendship = try await getFriendship(currentUserID: currentUserID, friendID: friendID)
             return friendship != nil
         } catch {
-            logger.error("Error checking friendship existence: \(error.localizedDescription)")
+            self.logger.error("Error checking friendship existence: \(error.localizedDescription)")
             throw error
         }
     }
     
     /// Get all friends of the current user with their user profiles
     func getFriendsWithProfiles(currentUserID: String) async throws -> [(FriendshipModel, UserModel)] {
-        logger.debug("Getting friends with profiles for user \(currentUserID)")
+        self.logger.debug("Getting friends with profiles for user \(currentUserID)")
         
         do {
-            // Get all friendships for the current user
+            // Get all friendships for the current user - this runs on the main thread because of @MainActor
             let descriptor = FetchDescriptor<FriendshipModel>(predicate: #Predicate { (friendship: FriendshipModel) -> Bool in 
                 friendship.userID == currentUserID || friendship.friendID == currentUserID
             })
@@ -444,29 +463,52 @@ class FirebaseFriendshipRepository: FriendshipRepository {
                 try await getFriendshipsForCurrentUser() : 
                 localFriendships
             
-            var result: [(FriendshipModel, UserModel)] = []
+            // Get the user repository once for all operations
+            let userRepository = await getUserRepository()
             
-            for friendship in friendships {
-                // Determine which ID is the friend's ID
-                let friendUserID = friendship.userID == currentUserID ? friendship.friendID : friendship.userID
+            // Use a task group to fetch friend profiles in parallel
+            return try await withThrowingTaskGroup(of: (FriendshipModel, UserModel)?.self) { group in
+                // Capture friendships array for use in task group
+                let friendshipsForTasks = friendships
                 
-                // Fetch the friend's profile
-                let repository = await getUserRepository()
-                let friendProfile = try await repository.getUser(id: friendUserID)
+                // Process friendships in parallel
+                for friendship in friendshipsForTasks {
+                    // Determine which ID is the friend's ID
+                    let friendUserID = friendship.userID == currentUserID ? friendship.friendID : friendship.userID
+                    
+                    // Add a task for each friend profile to fetch
+                    group.addTask {
+                        do {
+                            // Get the friend's profile
+                            let friendProfile = try await userRepository.getUser(id: friendUserID)
+                            return (friendship, friendProfile)
+                        } catch {
+                            self.logger.error("Error fetching friend profile for \(friendUserID): \(error.localizedDescription)")
+                            return nil
+                        }
+                    }
+                }
                 
-                result.append((friendship, friendProfile))
+                // Collect results
+                var result: [(FriendshipModel, UserModel)] = []
+                for try await pair in group {
+                    if let pair = pair {
+                        result.append(pair)
+                    }
+                }
+                
+                self.logger.debug("Successfully loaded \(result.count) friends with profiles")
+                return result
             }
-            
-            return result
         } catch {
-            logger.error("Error getting friends with profiles: \(error.localizedDescription)")
+            self.logger.error("Error getting friends with profiles: \(error.localizedDescription)")
             throw error
         }
     }
     
     /// Get count of pending friend requests for a user
     func getPendingFriendRequestsCount(for userID: String) async throws -> Int {
-        logger.debug("Getting pending friend request count for user \(userID)")
+        self.logger.debug("Getting pending friend request count for user \(userID)")
         
         // Try to fetch from local database first
         let descriptor = FetchDescriptor<FriendshipModel>(predicate: #Predicate { (friendship: FriendshipModel) -> Bool in 
@@ -477,30 +519,54 @@ class FirebaseFriendshipRepository: FriendshipRepository {
             let pendingRequests = try modelContext.fetch(descriptor)
             
             if !pendingRequests.isEmpty {
-                logger.debug("Found \(pendingRequests.count) pending friend requests in local database")
+                self.logger.debug("Found \(pendingRequests.count) pending friend requests in local database")
                 return pendingRequests.count
             }
             
-            // If none found locally, try fetching from Firebase
-            let snapshot = try await db.collection(friendshipsCollection)
-                .whereField("friendID", isEqualTo: userID)
-                .whereField("relationshipType", isEqualTo: "pending")
-                .getDocuments()
-            
-            logger.debug("Found \(snapshot.documents.count) pending friend requests in Firebase")
-            return snapshot.documents.count
+            // If none found locally, try fetching from Firebase using background thread
+            return try await performFirebaseOperation {
+                do {
+                    let snapshot = try await self.db.collection(self.friendshipsCollection)
+                        .whereField("friendID", isEqualTo: userID)
+                        .whereField("relationshipType", isEqualTo: "pending")
+                        .getDocuments()
+                    
+                    self.logger.debug("Found \(snapshot.documents.count) pending friend requests in Firebase")
+                    
+                    // Store documents for processing if needed
+                    let documents = snapshot.documents
+                    
+                    // If we have pending requests, we should store them in the local database for future lookups
+                    if !documents.isEmpty {
+                        return await MainActor.run {
+                            for document in documents {
+                                let data = document.data()
+                                let friendship = self.createFriendshipModelFromFirebaseData(id: document.documentID, data: data)
+                                self.modelContext.insert(friendship)
+                            }
+                            try? self.modelContext.save()
+                            return documents.count
+                        }
+                    }
+                    
+                    return documents.count
+                } catch {
+                    self.logger.error("Error getting pending friend requests count: \(error.localizedDescription)")
+                    throw error
+                }
+            }
         } catch {
-            logger.error("Error getting pending friend requests count: \(error.localizedDescription)")
+            self.logger.error("Error getting pending friend requests count: \(error.localizedDescription)")
             throw error
         }
     }
     
     func syncLocalWithRemote(for userID: String) async throws {
-        logger.debug("Syncing local friendships with remote data for user \(userID)")
+        self.logger.debug("Syncing local friendships with remote data for user \(userID)")
         
         do {
             // Fetch all remote friendships
-            let snapshot = try await db.collection(friendshipsCollection)
+            let snapshot = try await self.db.collection(self.friendshipsCollection)
                 .whereField("userID", isEqualTo: userID)
                 .getDocuments()
             
@@ -524,7 +590,7 @@ class FirebaseFriendshipRepository: FriendshipRepository {
                     if let remoteUpdated = data["updatedAt"] as? TimeInterval,
                        Date(timeIntervalSince1970: remoteUpdated) > localFriendship.updatedAt {
                         
-                        let updatedFriendship = createFriendshipModelFromFirebaseData(id: idString, data: data)
+                        let updatedFriendship = self.createFriendshipModelFromFirebaseData(id: idString, data: data)
                         localFriendship.relationshipType = updatedFriendship.relationshipType
                         localFriendship.lastHangoutDate = updatedFriendship.lastHangoutDate
                         localFriendship.nextScheduledHangout = updatedFriendship.nextScheduledHangout
@@ -535,13 +601,13 @@ class FirebaseFriendshipRepository: FriendshipRepository {
                     }
                 } else {
                     // Create new local friendship
-                    let newFriendship = createFriendshipModelFromFirebaseData(id: idString, data: data)
-                    modelContext.insert(newFriendship)
+                    let newFriendship = self.createFriendshipModelFromFirebaseData(id: idString, data: data)
+                    self.modelContext.insert(newFriendship)
                 }
             }
             
             // Check reverse relationships (where user is the friend)
-            let reverseSnapshot = try await db.collection(friendshipsCollection)
+            let reverseSnapshot = try await self.db.collection(self.friendshipsCollection)
                 .whereField("friendID", isEqualTo: userID)
                 .getDocuments()
                 
@@ -568,7 +634,7 @@ class FirebaseFriendshipRepository: FriendshipRepository {
                     if let remoteUpdated = data["updatedAt"] as? TimeInterval,
                        Date(timeIntervalSince1970: remoteUpdated) > localFriendship.updatedAt {
                         
-                        let updatedFriendship = createFriendshipModelFromFirebaseData(id: idString, data: data)
+                        let updatedFriendship = self.createFriendshipModelFromFirebaseData(id: idString, data: data)
                         localFriendship.relationshipType = updatedFriendship.relationshipType
                         localFriendship.lastHangoutDate = updatedFriendship.lastHangoutDate
                         localFriendship.nextScheduledHangout = updatedFriendship.nextScheduledHangout
@@ -579,8 +645,8 @@ class FirebaseFriendshipRepository: FriendshipRepository {
                     }
                 } else {
                     // Create new local friendship
-                    let newFriendship = createFriendshipModelFromFirebaseData(id: idString, data: data)
-                    modelContext.insert(newFriendship)
+                    let newFriendship = self.createFriendshipModelFromFirebaseData(id: idString, data: data)
+                    self.modelContext.insert(newFriendship)
                 }
             }
             
@@ -593,16 +659,16 @@ class FirebaseFriendshipRepository: FriendshipRepository {
             
             for localFriendship in allLocalFriendships {
                 if !remoteFriendshipIDs.contains(localFriendship.id.uuidString) {
-                    modelContext.delete(localFriendship)
+                    self.modelContext.delete(localFriendship)
                 }
             }
             
             // Save all changes
-            try modelContext.save()
+            try self.modelContext.save()
             
             logger.info("Successfully synced friendships for user \(userID)")
         } catch {
-            logger.error("Error syncing friendships: \(error.localizedDescription)")
+            self.logger.error("Error syncing friendships: \(error.localizedDescription)")
             throw error
         }
     }

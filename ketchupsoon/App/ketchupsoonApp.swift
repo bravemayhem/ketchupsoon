@@ -46,7 +46,8 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
     
     func checkForFirebaseUsersInContacts() async {
         // Get model context
-        let sharedModelContainer = try? ModelContainer()
+        let schema = Schema([UserModel.self, FriendshipModel.self, MeetupModel.self])
+        let sharedModelContainer = try? ModelContainer(for: schema)
         guard let context = sharedModelContainer?.mainContext else {
             print("⚠️ Failed to get SwiftData context")
             return
@@ -220,6 +221,11 @@ struct ketchupsoonApp: App {
     // register app delegate for Firebase setup
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
     
+    static func registerValueTransformers() {
+        // Register our custom transformers for array handling
+        ArrayTransformer.register()
+    }
+    
     let container: ModelContainer
     @StateObject private var colorSchemeManager = ColorSchemeManager.shared
     @StateObject private var profileManager = UserProfileManager.shared  // Initialize UserProfileManager
@@ -233,6 +239,9 @@ struct ketchupsoonApp: App {
     init() {
         PerformanceMonitor.shared.startMeasuring("AppLaunch")
         
+        // Register our custom array transformer
+        Self.registerValueTransformers()
+        
         // Verify transformer registration
         let registeredTransformers = ValueTransformer.valueTransformerNames()
         print("✓ Registered transformers: \(registeredTransformers)")
@@ -241,7 +250,9 @@ struct ketchupsoonApp: App {
         do {
             print("🏗 Creating schema...")
             let schema = Schema([
-                UserModel.self
+                UserModel.self,
+                FriendshipModel.self,
+                MeetupModel.self
             ])
             
             print("📦 Creating ModelContainer...")
