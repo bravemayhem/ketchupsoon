@@ -8,17 +8,18 @@ import Combine
 /// Service that manages real-time Firestore listeners for both users and friendships
 /// Provides automatic synchronization between Firebase and SwiftData
 @MainActor
-class FirestoreListenerService: ObservableObject {
+class FirestoreListenerService: ObservableObject, AuthStateSubscriber {
     // MARK: - Properties
     
-    private let db = Firestore.firestore()
+    private lazy var db: Firestore = {
+        return Firestore.firestore()
+    }()
     private let logger = Logger(subsystem: "com.ketchupsoon", category: "FirestoreListenerService")
     private let modelContext: ModelContext
     
     // Store active listeners to allow cancellation
     private var userListeners: [ListenerRegistration] = []
     private var friendshipListeners: [ListenerRegistration] = []
-    private var authStateListener: AuthStateDidChangeListenerHandle?
     
     // Nonisolated copies for access from nonisolated contexts
     private nonisolated var _userListeners: [ListenerRegistration] {
@@ -41,16 +42,6 @@ class FirestoreListenerService: ObservableObject {
         }
     }
     
-    private nonisolated var _authStateListener: AuthStateDidChangeListenerHandle? {
-        get async {
-            await withCheckedContinuation { continuation in
-                Task { @MainActor in
-                    continuation.resume(returning: authStateListener)
-                }
-            }
-        }
-    }
-    
     // Published properties for UI reactivity
     @Published var isListening: Bool = false
     @Published var lastUpdateTimestamp: Date?
@@ -64,52 +55,73 @@ class FirestoreListenerService: ObservableObject {
         return FriendshipRepositoryFactory.createRepository(modelContext: modelContext)
     }()
     
+    // Operation coordinator
+    private let operationCoordinator: FirebaseOperationCoordinator
+    
+    // State tracking
+    private var currentUserID: String?
+    private var lastListenerStartTime: Date?
+    
     // MARK: - Initialization
     
     init(modelContext: ModelContext) {
         self.modelContext = modelContext
+        self.operationCoordinator = FirebaseOperationCoordinator.shared
+        
+        // Register with auth state service
+        Task { @MainActor in
+            AuthStateService.shared.subscribe(self)
+        }
     }
     
     deinit {
         stopAllListeners()
+        
+        // Create a local reference to avoid capturing self in the Task
+        let subscriber = self
+        
+        // Use Task.detached to avoid capturing self
+        Task.detached { @MainActor in
+            AuthStateService.shared.unsubscribe(subscriber)
+        }
+    }
+    
+    // MARK: - AuthStateSubscriber Implementation
+    
+    nonisolated func onAuthStateChanged(newState: AuthState, previousState: AuthState?) {
+        // Since this method is nonisolated, we need to transfer to the MainActor
+        Task { @MainActor in
+            self.handleAuthStateChange(newState: newState, previousState: previousState)
+        }
+    }
+    
+    @MainActor
+    private func handleAuthStateChange(newState: AuthState, previousState: AuthState?) {
+        // Handle auth state changes
+        switch newState {
+        case .authenticated(let userID):
+            // Only start listeners if we're not already listening for this user
+            if currentUserID != userID {
+                stopAllListeners()
+                startListeningForUser(userID: userID)
+            }
+            
+        case .refreshing(let userID):
+            // Do nothing - keep existing listeners
+            logger.debug("Auth state refreshing for user \(userID)")
+            
+        case .notAuthenticated:
+            // User signed out, stop all listeners
+            stopAllListeners()
+        }
     }
     
     // MARK: - Public Methods
-    
-    /// Start listening for real-time updates for the current user
-    func startListeningForCurrentUser() {
-        guard let currentUser = Auth.auth().currentUser else {
-            logger.warning("Cannot start listening - no current user")
-            return
-        }
-        
-        // Set up Auth state listener first
-        setupAuthStateListener()
-        
-        // Start listening for user profile updates
-        startUserListener(for: currentUser.uid)
-        
-        // Start listening for friendship updates
-        startFriendshipsListener(for: currentUser.uid)
-        
-        isListening = true
-        logger.info("Started listening for real-time updates for user \(currentUser.uid)")
-    }
     
     /// Stop all active listeners
     /// This method is marked as nonisolated so it can be called from deinit
     nonisolated func stopAllListeners() {
         Task {
-            // Remove Auth state listener
-            if let authListener = await _authStateListener {
-                Auth.auth().removeStateDidChangeListener(authListener)
-                
-                // Update on main actor
-                Task { @MainActor in
-                    self.authStateListener = nil
-                }
-            }
-            
             // Remove all user listeners
             let userListenersSnapshot = await _userListeners
             for listener in userListenersSnapshot {
@@ -131,7 +143,11 @@ class FirestoreListenerService: ObservableObject {
             Task { @MainActor in
                 self.friendshipListeners.removeAll()
                 self.isListening = false
-                self.logger.info("Stopped all Firestore listeners")
+                self.currentUserID = nil
+                
+                if FirebaseOperationCoordinator.shared.logVerbosity >= .important {
+                    self.logger.notice("Stopped all Firestore listeners")
+                }
             }
         }
     }
@@ -145,50 +161,54 @@ class FirestoreListenerService: ObservableObject {
         }
         userListeners.removeAll()
         
+        if currentUserID == userID {
+            currentUserID = nil
+        }
+        
         logger.debug("Stopped listening for user \(userID)")
     }
     
     // MARK: - Private Helper Methods
     
-    private func setupAuthStateListener() {
-        // Remove existing listener if any
-        if let authStateListener = authStateListener {
-            Auth.auth().removeStateDidChangeListener(authStateListener)
+    private func startListeningForUser(userID: String) {
+        // Debounce rapid starts
+        if let lastStart = lastListenerStartTime, 
+           Date().timeIntervalSince(lastStart) < 1.0 { // 1 second
+            logger.debug("Debounced listener start - too soon after last start")
+            return
         }
         
-        // Set up new listener
-        authStateListener = Auth.auth().addStateDidChangeListener { [weak self] (_, user) in
-            guard let self = self else { return }
-            
-            if let user = user {
-                // User signed in or changed
-                logger.debug("Auth state changed, user: \(user.uid)")
-                
-                // Restart listeners for the current user
-                Task {
-                    await self.restartListenersForCurrentUser()
+        // Store current user ID
+        currentUserID = userID
+        lastListenerStartTime = Date()
+        
+        // Start listening for user profile updates
+        startUserListener(for: userID)
+        
+        // Start listening for friendship updates
+        startFriendshipsListener(for: userID)
+        
+        isListening = true
+        
+        if FirebaseOperationCoordinator.shared.logVerbosity >= .important {
+            logger.notice("Started listening for real-time updates for user \(userID)")
+        }
+        
+        // Queue an operation to sync data
+        operationCoordinator.scheduleOperation(
+            name: "Sync User Data After Listener Start",
+            key: "sync_after_listen_\(userID)",
+            priority: .normal,
+            minInterval: 5.0,
+            operation: { [self] in
+                do {
+                    try await self.userRepository.refreshCurrentUser()
+                    try await self.friendshipRepository.syncLocalWithRemote(for: userID)
+                } catch {
+                    logger.error("Error syncing data after starting listeners: \(error.localizedDescription)")
                 }
-            } else {
-                // User signed out
-                logger.debug("Auth state changed, user signed out")
-                self.stopAllListeners()
             }
-        }
-    }
-    
-    private func restartListenersForCurrentUser() async {
-        stopAllListeners()
-        startListeningForCurrentUser()
-        
-        // Force sync to ensure we have the latest data
-        if let currentUser = Auth.auth().currentUser {
-            do {
-                try await userRepository.refreshCurrentUser()
-                try await friendshipRepository.syncLocalWithRemote(for: currentUser.uid)
-            } catch {
-                logger.error("Error syncing data after auth state change: \(error.localizedDescription)")
-            }
-        }
+        )
     }
     
     private func startUserListener(for userID: String) {

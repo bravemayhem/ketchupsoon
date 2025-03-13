@@ -13,7 +13,7 @@ struct UserProfileView: View {
     @EnvironmentObject private var firebaseSyncService: FirebaseSyncService
     
     // MARK: - ViewModel
-    @StateObject private var viewModel: UserProfileViewModel
+    @StateObject private var viewModel = UserProfileViewModel()
     
     // MARK: - UI State
     @State private var showPhotoPicker = false
@@ -21,18 +21,6 @@ struct UserProfileView: View {
     @State private var showSourceTypeActionSheet = false
     @State private var sourceType: UIImagePickerController.SourceType = .photoLibrary
     @State private var showCropView: Bool = false
-    
-    // MARK: - Initialization
-    // Default initializer
-    init() {
-        // We have to initialize the StateObject here, but it will be properly injected in onAppear
-        // This is just a temporary instance
-        let container = try! ModelContainer(for: UserModel.self)
-        _viewModel = StateObject(wrappedValue: UserProfileViewModel(
-            modelContext: ModelContext(container),
-            firebaseSyncService: FirebaseSyncService(modelContext: container.mainContext)
-        ))
-    }
     
     // MARK: - Body
     var body: some View {
@@ -79,11 +67,9 @@ struct UserProfileView: View {
         }
         .padding(.bottom, 80)
         .onAppear {
-            // Set up the real ViewModel with proper dependencies
-            if viewModel.firebaseSyncService !== firebaseSyncService {
-                viewModel.firebaseSyncService = firebaseSyncService
-                viewModel.userRepository = UserRepositoryFactory.createRepository(modelContext: modelContext)
-            }
+            // Initialize the ViewModel with dependencies
+            viewModel.firebaseSyncService = firebaseSyncService
+            viewModel.userRepository = UserRepositoryFactory.createRepository(modelContext: modelContext)
             
             Task {
                 await viewModel.loadProfile()
@@ -117,7 +103,7 @@ struct UserProfileView: View {
         }
         // Crop view integration
         .sheet(isPresented: $showCropView) {
-            if let image = viewModel.croppingImage {
+            if viewModel.croppingImage != nil {
                 CropImageView(image: $viewModel.croppingImage, onCrop: { croppedImage in
                     viewModel.profileImage = croppedImage
                     showCropView = false

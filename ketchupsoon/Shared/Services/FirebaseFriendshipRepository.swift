@@ -9,7 +9,9 @@ import OSLog
 class FirebaseFriendshipRepository: FriendshipRepository {
     // MARK: - Properties
     
-    private let db = Firestore.firestore()
+    private lazy var db: Firestore = {
+        return Firestore.firestore()
+    }()
     private let friendshipsCollection = "friendships"
     private let logger = Logger(subsystem: "com.ketchupsoon", category: "FirebaseFriendshipRepository")
     private let modelContext: ModelContext

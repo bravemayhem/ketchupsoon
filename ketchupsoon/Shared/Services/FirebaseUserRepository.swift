@@ -10,16 +10,28 @@ import OSLog
 class FirebaseUserRepository: UserRepository {
     // MARK: - Properties
     
-    private let db = Firestore.firestore()
-    private let storage = Storage.storage()
+    private lazy var db: Firestore = {
+        return Firestore.firestore()
+    }()
+    private lazy var storage: Storage = {
+        return Storage.storage()
+    }()
     private let usersCollection = "users"
     private let logger = Logger(subsystem: "com.ketchupsoon", category: "FirebaseUserRepository")
     private let modelContext: ModelContext
     
+    // Operation coordinator
+    private let operationCoordinator: FirebaseOperationCoordinator
+    
+    // Last refresh time tracking
+    private var lastRefreshTime: Date?
+    
     // MARK: - Initialization
     
+    @MainActor
     init(modelContext: ModelContext) {
         self.modelContext = modelContext
+        self.operationCoordinator = FirebaseOperationCoordinator.shared
     }
     
     // MARK: - User Fetching Methods
@@ -313,45 +325,72 @@ class FirebaseUserRepository: UserRepository {
     }
 
     func refreshCurrentUser() async throws {
-        logger.debug("Refreshing current user data")
-        
         guard let currentUser = Auth.auth().currentUser else {
             logger.warning("Cannot refresh - no current user")
             throw NSError(domain: "com.ketchupsoon", code: 401, 
                          userInfo: [NSLocalizedDescriptionKey: "No user is currently logged in"])
         }
         
-        do {
-            // Get fresh data from Firestore
-            let document = try await db.collection(usersCollection).document(currentUser.uid).getDocument()
-            
-            if document.exists, let data = document.data() {
-                // Update user in SwiftData
-                let userId = currentUser.uid
-                let descriptor = FetchDescriptor<UserModel>(predicate: #Predicate { (user: UserModel) -> Bool in
-                    user.id == userId
-                })
-                let localUsers = try modelContext.fetch(descriptor)
-                
-                if let existingUser = localUsers.first {
-                    // Update existing user
-                    updateUserModelFromFirebaseData(user: existingUser, data: data)
-                } else {
-                    // Create new user if not found locally
-                    let user = UserModel.from(firebaseUser: currentUser, additionalData: data)
-                    modelContext.insert(user)
+        // Use a unique key for this user's refresh operation
+        let operationKey = "refresh_user_\(currentUser.uid)"
+        
+        return try await withCheckedThrowingContinuation { continuation in
+            // Schedule the operation through the coordinator
+            Task { @MainActor [weak self] in
+                guard let self = self else {
+                    continuation.resume(throwing: NSError(domain: "com.ketchupsoon", code: 500, 
+                                                  userInfo: [NSLocalizedDescriptionKey: "Repository was deallocated"]))
+                    return
                 }
                 
-                try modelContext.save()
-                logger.info("Successfully refreshed current user data")
-            } else {
-                logger.warning("Current user not found in Firestore")
-                throw NSError(domain: "com.ketchupsoon", code: 404, 
-                             userInfo: [NSLocalizedDescriptionKey: "Current user not found in Firestore"])
+                self.operationCoordinator.scheduleOperation(
+                    name: "Refresh Current User",
+                    key: operationKey,
+                    priority: .normal,
+                    minInterval: 3.0, // 3 seconds minimum between refreshes for the same user
+                    operation: { [weak self] in
+                    guard let self = self else {
+                        return
+                    }
+                    
+                    do {
+                        // Get fresh data from Firestore
+                        let document = try await db.collection(usersCollection).document(currentUser.uid).getDocument()
+                        
+                        if document.exists, let data = document.data() {
+                            // Update user in SwiftData
+                            let userId = currentUser.uid
+                            let descriptor = FetchDescriptor<UserModel>(predicate: #Predicate { (user: UserModel) -> Bool in
+                                user.id == userId
+                            })
+                            let localUsers = try modelContext.fetch(descriptor)
+                            
+                            if let existingUser = localUsers.first {
+                                // Update existing user
+                                updateUserModelFromFirebaseData(user: existingUser, data: data)
+                            } else {
+                                // Create new user if not found locally
+                                let user = UserModel.from(firebaseUser: currentUser, additionalData: data)
+                                modelContext.insert(user)
+                            }
+                            
+                            try modelContext.save()
+                            lastRefreshTime = Date()
+                            continuation.resume(returning: ())
+                        } else {
+                            let error = NSError(domain: "com.ketchupsoon", code: 404, 
+                                       userInfo: [NSLocalizedDescriptionKey: "Current user not found in Firestore"])
+                            continuation.resume(throwing: error)
+                        }
+                    } catch {
+                        continuation.resume(throwing: error)
+                    }
+                },
+                errorHandler: { error in
+                    continuation.resume(throwing: error)
+                }
+                )
             }
-        } catch {
-            logger.error("Error refreshing current user: \(error.localizedDescription)")
-            throw error
         }
     }
 

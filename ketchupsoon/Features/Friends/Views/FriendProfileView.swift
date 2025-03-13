@@ -13,6 +13,7 @@ struct FriendProfileView: View {
     @State private var isRefreshing = false
     @State private var isLoading = false
     @State private var errorMessage: String? = nil
+    @State private var userDocumentListener: ListenerRegistration?
     
     // Logger for debugging
     private let logger = Logger(subsystem: "com.ketchupsoon", category: "FriendProfileView")
@@ -336,68 +337,82 @@ extension FriendProfileView {
     private func refreshFriendData() async {
         guard !isLoading else { return }
         
+        isLoading = true
+        errorMessage = nil
+        
+        // Get the latest user data from Firebase using the friendID
+        let userRepository = UserRepositoryFactory.createRepository(modelContext: modelContext)
         do {
-            isLoading = true
-            errorMessage = nil
-            
-            // Get the latest user data from Firebase using the friendID
-            let userRepository = UserRepositoryFactory.createRepository(modelContext: modelContext)
-            if let updatedFriend = try await userRepository.getUserByID(friend.id) {
-                await MainActor.run {
-                    self.refreshedFriend = updatedFriend
-                    self.isRefreshing = false
-                    self.isLoading = false
-                    logger.info("Successfully refreshed friend data for \(friend.id)")
-                }
-            } else {
-                await MainActor.run {
-                    self.isRefreshing = false
-                    self.isLoading = false
-                    errorMessage = "Could not find friend data"
-                    logger.warning("Friend not found with ID \(friend.id)")
-                }
+            let updatedFriend = try await userRepository.getUser(id: friend.id)
+            await MainActor.run {
+                self.refreshedFriend = updatedFriend
+                self.isRefreshing = false
+                self.isLoading = false
+                logger.info("Successfully refreshed friend data for \(friend.id)")
             }
         } catch {
             await MainActor.run {
                 self.isRefreshing = false
                 self.isLoading = false
-                errorMessage = "Failed to refresh: \(error.localizedDescription)"
-                logger.error("Error refreshing friend data: \(error)")
+                errorMessage = "Could not find friend data: \(error.localizedDescription)"
+                logger.warning("Friend not found with ID \(friend.id): \(error)")
             }
         }
     }
     
     // Set up real-time updates for this friend
     private func startRealTimeUpdates() {
-        // Get a reference to the firestore database
-        let db = Firestore.firestore()
-        
         // Create a listener for this specific user document
-        let userRef = db.collection("users").document(friend.id)
+        let userRef = Firestore.firestore().collection("users").document(friend.id)
         
-        // Store listener so we can detach it later
-        FirestoreListenerService.shared.addListener(userRef.addSnapshotListener { documentSnapshot, error in
+        // Create a listener and store it for later cleanup
+        let listener = userRef.addSnapshotListener { documentSnapshot, error in
             guard let document = documentSnapshot else {
-                logger.error("Error fetching user document: \(error?.localizedDescription ?? "Unknown error")")
+                self.logger.error("Error fetching user document: \(error?.localizedDescription ?? "Unknown error")")
                 return
             }
             
             // If the document exists and has data, update our friend model
             if document.exists, let userData = document.data() {
-                if let updatedFriend = UserModel.fromFirestore(documentData: userData, documentID: document.documentID) {
-                    // Update on the main thread since this impacts UI
-                    DispatchQueue.main.async {
-                        self.refreshedFriend = updatedFriend
-                        self.logger.info("Real-time update received for friend \(updatedFriend.id)")
+                // Create a UserModel from firestore data
+                // Get existing user to update
+                let friendID = document.documentID
+                let descriptor = FetchDescriptor<UserModel>(predicate: #Predicate { user in 
+                    user.id == friendID
+                })
+                do {
+                    let existingUser = try self.modelContext.fetch(descriptor).first
+                    
+                    if let existingUser = existingUser {
+                        // Update existing user
+                        let updatedFriend = existingUser
+                        // Update properties from firestore data
+                        updatedFriend.name = userData["name"] as? String ?? updatedFriend.name
+                        updatedFriend.profileImageURL = userData["profileImageURL"] as? String ?? updatedFriend.profileImageURL
+                        updatedFriend.bio = userData["bio"] as? String ?? updatedFriend.bio
+                        // Update on the main thread since this impacts UI
+                        DispatchQueue.main.async {
+                            self.refreshedFriend = updatedFriend
+                            self.logger.info("Real-time update received for friend \(updatedFriend.id)")
+                        }
                     }
+                } catch {
+                    self.logger.error("Error updating friend from Firestore: \(error)")
                 }
             }
-        })
+        }
+        
+        // Store the listener in our state variable
+        self.userDocumentListener = listener
     }
+    
+    // Track our listener is managed with @State above
     
     // Clean up listeners when the view disappears
     private func stopRealTimeUpdates() {
-        FirestoreListenerService.shared.removeAllListeners()
+        // Remove the listener if it exists
+        userDocumentListener?.remove()
+        userDocumentListener = nil
         logger.info("Stopped real-time updates for friend profile")
     }
 }
@@ -452,4 +467,3 @@ struct RefreshableView: View {
         .environmentObject(FirebaseSyncServiceFactory.preview)
         .preferredColorScheme(.dark)
 }
-

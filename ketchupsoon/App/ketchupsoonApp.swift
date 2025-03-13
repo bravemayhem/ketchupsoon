@@ -12,12 +12,19 @@ import FirebaseFirestore
 import FirebaseMessaging
 import UserNotifications
 import WatchConnectivity
+import UIKit
+import Observation
 
 class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate { // Removed MessagingDelegate
     func application(_ application: UIApplication,
                     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
         // Configure Firebase
         FirebaseApp.configure()  // Uncomment to enable Firebase
+        
+        // Initialize central services
+        _ = LoggingService.shared
+        _ = AuthStateService.shared
+        _ = FirebaseOperationCoordinator.shared
         
         // Configure Firebase Messaging
         // Messaging.messaging().delegate = self  // Temporarily commented out for testing
@@ -142,6 +149,72 @@ extension URL {
     }
 }
 
+// MARK: - Haptic Feedback
+@Observable
+class HapticFeedbackGenerator {
+    private let lightGenerator = UIImpactFeedbackGenerator(style: .light)
+    private let mediumGenerator = UIImpactFeedbackGenerator(style: .medium)
+    private let heavyGenerator = UIImpactFeedbackGenerator(style: .heavy)
+    private let selectionGenerator = UISelectionFeedbackGenerator()
+    private let notificationGenerator = UINotificationFeedbackGenerator()
+    
+    init() {
+        prepare()
+    }
+    
+    func prepare() {
+        lightGenerator.prepare()
+        mediumGenerator.prepare()
+        heavyGenerator.prepare()
+        selectionGenerator.prepare()
+        notificationGenerator.prepare()
+    }
+    
+    func lightImpact() {
+        lightGenerator.impactOccurred()
+    }
+    
+    func mediumImpact() {
+        mediumGenerator.impactOccurred()
+    }
+    
+    func heavyImpact() {
+        heavyGenerator.impactOccurred()
+    }
+    
+    func selectionChanged() {
+        selectionGenerator.selectionChanged()
+    }
+    
+    func notificationOccurred(_ type: UINotificationFeedbackGenerator.FeedbackType) {
+        notificationGenerator.notificationOccurred(type)
+    }
+    
+    func success() {
+        notificationGenerator.notificationOccurred(.success)
+    }
+    
+    func warning() {
+        notificationGenerator.notificationOccurred(.warning)
+    }
+    
+    func error() {
+        notificationGenerator.notificationOccurred(.error)
+    }
+}
+
+// Environment key for haptic feedback
+struct HapticFeedbackKey: EnvironmentKey {
+    static let defaultValue = HapticFeedbackGenerator()
+}
+
+extension EnvironmentValues {
+    var hapticFeedback: HapticFeedbackGenerator {
+        get { self[HapticFeedbackKey.self] }
+        set { self[HapticFeedbackKey.self] = newValue }
+    }
+}
+
 @main
 struct ketchupsoonApp: App {
     // register app delegate for Firebase setup
@@ -151,7 +224,11 @@ struct ketchupsoonApp: App {
     @StateObject private var colorSchemeManager = ColorSchemeManager.shared
     @StateObject private var profileManager = UserProfileManager.shared  // Initialize UserProfileManager
     @StateObject private var firebaseSyncService: FirebaseSyncService
+    @StateObject private var onboardingManager = OnboardingManager.shared  // Add OnboardingManager
     @Environment(\.scenePhase) private var scenePhase
+    
+    // Update to use Observable without @StateObject
+    private var feedbackGenerator = HapticFeedbackGenerator()
     
     init() {
         PerformanceMonitor.shared.startMeasuring("AppLaunch")
@@ -271,32 +348,48 @@ struct ketchupsoonApp: App {
     
     var body: some Scene {
         WindowGroup {
-            SplashScreenView()
-                .modelContainer(for: [], inMemory: false)
+            ContentView()
+                .modelContainer(for: [
+                    UserModel.self,
+                    FriendshipModel.self,
+                    MeetupModel.self
+                ])
+                .environment(\.modelContext, container.mainContext)
+                .environmentObject(colorSchemeManager)
+                .environmentObject(profileManager)
+                .environmentObject(firebaseSyncService)
+                .environmentObject(onboardingManager)  // Add OnboardingManager to environment
+                .environment(feedbackGenerator)
+                .onAppear {
+                    // Initialize the logging service
+                    _ = LoggingService.shared
+                    
+                    // Initialize auth state service
+                    _ = AuthStateService.shared
+                    
+                    // Other existing onAppear code...
+                }
                 .preferredColorScheme(colorSchemeManager.currentAppearanceMode == .system ? nil : colorSchemeManager.colorScheme)
                 .environment(\.colorScheme, colorSchemeManager.colorScheme)
-                .onAppear {
-                    /*
-                    // Verify font registration on startup (DEBUG only)
-                    #if DEBUG
-                    verifyFontRegistration()
-                    #endif
-                     */
-                }
         }
         .modelContainer(container)
         .onChange(of: scenePhase) { oldPhase, newPhase in
             switch newPhase {
             case .active:
-                // App became active, start Firebase services
-                print("🔥 Starting Firebase services")
+                // App became active
                 if Auth.auth().currentUser != nil {
-                    firebaseSyncService.startServices()
+                    // Initialize log verbosity first
+                    FirebaseOperationCoordinator.shared.setLogVerbosity(.important)
+                    
+                    // Tell auth service to refresh state (which will trigger necessary operations)
+                    AuthStateService.shared.refreshState()
                 }
             case .background:
-                // App entered background, stop Firebase services
-                print("🔥 Stopping Firebase services")
-                firebaseSyncService.stopServices()
+                // App entered background, cancel non-critical operations
+                if let userID = Auth.auth().currentUser?.uid {
+                    FirebaseOperationCoordinator.shared.cancelOperations(withKey: "sync_after_listen_\(userID)")
+                    FirebaseOperationCoordinator.shared.cancelOperations(withKey: "full_sync_\(userID)")
+                }
             case .inactive:
                 // App is transitioning between states, do nothing
                 break

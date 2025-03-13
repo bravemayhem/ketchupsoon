@@ -4,12 +4,14 @@ struct SplashScreenView: View {
     @State private var isActive = false
     @StateObject private var onboardingManager = OnboardingManager.shared
     @EnvironmentObject private var colorSchemeManager: ColorSchemeManager
+    @EnvironmentObject private var firebaseSyncService: FirebaseSyncService
     
     var body: some View {
         if isActive {
             // Always navigate to ContentView, which will handle onboarding display
             ContentView()
                 .environmentObject(onboardingManager)
+                .environmentObject(firebaseSyncService)
         } else {
             ZStack {
                 // Background from UserOnboardingView

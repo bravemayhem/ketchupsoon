@@ -41,15 +41,23 @@ class UserProfileViewModel: ObservableObject {
     
     // MARK: - Dependencies
     private let logger = Logger(subsystem: "com.ketchupsoon", category: "UserProfileViewModel")
-    var userRepository: UserRepository
-    var firebaseSyncService: FirebaseSyncService
+    var userRepository: UserRepository!
+    var firebaseSyncService: FirebaseSyncService!
     private var profileManager = UserProfileManager.shared
     private var autoSaveTimer: AnyCancellable?
     
     // MARK: - Initialization
+    
+    // Default initializer for use with dependency injection
+    init() {
+        logger.info("Created UserProfileViewModel with default initializer")
+    }
+    
+    // Full initializer with dependencies provided
     init(modelContext: ModelContext, firebaseSyncService: FirebaseSyncService) {
         self.userRepository = UserRepositoryFactory.createRepository(modelContext: modelContext)
         self.firebaseSyncService = firebaseSyncService
+        logger.info("Created UserProfileViewModel with full dependencies")
     }
     
     // MARK: - Public Methods
@@ -155,7 +163,7 @@ class UserProfileViewModel: ObservableObject {
         
         do {
             // Create an updated profile
-            var updatedProfile = userProfile
+            let updatedProfile = userProfile
             updatedProfile.name = userName
             updatedProfile.bio = userBio
             updatedProfile.birthday = birthday
@@ -164,15 +172,15 @@ class UserProfileViewModel: ObservableObject {
             try await profileManager.updateUserProfile(updates: [
                 "name": userName,
                 "bio": userBio,
-                "birthday": birthday
+                "birthday": birthday ?? Date(timeIntervalSince1970: 0)  // Default to Unix epoch if nil
             ])
             
             // Also update the repository for local persistence
             let localUser = try await userRepository.getUser(id: userId)
-            var updatedUser = localUser
+            let updatedUser = localUser
             updatedUser.name = userName
             updatedUser.bio = userBio
-            updatedUser.birthday = birthday
+            updatedUser.birthday = birthday ?? Date(timeIntervalSince1970: 0)  // Default to Unix epoch if nil
             
             try await userRepository.updateUser(user: updatedUser)
             logger.info("✅ Updated user in local repository")
@@ -336,8 +344,8 @@ class UserProfileViewModel: ObservableObject {
             try await firebaseSyncService.updateCurrentUserProfileImage(url: url)
             
             // Also update the legacy profile manager
-            if var userProfile = profileManager.currentUserProfile,
-               let userId = Auth.auth().currentUser?.uid {
+            if let userProfile = profileManager.currentUserProfile,
+               let _ = Auth.auth().currentUser?.uid {
                 userProfile.profileImageURL = url
                 try await profileManager.updateUserProfile(updates: ["profileImageURL": url])
             }

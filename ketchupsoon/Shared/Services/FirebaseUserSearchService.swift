@@ -10,7 +10,9 @@ class FirebaseUserSearchService: ObservableObject {
     static let shared = FirebaseUserSearchService()
     
     private let logger = Logger(subsystem: "com.ketchupsoon", category: "FirebaseUserSearchService")
-    private let db = Firestore.firestore()
+    private lazy var db: Firestore = {
+        return Firestore.firestore()
+    }()
     private let usersCollection = "users"
     
     @Published var isSearching = false

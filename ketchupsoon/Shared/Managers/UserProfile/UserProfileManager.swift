@@ -14,7 +14,9 @@ class UserProfileManager: ObservableObject {
     static let shared = UserProfileManager()
     
     private let logger = Logger(subsystem: "com.ketchupsoon", category: "UserProfileManager")
-    private let db = Firestore.firestore()
+    private lazy var db: Firestore = {
+        return Firestore.firestore()
+    }()
     private let usersCollection = "users"
     
     @Published var currentUserProfile: UserModel?

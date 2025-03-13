@@ -353,36 +353,26 @@ extension AddFriendView {
         }
     }
     
-    // Add a friend using FirebaseSyncService
+    @MainActor
     private func addFriend(_ user: UserModel) {
         guard !addedFriendIds.contains(user.id) else { return }
         
-        Task { @MainActor in
+        Task<Void, Never> {
             do {
                 // Create friendship with the selected user
-                try await firebaseSyncService.createFriendship(with: user.id, notes: nil)
+                try await firebaseSyncService.createFriendship(with: user.id, notes: nil as String?)
                 
                 // Update UI directly since we're already on the MainActor
-                // Update UI to show the user has been added
                 addedFriendIds.insert(user.id)
-                
-                // Show success message
-                successMessage = "Added \(user.name) as a friend!"
+                successMessage = "Added \(user.name ?? "User") as a friend!"
                 showSuccessMessage = true
                 
-                // Hide success message after a delay
-                DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                    withAnimation {
-                        showSuccessMessage = false
-                    }
+                try? await Task.sleep(nanoseconds: 3_000_000_000)
+                withAnimation {
+                    showSuccessMessage = false
                 }
-                
-                logger.info("Successfully added friend: \(user)")
             } catch {
-                // Already on MainActor
                 errorMessage = "Error adding friend: \(error)"
-                
-                logger.error("Error adding friend: \(error)")
             }
         }
     }
@@ -540,7 +530,8 @@ struct ContactRow: View {
         }
         
         // Auto-hide toast after 3 seconds
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+        Task {
+            try? await Task.sleep(nanoseconds: 3_000_000_000)
             withAnimation(.easeOut(duration: 0.5)) {
                 showToast = false
             }

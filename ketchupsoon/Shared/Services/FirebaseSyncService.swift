@@ -8,7 +8,7 @@ import Combine
 /// Service that manages overall synchronization between Firebase and SwiftData
 /// Coordinates all Firebase operations and provides a simple interface for the app
 @MainActor
-class FirebaseSyncService: ObservableObject {
+class FirebaseSyncService: ObservableObject, AuthStateSubscriber {
     // MARK: - Properties
     
     private let logger = Logger(subsystem: "com.ketchupsoon", category: "FirebaseSyncService")
@@ -18,12 +18,29 @@ class FirebaseSyncService: ObservableObject {
     private let userRepository: UserRepository
     private let friendshipRepository: FriendshipRepository
     private let meetupRepository: MeetupRepository
-    private let listenerService: FirestoreListenerService
+    private let operationCoordinator: FirebaseOperationCoordinator
     
     // Published properties for UI reactivity
     @Published var isSyncing: Bool = false
     @Published var lastSyncTimestamp: Date?
     @Published var syncError: Error?
+    
+    // MARK: - Concurrency Safety
+    
+    // Actor to provide thread-safe access to repository operations
+    private actor RepositoryAccessActor {
+        func performOperation<T>(_ operation: @escaping () async throws -> T) async throws -> T {
+            try await operation()
+        }
+    }
+    
+    private let repositoryAccessActor = RepositoryAccessActor()
+    
+    @MainActor
+    private func performRepositoryUpdate<T>(_ update: @escaping () async throws -> T) async throws -> T {
+        // Use the actor to ensure isolation and concurrency safety
+        return try await repositoryAccessActor.performOperation(update)
+    }
     
     // MARK: - Initialization
     
@@ -34,32 +51,71 @@ class FirebaseSyncService: ObservableObject {
         self.userRepository = UserRepositoryFactory.createRepository(modelContext: modelContext)
         self.friendshipRepository = FriendshipRepositoryFactory.createRepository(modelContext: modelContext)
         self.meetupRepository = MeetupRepositoryFactory.createRepository(modelContext: modelContext)
-        self.listenerService = FirestoreListenerServiceFactory.createService(modelContext: modelContext)
+        self.operationCoordinator = FirebaseOperationCoordinator.shared
+        
+        // Register with auth state service
+        Task { @MainActor in
+            AuthStateService.shared.subscribe(self)
+        }
+    }
+    
+    deinit {
+        // Create a local reference to ensure we don't capture self in the task
+        let subscriber = self
+        // Use detached task to avoid implicitly capturing self
+        Task.detached { @MainActor in
+            AuthStateService.shared.unsubscribe(subscriber)
+        }
+    }
+    
+    // MARK: - AuthStateSubscriber Implementation
+    
+    nonisolated func onAuthStateChanged(newState: AuthState, previousState: AuthState?) {
+        Task { @MainActor in
+            await handleAuthStateChange(newState: newState, previousState: previousState)
+        }
+    }
+    
+    @MainActor
+    private func handleAuthStateChange(newState: AuthState, previousState: AuthState?) async {
+        switch newState {
+        case .authenticated:
+            // User authenticated, start services
+            if previousState == nil || previousState == .notAuthenticated {
+                logger.notice("Auth state changed to authenticated, starting services")
+                await startServices()
+            }
+        case .notAuthenticated:
+            // User signed out, stop services
+            if previousState?.isAuthenticated == true {
+                logger.notice("Auth state changed to not authenticated, stopping services")
+                stopServices()
+            }
+        case .refreshing:
+            // Just refreshing, do nothing
+            break
+        }
     }
     
     // MARK: - Public Methods
     
     /// Start all Firebase services for the current user
     /// This should be called when the app starts or when a user logs in
-    func startServices() {
-        // Start real-time listeners
-        listenerService.startListeningForCurrentUser()
-        
+    func startServices() async {
         // Perform initial sync
-        Task {
-            await performFullSync()
-        }
+        await performFullSync()
         
-        logger.info("Started all Firebase services")
+        if FirebaseOperationCoordinator.shared.logVerbosity >= .important {
+            logger.notice("Started all Firebase services")
+        }
     }
     
     /// Stop all Firebase services
     /// This should be called when the app is backgrounded or when a user logs out
     func stopServices() {
-        // Stop real-time listeners
-        listenerService.stopAllListeners()
-        
-        logger.info("Stopped all Firebase services")
+        if FirebaseOperationCoordinator.shared.logVerbosity >= .important {
+            logger.notice("Stopped all Firebase services")
+        }
     }
     
     /// Perform a full sync between Firebase and SwiftData
@@ -76,29 +132,72 @@ class FirebaseSyncService: ObservableObject {
         isSyncing = true
         syncError = nil
         
-        do {
-            // Sync user data
-            logger.debug("Syncing user data")
-            try await userRepository.refreshCurrentUser()
-            
-            // Sync friendship data
-            logger.debug("Syncing friendship data")
-            try await friendshipRepository.syncLocalWithRemote(for: userID)
-            
-            // Sync meetup data
-            logger.debug("Syncing meetup data")
-            try await meetupRepository.syncLocalWithRemote(for: userID)
-            
-            // Update sync timestamp
-            lastSyncTimestamp = Date()
-            logger.info("Completed full sync for user \(userID)")
-        } catch {
-            syncError = error
-            logger.error("Error during full sync: \(error.localizedDescription)")
-        }
+        // Schedule a full sync operation
+        // Capture necessary dependencies locally to avoid capturing self in the closure
+        let logger = self.logger
+        let userRepository = self.userRepository
+        let friendshipRepository = self.friendshipRepository
+        let meetupRepository = self.meetupRepository
         
-        // Reset syncing state
-        isSyncing = false
+        operationCoordinator.scheduleOperation(
+            name: "Full Data Sync",
+            key: "full_sync_\(userID)",
+            priority: .high,
+            minInterval: 30.0, // 30 seconds minimum between full syncs
+            operation: { [weak self] in
+                // Use weak self to avoid reference cycles
+                guard let self = self else { return }
+                
+                do {
+                    // Sync user data
+                    if FirebaseOperationCoordinator.shared.logVerbosity >= .verbose {
+                        logger.debug("Syncing user data")
+                    }
+                    try await self.performRepositoryUpdate {
+                        try await userRepository.refreshCurrentUser()
+                    }
+                    
+                    // Sync friendship data
+                    if FirebaseOperationCoordinator.shared.logVerbosity >= .verbose {
+                        logger.debug("Syncing friendship data")
+                    }
+                    try await self.performRepositoryUpdate {
+                        try await friendshipRepository.syncLocalWithRemote(for: userID)
+                    }
+                    
+                    // Sync meetup data
+                    if FirebaseOperationCoordinator.shared.logVerbosity >= .verbose {
+                        logger.debug("Syncing meetup data")
+                    }
+                    try await self.performRepositoryUpdate {
+                        try await meetupRepository.syncLocalWithRemote(for: userID)
+                    }
+                    
+                    // Update sync timestamp
+                    await MainActor.run {
+                        self.lastSyncTimestamp = Date()
+                        self.isSyncing = false
+                    }
+                    
+                    if FirebaseOperationCoordinator.shared.logVerbosity >= .important {
+                        logger.notice("Completed full sync for user \(userID)")
+                    }
+                } catch {
+                    await MainActor.run {
+                        self.syncError = error
+                        self.isSyncing = false
+                    }
+                    logger.error("Error during full sync: \(error.localizedDescription)")
+                }
+            },
+            errorHandler: { [weak self] error in
+                Task { @MainActor in
+                    guard let self = self else { return }
+                    self.syncError = error
+                    self.isSyncing = false
+                }
+            }
+        )
     }
     
     /// Create a new friendship between the current user and another user
@@ -114,7 +213,9 @@ class FirebaseSyncService: ObservableObject {
             customNotes: notes
         )
         
-        try await friendshipRepository.createFriendship(friendship: friendship)
+        try await performRepositoryUpdate {
+            try await self.friendshipRepository.createFriendship(friendship: friendship)
+        }
     }
     
     /// Get all friends of the current user with their profile data
@@ -124,12 +225,16 @@ class FirebaseSyncService: ObservableObject {
                          userInfo: [NSLocalizedDescriptionKey: "User not authenticated"])
         }
         
-        return try await friendshipRepository.getFriendsWithProfiles(currentUserID: currentUser.uid)
+        return try await performRepositoryUpdate {
+            try await self.friendshipRepository.getFriendsWithProfiles(currentUserID: currentUser.uid)
+        }
     }
     
     /// Search for users by name or email
     func searchUsers(query: String) async throws -> [UserModel] {
-        return try await userRepository.searchUsers(query: query)
+        return try await performRepositoryUpdate {
+            try await self.userRepository.searchUsers(query: query)
+        }
     }
     
     /// Get count of pending friend requests for the current user
@@ -139,7 +244,9 @@ class FirebaseSyncService: ObservableObject {
                          userInfo: [NSLocalizedDescriptionKey: "User not authenticated"])
         }
         
-        return try await friendshipRepository.getPendingFriendRequestsCount(for: currentUser.uid)
+        return try await performRepositoryUpdate {
+            try await self.friendshipRepository.getPendingFriendRequestsCount(for: currentUser.uid)
+        }
     }
     
     /// Update the current user's profile
@@ -170,7 +277,9 @@ class FirebaseSyncService: ObservableObject {
         currentUser.updatedAt = Date()
         
         // Save changes
-        try await userRepository.updateUser(user: currentUser)
+        try await performRepositoryUpdate {
+            try await self.userRepository.updateUser(user: currentUser)
+        }
     }
     
     /// Update the current user's profile image URL
@@ -187,7 +296,9 @@ class FirebaseSyncService: ObservableObject {
         currentUser.updatedAt = Date()
         
         // Save changes
-        try await userRepository.updateUser(user: currentUser)
+        try await performRepositoryUpdate {
+            try await self.userRepository.updateUser(user: currentUser)
+        }
         
         logger.info("Updated profile image URL to: \(url)")
     }
@@ -216,19 +327,25 @@ class FirebaseSyncService: ObservableObject {
         friendship.lastContactedDate = Date()
         
         // Save changes
-        try await friendshipRepository.updateFriendship(friendship: friendship)
+        try await performRepositoryUpdate {
+            try await self.friendshipRepository.updateFriendship(friendship: friendship)
+        }
     }
     
     // MARK: - Meetup Methods
     
     /// Save a meetup to SwiftData and Firebase
     func saveMeetup(_ meetup: MeetupModel) async throws {
-        try await meetupRepository.saveMeetup(meetup: meetup)
+        try await performRepositoryUpdate {
+            try await self.meetupRepository.saveMeetup(meetup: meetup)
+        }
     }
     
     /// Delete a meetup (mark as deleted in Firebase)
     func deleteMeetup(_ meetup: MeetupModel) async throws {
-        try await meetupRepository.deleteMeetup(meetup: meetup)
+        try await performRepositoryUpdate {
+            try await self.meetupRepository.deleteMeetup(meetup: meetup)
+        }
     }
     
     /// Get all meetups for the current user
@@ -238,7 +355,9 @@ class FirebaseSyncService: ObservableObject {
                         userInfo: [NSLocalizedDescriptionKey: "User not authenticated"])
         }
         
-        return try await meetupRepository.getMeetups(for: currentUser.uid)
+        return try await performRepositoryUpdate {
+            try await self.meetupRepository.getMeetups(for: currentUser.uid)
+        }
     }
     
     /// Sync meetups from Firebase for the current user
@@ -248,7 +367,9 @@ class FirebaseSyncService: ObservableObject {
                         userInfo: [NSLocalizedDescriptionKey: "User not authenticated"])
         }
         
-        try await meetupRepository.syncLocalWithRemote(for: currentUser.uid)
+        try await performRepositoryUpdate {
+            try await self.meetupRepository.syncLocalWithRemote(for: currentUser.uid)
+        }
     }
     
     /// Update a user preference in Firebase
@@ -256,7 +377,61 @@ class FirebaseSyncService: ObservableObject {
     ///   - userID: The ID of the user
     ///   - key: The preference key to update
     ///   - value: The new value (must be a type that can be stored in Firebase)
+    @available(*, deprecated, message: "Use type-safe updateUserPreference methods instead")
     func updateUserPreference(userID: String, key: String, value: Any) async throws {
+        // Since we need to maintain backward compatibility, redirect to appropriate type methods
+        if let stringValue = value as? String {
+            try await updateUserPreference(userID: userID, key: key, value: stringValue)
+        } else if let intValue = value as? Int {
+            try await updateUserPreference(userID: userID, key: key, value: intValue)
+        } else if let doubleValue = value as? Double {
+            try await updateUserPreference(userID: userID, key: key, value: doubleValue)
+        } else if let boolValue = value as? Bool {
+            try await updateUserPreference(userID: userID, key: key, value: boolValue)
+        } else if let stringArray = value as? [String] {
+            try await updateUserPreference(userID: userID, key: key, value: stringArray)
+        } else if let stringDict = value as? [String: String] {
+            try await updateUserPreference(userID: userID, key: key, value: stringDict)
+        } else {
+            throw NSError(domain: "com.ketchupsoon", code: 400,
+                         userInfo: [NSLocalizedDescriptionKey: "Unsupported preference value type. Use type-safe methods instead."])
+        }
+    }
+    
+    // MARK: - Type-safe preference updates
+    
+    /// Update a user preference with a String value (Sendable-compliant)
+    func updateUserPreference(userID: String, key: String, value: String) async throws {
+        try await updateUserPreferenceInternal(userID: userID, key: key, value: value)
+    }
+    
+    /// Update a user preference with an Int value (Sendable-compliant)
+    func updateUserPreference(userID: String, key: String, value: Int) async throws {
+        try await updateUserPreferenceInternal(userID: userID, key: key, value: value)
+    }
+    
+    /// Update a user preference with a Double value (Sendable-compliant)
+    func updateUserPreference(userID: String, key: String, value: Double) async throws {
+        try await updateUserPreferenceInternal(userID: userID, key: key, value: value)
+    }
+    
+    /// Update a user preference with a Bool value (Sendable-compliant)
+    func updateUserPreference(userID: String, key: String, value: Bool) async throws {
+        try await updateUserPreferenceInternal(userID: userID, key: key, value: value)
+    }
+    
+    /// Update a user preference with a String array (Sendable-compliant)
+    func updateUserPreference(userID: String, key: String, value: [String]) async throws {
+        try await updateUserPreferenceInternal(userID: userID, key: key, value: value)
+    }
+    
+    /// Update a user preference with a String dictionary (Sendable-compliant)
+    func updateUserPreference(userID: String, key: String, value: [String: String]) async throws {
+        try await updateUserPreferenceInternal(userID: userID, key: key, value: value)
+    }
+    
+    /// Internal implementation for updating user preferences with Sendable types
+    private func updateUserPreferenceInternal<T: Sendable>(userID: String, key: String, value: T) async throws {
         guard Auth.auth().currentUser != nil else {
             throw NSError(domain: "com.ketchupsoon", code: 401, 
                          userInfo: [NSLocalizedDescriptionKey: "User not authenticated"])
@@ -270,11 +445,18 @@ class FirebaseSyncService: ObservableObject {
         }
         
         // Update the user preference in Firestore
-        let firestoreDB = Firestore.firestore()
-        let userRef = firestoreDB.collection("users").document(userID)
+        let userRef = Firestore.firestore().collection("users").document(userID)
         
-        // Update just the preferences field using dot notation
-        try await userRef.updateData(["preferences.\(key)": value])
+        // Since Firebase's updateData requires [String: Any] but we need to maintain Sendable,
+        // we'll need to apply special handling for each supported type
+        @MainActor func updateFirestoreData() async throws {
+            // On the main actor, we can safely work with non-Sendable types
+            let updateData = ["preferences.\(key)": value]
+            try await userRef.updateData(updateData)
+        }
+        
+        // Perform the update on the main actor
+        try await updateFirestoreData()
         
         // Update local model if needed
         if var preferences = currentUser.getPreferences() {
@@ -364,10 +546,16 @@ protocol MeetupRepository {
 class FirestoreMeetupRepository: MeetupRepository {
     private let logger = Logger(subsystem: "com.ketchupsoon", category: "MeetupRepository")
     private let modelContext: ModelContext
-    private let firestoreDB = Firestore.firestore()
+    private let friendshipRepository: FriendshipRepository
+    private let firestoreService: FirestoreListenerService
+    private lazy var firestoreDB: Firestore = {
+        return Firestore.firestore()
+    }()
     
-    init(modelContext: ModelContext) {
+    init(modelContext: ModelContext, friendshipRepository: FriendshipRepository, firestoreService: FirestoreListenerService) {
         self.modelContext = modelContext
+        self.friendshipRepository = friendshipRepository
+        self.firestoreService = firestoreService
     }
     
     func saveMeetup(meetup: MeetupModel) async throws {
@@ -418,6 +606,19 @@ class FirestoreMeetupRepository: MeetupRepository {
         logger.info("Completed meetup sync for user \(userID)")
     }
     
+    private func syncUserFriendships() async {
+        do {
+            guard let currentUser = Auth.auth().currentUser else {
+                logger.warning("Cannot sync friendships - no current user")
+                return
+            }
+            // Use the repository's syncLocalWithRemote method instead
+            try await friendshipRepository.syncLocalWithRemote(for: currentUser.uid)
+        } catch {
+            logger.error("Error syncing user friendships: \(error.localizedDescription)")
+        }
+    }
+    
     private func syncMeetups(for userID: String) async throws {
         // Fetch meetups from Firestore where the user is a participant
         let snapshot = try await firestoreDB.collection("meetups")
@@ -461,12 +662,38 @@ class FirestoreMeetupRepository: MeetupRepository {
         // Optionally handle local meetups that no longer exist in Firebase
         // For now, we'll just leave them as is
     }
+    
+    var listener: ListenerRegistration?
+    
+    func startListeningToFriendRequests() {
+        guard let currentUser = Auth.auth().currentUser else { return }
+        
+        // Create a Firestore listener to observe friend requests
+        let db = Firestore.firestore()
+        listener = db.collection("friendships")
+            .whereField("friendID", isEqualTo: currentUser.uid)
+            .whereField("relationshipType", isEqualTo: "pending")
+            .addSnapshotListener { [weak self] (snapshot, error) in
+                if let error = error {
+                    self?.logger.error("Error listening for friend requests: \(error.localizedDescription)")
+                    return
+                }
+                
+                // When friend requests change, sync friendships
+                Task { [weak self] in
+                    await self?.syncUserFriendships()
+                }
+            }
+    }
 }
 
 /// Factory for creating MeetupRepository instances
 struct MeetupRepositoryFactory {
+    @MainActor
     static func createRepository(modelContext: ModelContext) -> MeetupRepository {
-        return FirestoreMeetupRepository(modelContext: modelContext)
+        let friendshipRepository = FriendshipRepositoryFactory.createRepository(modelContext: modelContext)
+        let firestoreService = FirestoreListenerServiceFactory.createService(modelContext: modelContext)
+        return FirestoreMeetupRepository(modelContext: modelContext, friendshipRepository: friendshipRepository, firestoreService: firestoreService)
     }
 }
 
