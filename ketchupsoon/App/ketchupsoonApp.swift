@@ -150,7 +150,7 @@ struct ketchupsoonApp: App {
     let container: ModelContainer
     @StateObject private var colorSchemeManager = ColorSchemeManager.shared
     @StateObject private var profileManager = UserProfileManager.shared  // Initialize UserProfileManager
-    @StateObject private var firebaseSyncService: FirebaseSyncService?
+    @StateObject private var firebaseSyncService: FirebaseSyncService
     @Environment(\.scenePhase) private var scenePhase
     
     init() {
@@ -219,10 +219,11 @@ struct ketchupsoonApp: App {
             fatalError("Could not initialize ModelContainer: \(error)")
         }
         
-        configureAppearance()
-        
         // Initialize Firebase services with the container's context
-        self.firebaseSyncService = FirebaseSyncServiceFactory.createService(modelContext: container.mainContext)
+        let syncService = FirebaseSyncService(modelContext: container.mainContext)
+        _firebaseSyncService = StateObject(wrappedValue: syncService)
+        
+        configureAppearance()
     }
     
     private func configureAppearance() {
@@ -275,10 +276,12 @@ struct ketchupsoonApp: App {
                 .preferredColorScheme(colorSchemeManager.currentAppearanceMode == .system ? nil : colorSchemeManager.colorScheme)
                 .environment(\.colorScheme, colorSchemeManager.colorScheme)
                 .onAppear {
+                    /*
                     // Verify font registration on startup (DEBUG only)
                     #if DEBUG
                     verifyFontRegistration()
                     #endif
+                     */
                 }
         }
         .modelContainer(container)
@@ -288,12 +291,12 @@ struct ketchupsoonApp: App {
                 // App became active, start Firebase services
                 print("🔥 Starting Firebase services")
                 if Auth.auth().currentUser != nil {
-                    firebaseSyncService?.startServices()
+                    firebaseSyncService.startServices()
                 }
             case .background:
                 // App entered background, stop Firebase services
                 print("🔥 Stopping Firebase services")
-                firebaseSyncService?.stopServices()
+                firebaseSyncService.stopServices()
             case .inactive:
                 // App is transitioning between states, do nothing
                 break

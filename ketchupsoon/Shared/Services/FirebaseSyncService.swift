@@ -173,6 +173,25 @@ class FirebaseSyncService: ObservableObject {
         try await userRepository.updateUser(user: currentUser)
     }
     
+    /// Update the current user's profile image URL
+    func updateCurrentUserProfileImage(url: String) async throws {
+        guard let currentUser = try await userRepository.getCurrentUser() else {
+            throw NSError(domain: "com.ketchupsoon", code: 404, 
+                         userInfo: [NSLocalizedDescriptionKey: "Current user not found"])
+        }
+        
+        // Update profile image URL
+        currentUser.profileImageURL = url
+        
+        // Update timestamp
+        currentUser.updatedAt = Date()
+        
+        // Save changes
+        try await userRepository.updateUser(user: currentUser)
+        
+        logger.info("Updated profile image URL to: \(url)")
+    }
+    
     /// Update a friendship with new information
     func updateFriendship(
         friendshipID: UUID,
@@ -231,6 +250,104 @@ class FirebaseSyncService: ObservableObject {
         
         try await meetupRepository.syncLocalWithRemote(for: currentUser.uid)
     }
+    
+    /// Update a user preference in Firebase
+    /// - Parameters:
+    ///   - userID: The ID of the user
+    ///   - key: The preference key to update
+    ///   - value: The new value (must be a type that can be stored in Firebase)
+    func updateUserPreference(userID: String, key: String, value: Any) async throws {
+        guard Auth.auth().currentUser != nil else {
+            throw NSError(domain: "com.ketchupsoon", code: 401, 
+                         userInfo: [NSLocalizedDescriptionKey: "User not authenticated"])
+        }
+        
+        // Ensure we're updating the current user's preferences only
+        guard let currentUser = try await userRepository.getCurrentUser(), 
+              currentUser.id == userID else {
+            throw NSError(domain: "com.ketchupsoon", code: 403, 
+                         userInfo: [NSLocalizedDescriptionKey: "Cannot update preferences for another user"])
+        }
+        
+        // Update the user preference in Firestore
+        let firestoreDB = Firestore.firestore()
+        let userRef = firestoreDB.collection("users").document(userID)
+        
+        // Update just the preferences field using dot notation
+        try await userRef.updateData(["preferences.\(key)": value])
+        
+        // Update local model if needed
+        if var preferences = currentUser.getPreferences() {
+            preferences[key] = value
+            currentUser.setPreferences(preferences)
+            try await userRepository.updateUser(user: currentUser)
+        } else {
+            // If preferences don't exist yet, create them
+            currentUser.setPreferences([key: value])
+            try await userRepository.updateUser(user: currentUser)
+        }
+        
+        logger.info("Successfully updated user preference: \(key) for user: \(userID)")
+    }
+    
+    /// Clear all user data from Firebase
+    /// This will remove all user-related data from Firestore but keep the auth account
+    /// - Parameter userID: The ID of the user whose data should be cleared
+    func clearAllUserData(userID: String) async throws {
+        guard let currentUser = Auth.auth().currentUser, currentUser.uid == userID else {
+            throw NSError(domain: "com.ketchupsoon", code: 403, 
+                         userInfo: [NSLocalizedDescriptionKey: "Cannot clear data for another user"])
+        }
+        
+        let firestoreDB = Firestore.firestore()
+        let batch = firestoreDB.batch()
+        
+        // 1. Clear user profile data (but don't delete the document)
+        logger.info("Clearing user profile data for user: \(userID)")
+        let userRef = firestoreDB.collection("users").document(userID)
+        
+        // Keep minimal information but clear everything else
+        let minimalUserData: [String: Any] = [
+            "name": "",
+            "email": currentUser.email ?? "",
+            "preferences": [:],
+            "availabilityTimes": [],
+            "availableDays": [],
+            "favoriteActivities": [],
+            "bio": "",
+            "updatedAt": FieldValue.serverTimestamp(),
+            "dataCleared": true  // Flag to indicate this user has cleared their data
+        ]
+        batch.setData(minimalUserData, forDocument: userRef, merge: false)
+        
+        // 2. Get and delete all friendships
+        logger.info("Clearing friendships for user: \(userID)")
+        let friendshipsQuery = try await firestoreDB.collection("friendships")
+            .whereField("userID", isEqualTo: userID)
+            .getDocuments()
+        
+        for document in friendshipsQuery.documents {
+            batch.deleteDocument(document.reference)
+        }
+        
+        // 3. Get and delete all meetups where user is a participant
+        logger.info("Clearing meetups for user: \(userID)")
+        let meetupsQuery = try await firestoreDB.collection("meetups")
+            .whereField("participants", arrayContains: userID)
+            .getDocuments()
+        
+        for document in meetupsQuery.documents {
+            batch.deleteDocument(document.reference)
+        }
+        
+        // 4. Commit the batch operation
+        try await batch.commit()
+        
+        // 5. Stop services to prevent immediate re-sync
+        stopServices()
+        
+        logger.info("Successfully cleared all Firebase data for user: \(userID)")
+    }
 }
 
 // MARK: - Meetup Repository
@@ -263,10 +380,8 @@ class FirestoreMeetupRepository: MeetupRepository {
         // Convert to Firestore data
         let meetupData = meetup.toFirestoreData()
         
-        // Add to SwiftData if needed
-        if !modelContext.hasChanges(for: meetup) {
-            modelContext.insert(meetup)
-        }
+        // Add to SwiftData
+        modelContext.insert(meetup)
         
         // Save to Firestore
         try await meetupsCollection.document(meetup.id).setData(meetupData)
@@ -286,11 +401,14 @@ class FirestoreMeetupRepository: MeetupRepository {
     }
     
     func getMeetups(for userID: String) async throws -> [MeetupModel] {
-        let descriptor = FetchDescriptor<MeetupModel>(predicate: #Predicate {
-            $0.isDeleted == false && $0.participants.contains(userID)
-        }, sortBy: [SortDescriptor(\MeetupModel.date)])
+        // Create descriptor with sort but no predicate initially
+        let descriptor = FetchDescriptor<MeetupModel>(
+            sortBy: [SortDescriptor(\MeetupModel.date)]
+        )
         
-        return try modelContext.fetch(descriptor)
+        // Fetch all meetups and filter in memory
+        let allMeetups = try modelContext.fetch(descriptor)
+        return allMeetups.filter { !$0.isDeleted && $0.participants.contains(userID) }
     }
     
     func syncLocalWithRemote(for userID: String) async throws {
@@ -315,8 +433,12 @@ class FirestoreMeetupRepository: MeetupRepository {
                 remoteMeetupIDs.insert(meetup.id)
                 
                 // Check if meetup already exists in SwiftData
-                let descriptor = FetchDescriptor<MeetupModel>(predicate: #Predicate { $0.id == meetup.id })
-                if let existingMeetup = try? modelContext.fetch(descriptor).first {
+                let descriptor = FetchDescriptor<MeetupModel>()
+                
+                // Fetch all and find match in memory
+                let existingMeetups = try modelContext.fetch(descriptor)
+                let existingMeetup = existingMeetups.first { $0.id == meetup.id }
+                if let existingMeetup = existingMeetup {
                     // Update existing meetup if the remote is newer
                     if meetup.updatedAt > existingMeetup.updatedAt {
                         existingMeetup.title = meetup.title
@@ -357,6 +479,7 @@ struct FirebaseSyncServiceFactory {
     }
     
     // Preview service for SwiftUI previews
+    @MainActor
     static var preview: FirebaseSyncService {
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         let container = try! ModelContainer(for: UserModel.self, FriendshipModel.self, MeetupModel.self, configurations: config)

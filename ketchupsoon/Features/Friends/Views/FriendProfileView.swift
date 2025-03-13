@@ -1,18 +1,33 @@
 import SwiftUI
 import SwiftData
+import FirebaseAuth
+import FirebaseFirestore
+import OSLog
 
 struct FriendProfileView: View {
     // MARK: - Properties
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
+    @EnvironmentObject private var firebaseSyncService: FirebaseSyncService
     @State private var isFavorite = false
+    @State private var isRefreshing = false
+    @State private var isLoading = false
+    @State private var errorMessage: String? = nil
+    
+    // Logger for debugging
+    private let logger = Logger(subsystem: "com.ketchupsoon", category: "FriendProfileView")
     
     let friend: UserModel
+    
+    // State to hold the refreshed friend data
+    @State private var refreshedFriend: UserModel?
     
     // Profile appearance (using the friend's gradient index)
     private var profileRingGradient: LinearGradient {
         // Safely access the avatar gradients array
         let gradients = AppColors.avatarGradients
-        let safeIndex = min(max(friend.gradientIndex, 0), gradients.count - 1)
+        let friendToUse = refreshedFriend ?? friend
+        let safeIndex = min(max(friendToUse.gradientIndex, 0), gradients.count - 1)
         return gradients[safeIndex]
     }
     
@@ -29,6 +44,11 @@ struct FriendProfileView: View {
             
             // Main content
             ScrollView {
+                RefreshableView(isRefreshing: $isRefreshing) {
+                    // Trigger refresh action
+                    await refreshFriendData()
+                }
+                
                 VStack(spacing: 24) {
                     // Profile content view
                     friendProfileContentView
@@ -45,8 +65,36 @@ struct FriendProfileView: View {
             
             // Back button
             backButton
+            
+            // Loading overlay
+            if isLoading {
+                Color.black.opacity(0.4)
+                    .ignoresSafeArea()
+                ProgressView()
+                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                    .scaleEffect(1.5)
+            }
         }
         .navigationBarHidden(true)
+        .onAppear {
+            Task {
+                // Initial data load when view appears
+                await refreshFriendData()
+                // Start listening for real-time updates
+                startRealTimeUpdates()
+            }
+        }
+        .onDisappear {
+            // Clean up listener when view disappears
+            stopRealTimeUpdates()
+        }
+        .alert("Error", isPresented: .constant(errorMessage != nil), actions: {
+            Button("OK") {
+                errorMessage = nil
+            }
+        }, message: {
+            Text(errorMessage ?? "An unknown error occurred")
+        })
     }
     
     // MARK: - Friend Profile Content View
@@ -62,7 +110,8 @@ struct FriendProfileView: View {
                     .shadow(color: AppColors.purple.opacity(0.5), radius: 8, x: 0, y: 0)
                 
                 // Profile image or emoji
-                if let profileImageURL = friend.profileImageURL, !profileImageURL.isEmpty, let url = URL(string: profileImageURL) {
+                let friendToUse = refreshedFriend ?? friend
+                if let profileImageURL = friendToUse.profileImageURL, !profileImageURL.isEmpty, let url = URL(string: profileImageURL) {
                     AsyncImage(url: url) { image in
                         image
                             .resizable()
@@ -91,7 +140,8 @@ struct FriendProfileView: View {
             .padding(.top, 20)
             
             // User name
-            Text(friend.name ?? "Friend")
+            let friendToUse = refreshedFriend ?? friend
+            Text(friendToUse.name ?? "Friend")
                 .font(.system(size: 30, weight: .bold))
                 .foregroundColor(.white)
                 .multilineTextAlignment(.center)
@@ -99,7 +149,7 @@ struct FriendProfileView: View {
                 .padding(.top, 10)
             
             // User bio (as regular text)
-            if let bio = friend.bio, !bio.isEmpty {
+            if let bio = friendToUse.bio, !bio.isEmpty {
                 Text(bio)
                     .font(.system(size: 16))
                     .foregroundColor(.white.opacity(0.9))
@@ -111,8 +161,9 @@ struct FriendProfileView: View {
             
             // User info as simple text lines with emoji
             VStack(spacing: 12) {
+                let friendToUse = refreshedFriend ?? friend
                 
-                if let phoneNumber = friend.phoneNumber, !phoneNumber.isEmpty {
+                if let phoneNumber = friendToUse.phoneNumber, !phoneNumber.isEmpty {
                     HStack(spacing: 8) {
                         Text("📱")
                         Text(formatPhoneForDisplay(phoneNumber))
@@ -121,7 +172,7 @@ struct FriendProfileView: View {
                     .frame(maxWidth: .infinity, alignment: .center)
                 }
                 
-                if let birthday = friend.birthday {
+                if let birthday = friendToUse.birthday {
                     HStack(spacing: 8) {
                         Text("🎂")
                         Text(formatBirthdayForDisplay(birthday))
@@ -278,6 +329,108 @@ struct FriendProfileView: View {
     }
 }
 
+// MARK: - Helper Methods
+extension FriendProfileView {
+    
+    // Refresh friend data from Firebase
+    private func refreshFriendData() async {
+        guard !isLoading else { return }
+        
+        do {
+            isLoading = true
+            errorMessage = nil
+            
+            // Get the latest user data from Firebase using the friendID
+            let userRepository = UserRepositoryFactory.createRepository(modelContext: modelContext)
+            if let updatedFriend = try await userRepository.getUserByID(friend.id) {
+                await MainActor.run {
+                    self.refreshedFriend = updatedFriend
+                    self.isRefreshing = false
+                    self.isLoading = false
+                    logger.info("Successfully refreshed friend data for \(friend.id)")
+                }
+            } else {
+                await MainActor.run {
+                    self.isRefreshing = false
+                    self.isLoading = false
+                    errorMessage = "Could not find friend data"
+                    logger.warning("Friend not found with ID \(friend.id)")
+                }
+            }
+        } catch {
+            await MainActor.run {
+                self.isRefreshing = false
+                self.isLoading = false
+                errorMessage = "Failed to refresh: \(error.localizedDescription)"
+                logger.error("Error refreshing friend data: \(error)")
+            }
+        }
+    }
+    
+    // Set up real-time updates for this friend
+    private func startRealTimeUpdates() {
+        // Get a reference to the firestore database
+        let db = Firestore.firestore()
+        
+        // Create a listener for this specific user document
+        let userRef = db.collection("users").document(friend.id)
+        
+        // Store listener so we can detach it later
+        FirestoreListenerService.shared.addListener(userRef.addSnapshotListener { documentSnapshot, error in
+            guard let document = documentSnapshot else {
+                logger.error("Error fetching user document: \(error?.localizedDescription ?? "Unknown error")")
+                return
+            }
+            
+            // If the document exists and has data, update our friend model
+            if document.exists, let userData = document.data() {
+                if let updatedFriend = UserModel.fromFirestore(documentData: userData, documentID: document.documentID) {
+                    // Update on the main thread since this impacts UI
+                    DispatchQueue.main.async {
+                        self.refreshedFriend = updatedFriend
+                        self.logger.info("Real-time update received for friend \(updatedFriend.id)")
+                    }
+                }
+            }
+        })
+    }
+    
+    // Clean up listeners when the view disappears
+    private func stopRealTimeUpdates() {
+        FirestoreListenerService.shared.removeAllListeners()
+        logger.info("Stopped real-time updates for friend profile")
+    }
+}
+
+// Refreshable scroll view implementation
+struct RefreshableView: View {
+    @Binding var isRefreshing: Bool
+    let action: () async -> Void
+    
+    var body: some View {
+        GeometryReader { geometry in
+            if geometry.frame(in: .global).minY > 50 && !isRefreshing {
+                Spacer()
+                    .onAppear {
+                        isRefreshing = true
+                        Task {
+                            await action()
+                        }
+                    }
+            } else if isRefreshing {
+                HStack {
+                    Spacer()
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                    Spacer()
+                }
+                .frame(height: 50)
+            }
+        }
+        .frame(height: 50)
+    }
+}
+
 // MARK: - Preview
 #Preview {
     // Create a sample friend for preview
@@ -291,7 +444,12 @@ struct FriendProfileView: View {
         birthday: Date()
     )
     
+    // Set up preview with Firebase service
+    let previewContainer = try! ModelContainer(for: UserModel.self, FriendshipModel.self, MeetupModel.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
+    
     return FriendProfileView(friend: sampleFriend)
+        .modelContainer(previewContainer)
+        .environmentObject(FirebaseSyncServiceFactory.preview)
         .preferredColorScheme(.dark)
 }
 

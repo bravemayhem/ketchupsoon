@@ -15,9 +15,17 @@ class FirebaseFriendshipRepository: FriendshipRepository {
     private let modelContext: ModelContext
     
     // UserRepository dependency for fetching user profiles
-    private lazy var userRepository: UserRepository = {
-        return UserRepositoryFactory.createRepository(modelContext: modelContext)
-    }()
+    private var _userRepository: UserRepository?
+    
+    @MainActor
+    private func getUserRepository() async -> UserRepository {
+        if let repository = _userRepository {
+            return repository
+        }
+        let repository = UserRepositoryFactory.createRepository(modelContext: modelContext)
+        _userRepository = repository
+        return repository
+    }
     
     // MARK: - Initialization
     
@@ -104,10 +112,10 @@ class FirebaseFriendshipRepository: FriendshipRepository {
     // MARK: - Friendship Fetching Methods
     
     func getFriendship(id: UUID) async throws -> FriendshipModel {
-        let idString = id.uuidString
         // First check if friendship exists in SwiftData
+        let targetId = id // Create a local variable for the UUID
         let descriptor = FetchDescriptor<FriendshipModel>(predicate: #Predicate { (friendship: FriendshipModel) -> Bool in 
-            friendship.id.uuidString == idString
+            friendship.id == targetId
         })
         
         do {
@@ -126,14 +134,17 @@ class FirebaseFriendshipRepository: FriendshipRepository {
         
         do {
             // Query friendships by UUID (stored as a field)
+            let idString = id.uuidString
             let snapshot = try await db.collection(friendshipsCollection)
                 .whereField("id", isEqualTo: idString)
                 .getDocuments()
             
-            guard let document = snapshot.documents.first, let data = document.data() else {
+            guard let document = snapshot.documents.first else {
                 throw NSError(domain: "com.ketchupsoon", code: 404, 
                              userInfo: [NSLocalizedDescriptionKey: "Friendship not found"])
             }
+            
+            let data = document.data()
             
             // Create a new friendship and save it to SwiftData
             let friendship = createFriendshipModelFromFirebaseData(id: document.documentID, data: data)
@@ -298,8 +309,9 @@ class FirebaseFriendshipRepository: FriendshipRepository {
             try await db.collection(friendshipsCollection).document(docID).setData(firestoreData)
             
             // Save to local database
+            let targetId = friendship.id // Create a local variable for the UUID
             let descriptor = FetchDescriptor<FriendshipModel>(predicate: #Predicate { (f: FriendshipModel) -> Bool in
-                f.id == friendship.id
+                f.id == targetId
             })
             let existingFriendships = try modelContext.fetch(descriptor)
             
@@ -353,9 +365,9 @@ class FirebaseFriendshipRepository: FriendshipRepository {
         logger.debug("Deleting friendship \(id)")
         
         // First find the friendship to get the user and friend IDs
-        let idString = id.uuidString
+        let targetId = id // Create a local variable for the UUID
         let descriptor = FetchDescriptor<FriendshipModel>(predicate: #Predicate { (friendship: FriendshipModel) -> Bool in 
-            friendship.id.uuidString == idString
+            friendship.id == targetId
         })
         
         do {
@@ -437,7 +449,8 @@ class FirebaseFriendshipRepository: FriendshipRepository {
                 let friendUserID = friendship.userID == currentUserID ? friendship.friendID : friendship.userID
                 
                 // Fetch the friend's profile
-                let friendProfile = try await userRepository.getUser(id: friendUserID)
+                let repository = await getUserRepository()
+                let friendProfile = try await repository.getUser(id: friendUserID)
                 
                 result.append((friendship, friendProfile))
             }

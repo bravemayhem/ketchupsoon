@@ -1,5 +1,10 @@
 import SwiftUI
 import SwiftData
+import FirebaseAuth
+import OSLog
+
+private let logger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: "SettingsView")
+
 
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
@@ -12,6 +17,9 @@ struct SettingsView: View {
     @State private var showingResetOnboardingAlert = false
     @StateObject private var socialAuthManager = SocialAuthManager.shared
     @State private var isCalendarIntegrated = true
+    @EnvironmentObject private var firebaseSyncService: FirebaseSyncService
+    @State private var errorMessage: String?
+    @State private var isLoading = false
     
     var body: some View {
         ZStack {
@@ -60,6 +68,7 @@ struct SettingsView: View {
                         VStack(spacing: 0) {
                             NavigationLink {
                                 UserProfileView()
+                                    .environmentObject(firebaseSyncService)
                             } label: {
                                 menuItem(
                                     title: "Profile Settings",
@@ -87,6 +96,7 @@ struct SettingsView: View {
                         VStack(spacing: 0) {
                             NavigationLink {
                                 NotificationSettingsView()
+                                    .environmentObject(firebaseSyncService)
                             } label: {
                                 menuItem(
                                     title: "Notifications",
@@ -173,7 +183,7 @@ struct SettingsView: View {
             Button("Cancel", role: .cancel) { }
             Button("Clear", role: .destructive) {
                 Task { @MainActor in
-                    // await clearAllData()
+                    await clearAllData()
                 }
             }
         } message: {
@@ -183,7 +193,7 @@ struct SettingsView: View {
             Button("Cancel", role: .cancel) { }
             Button("Delete", role: .destructive) {
                 Task { @MainActor in
-                    // await deleteDataStore()
+                    await deleteDataStore()
                 }
             }
         } message: {
@@ -197,6 +207,22 @@ struct SettingsView: View {
             }
         } message: {
             Text("This will reset the onboarding flow and take you to the onboarding process immediately.")
+        }
+        .alert("Error", isPresented: .constant(errorMessage != nil), actions: {
+            Button("OK") {
+                errorMessage = nil
+            }
+        }, message: {
+            Text(errorMessage ?? "An unknown error occurred")
+        })
+        .overlay {
+            if isLoading {
+                Color.black.opacity(0.4)
+                    .ignoresSafeArea()
+                ProgressView()
+                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                    .scaleEffect(1.5)
+            }
         }
     }
     
@@ -286,7 +312,7 @@ struct SettingsView: View {
         }
     }
     
-    // Calendar integration toggle item
+    // Calendar integration toggle item with Firebase sync
     func calendarIntegrationItem(isOn: Binding<Bool>) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
@@ -325,6 +351,23 @@ struct SettingsView: View {
                 .onTapGesture {
                     withAnimation(.spring()) {
                         isOn.wrappedValue.toggle()
+                        
+                        // Save preferences to Firebase when toggled
+                        let syncService = firebaseSyncService
+                        Task {
+                            do {
+                                if let user = Auth.auth().currentUser {
+                                    try await syncService.updateUserPreference(
+                                        userID: user.uid,
+                                        key: "calendarIntegration",
+                                        value: isOn.wrappedValue
+                                    )
+                                    logger.info("Updated calendar integration preference in Firebase: \(isOn.wrappedValue)")
+                                }
+                            } catch {
+                                logger.error("Failed to update calendar integration preference: \(error)")
+                            }
+                        }
                     }
                 }
             }
@@ -339,10 +382,92 @@ struct SettingsView: View {
     }
 }
 
+// MARK: - Data Management Methods
+extension SettingsView {
+    /// Clear all data from both local SwiftData and Firebase
+    private func clearAllData() async {
+        do {
+            isLoading = true
+            errorMessage = nil
+            
+            // Clear local data first
+            try await clearLocalData()
+            
+            // Then clear remote data if user is authenticated
+            if let user = Auth.auth().currentUser {
+                let syncService = firebaseSyncService
+                try await syncService.clearAllUserData(userID: user.uid)
+                logger.info("Successfully cleared all user data from Firebase for user: \(user.uid)")
+            }
+            
+            isLoading = false
+        } catch {
+            isLoading = false
+            errorMessage = "Failed to clear data: \(error.localizedDescription)"
+            logger.error("Error clearing data: \(error.localizedDescription)")
+        }
+    }
+    
+    /// Clear only local SwiftData
+    private func clearLocalData() async throws {
+        // Delete all friend data
+        let friendsFetchDescriptor = FetchDescriptor<UserModel>()
+        let friends = try modelContext.fetch(friendsFetchDescriptor)
+        for friend in friends {
+            modelContext.delete(friend)
+        }
+        
+        // Delete all friendship data
+        let friendshipsFetchDescriptor = FetchDescriptor<FriendshipModel>()
+        let friendships = try modelContext.fetch(friendshipsFetchDescriptor)
+        for friendship in friendships {
+            modelContext.delete(friendship)
+        }
+        
+        // Delete all meetup data
+        let meetupsFetchDescriptor = FetchDescriptor<MeetupModel>()
+        let meetups = try modelContext.fetch(meetupsFetchDescriptor)
+        for meetup in meetups {
+            modelContext.delete(meetup)
+        }
+        
+        // Save changes
+        try modelContext.save()
+        logger.info("Successfully cleared local data")
+    }
+    
+    /// Delete the entire data store (debug only)
+    private func deleteDataStore() async {
+        do {
+            isLoading = true
+            errorMessage = nil
+            
+            // First clear the data
+            try await clearLocalData()
+            
+            // Then attempt to remove the SwiftData container if possible
+            // This is limited by SwiftData's API - full deletion may require app reinstall
+            try await Task.sleep(nanoseconds: 1_000_000_000) // Brief delay to ensure saves complete
+            
+            // Log success
+            logger.info("Successfully attempted to delete data store")
+            isLoading = false
+        } catch {
+            isLoading = false
+            errorMessage = "Failed to delete data store: \(error.localizedDescription)"
+            logger.error("Error deleting data store: \(error.localizedDescription)")
+        }
+    }
+}
+
 // Preview provider
 struct SettingsView_Previews: PreviewProvider {
     static var previews: some View {
-        SettingsView()
+        let previewContainer = try! ModelContainer(for: UserModel.self, FriendshipModel.self, MeetupModel.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
+        
+        return SettingsView()
+            .modelContainer(previewContainer)
+            .environmentObject(FirebaseSyncServiceFactory.preview)
             .preferredColorScheme(.dark)
     }
 }

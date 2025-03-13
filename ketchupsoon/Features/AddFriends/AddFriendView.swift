@@ -204,7 +204,7 @@ struct AddFriendView: View {
                 // Search results
                 ForEach(searchResults) { user in
                     ContactRow(
-                        name: user.name,
+                        name: user.name ?? "",
                         phone: user.phoneNumber ?? "",
                         email: user.email ?? "",
                         emoji: "🌟",
@@ -282,6 +282,8 @@ struct AddFriendView: View {
                 )
                 .padding(.horizontal, 20)
             }
+            
+            ContactRow(
                 name: "Jordan Lee",
                 phone: "555-4321",
                 initials: "JL",
@@ -355,34 +357,32 @@ extension AddFriendView {
     private func addFriend(_ user: UserModel) {
         guard !addedFriendIds.contains(user.id) else { return }
         
-        Task {
+        Task { @MainActor in
             do {
                 // Create friendship with the selected user
-                try await firebaseSyncService.createFriendship(with: user.id)
+                try await firebaseSyncService.createFriendship(with: user.id, notes: nil)
                 
-                await MainActor.run {
-                    // Update UI to show the user has been added
-                    addedFriendIds.insert(user.id)
-                    
-                    // Show success message
-                    successMessage = "Added \(user.name) as a friend!"
-                    showSuccessMessage = true
-                    
-                    // Hide success message after a delay
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                        withAnimation {
-                            showSuccessMessage = false
-                        }
+                // Update UI directly since we're already on the MainActor
+                // Update UI to show the user has been added
+                addedFriendIds.insert(user.id)
+                
+                // Show success message
+                successMessage = "Added \(user.name) as a friend!"
+                showSuccessMessage = true
+                
+                // Hide success message after a delay
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                    withAnimation {
+                        showSuccessMessage = false
                     }
                 }
                 
-                logger.info("Successfully added friend: \(user.name)")
+                logger.info("Successfully added friend: \(user)")
             } catch {
-                await MainActor.run {
-                    errorMessage = "Error adding friend: \(error.localizedDescription)"
-                }
+                // Already on MainActor
+                errorMessage = "Error adding friend: \(error)"
                 
-                logger.error("Error adding friend: \(error.localizedDescription)")
+                logger.error("Error adding friend: \(error)")
             }
         }
     }
@@ -413,14 +413,17 @@ struct ContactRow: View {
     @State private var buttonType: AddFriendViewColors.ButtonType
     @State private var showToast = false
     @State private var toastMessage = ""
+    var onButtonTap: (() -> Void)?
     
-    init(name: String, phone: String, emoji: String? = nil, initials: String? = nil, gradientColors: [Color]? = nil, buttonType: AddFriendViewColors.ButtonType) {
+    init(name: String, phone: String, email: String = "", emoji: String? = nil, initials: String? = nil, gradientColors: [Color]? = nil, buttonType: AddFriendViewColors.ButtonType, onButtonTap: (() -> Void)? = nil) {
         self.name = name
         self.phone = phone
+        self.email = email
         self.emoji = emoji
         self.initials = initials
         self.gradientColors = gradientColors
         self._buttonType = State(initialValue: buttonType)
+        self.onButtonTap = onButtonTap
     }
     
     var body: some View {
@@ -475,7 +478,7 @@ struct ContactRow: View {
                 Button(action: {
                     handleButtonTap()
                 }) {
-                    AddFriendViewColors.actionButton(type: buttonType)
+                    AnyView(AddFriendViewColors.actionButton(type: buttonType))
                 }
             }
             .padding(.vertical, 15)

@@ -2,6 +2,13 @@ import SwiftUI
 import SwiftData
 import Firebase
 import OSLog
+import FirebaseAuth
+
+// Logger extension for meetups
+extension Logger {
+    static let meetups = Logger(subsystem: "com.ketchupsoon", category: "Meetups")
+}
+
 
 struct CreateMeetupView: View {
     // Environment Objects
@@ -20,8 +27,8 @@ struct CreateMeetupView: View {
     @State private var showFriendSelector = false
     @Environment(\.dismiss) private var dismiss
     
-    // SwiftData Queries
-    @Query private var friends: [FriendshipModel]
+    // Combined data for friends and their profiles
+    @State private var friendsWithProfiles: [(friendship: FriendshipModel, user: UserModel)] = []
     
     // Loading current user
     private var currentUserID: String? {
@@ -88,6 +95,27 @@ struct CreateMeetupView: View {
         }, message: {
             Text(errorMessage ?? "An unknown error occurred")
         })
+        .onAppear {
+            loadFriendsData()
+        }
+    }
+    
+    // MARK: - Load Friends Data
+    private func loadFriendsData() {
+        Task {
+            guard let currentUserID = currentUserID else { return }
+            do {
+                // Create the repository locally when needed
+                let repository = FriendshipRepositoryFactory.createRepository(modelContext: modelContext)
+                let profiles = try await repository.getFriendsWithProfiles(currentUserID: currentUserID)
+                await MainActor.run {
+                    self.friendsWithProfiles = profiles
+                }
+            } catch {
+                print("Error loading friends with profiles: \(error)")
+                errorMessage = "Failed to load friends data: \(error.localizedDescription)"
+            }
+        }
     }
     
     // MARK: - Background Layer
@@ -192,12 +220,12 @@ struct CreateMeetupView: View {
                     ForEach(0..<selectedFriendIDs.count, id: \.self) { index in
                         // Get friend display name if available
                         let friendID = selectedFriendIDs[index]
-                        let friendship = friends.first(where: { $0.friendID == friendID })
+                        let friendship = friendsWithProfiles.first(where: { $0.friendship.friendID == friendID })
                         
                         // FriendAvatarView is now moved to a shared component at Shared/Components/FriendAvatarView.swift
                         FriendAvatarView(
                             emoji: friendEmojis[index % friendEmojis.count],
-                            name: friendship?.displayName ?? "Friend",
+                            name: friendship?.user.name ?? "Friend",
                             gradient: AppColors.avatarGradients[index % AppColors.avatarGradients.count]
                         )
                     }
@@ -460,12 +488,7 @@ struct CreateMeetupView: View {
         }
         .padding(.top, 10)
     }
-}
-
-// MARK: - Supporting Views
-
-// FriendAvatarView is now moved to a shared component at Shared/Components/FriendAvatarView.swift
-
+    
     // MARK: - Friend Selector View
     private var friendSelectorView: some View {
         VStack(spacing: 20) {
@@ -474,15 +497,15 @@ struct CreateMeetupView: View {
                 .foregroundColor(.white)
             
             List {
-                ForEach(friends, id: \.id) { friend in
+                ForEach(friendsWithProfiles, id: \.friendship.id) { data in
                     Button(action: {
-                        toggleFriendSelection(friendID: friend.friendID)
+                        toggleFriendSelection(friendID: data.friendship.friendID)
                     }) {
                         HStack {
-                            Text(friend.displayName ?? "Friend")
+                            Text(data.user.name ?? "Friend")
                                 .foregroundColor(.white)
                             Spacer()
-                            if selectedFriendIDs.contains(friend.friendID) {
+                            if selectedFriendIDs.contains(data.friendship.friendID) {
                                 Image(systemName: "checkmark.circle.fill")
                                     .foregroundColor(AppColors.accent)
                             }
@@ -565,6 +588,10 @@ struct CreateMeetupView: View {
         }
     }
 }
+
+// MARK: - Supporting Views
+
+// FriendAvatarView is now moved to a shared component at Shared/Components/FriendAvatarView.swift
 
 struct AIOptionButton: View {
     let title: String
@@ -658,6 +685,11 @@ struct ActivityButton: View {
 struct CreateMeetupView_Previews: PreviewProvider {
     static var previews: some View {
         CreateMeetupView()
-            .environmentObject(FirebaseSyncService.preview)
+            .environmentObject(previewFirebaseSyncService())
     }
-} 
+    
+    static func previewFirebaseSyncService() -> FirebaseSyncService {
+        let container = try! ModelContainer(for: UserModel.self, FriendshipModel.self, MeetupModel.self)
+        return FirebaseSyncService(modelContext: container.mainContext)
+    }
+}

@@ -33,7 +33,8 @@ final class UserModel {
     var isSocialProfileActive: Bool
     var socialAuthProvider: String?
     
-    // User preferences
+    // User preferences - stored as JSON string for SwiftData compatibility
+    var preferencesJSON: String?
     var availabilityTimes: [String]?
     var availableDays: [String]?
     var favoriteActivities: [String]?
@@ -56,6 +57,7 @@ final class UserModel {
         gradientIndex: Int = 0,
         isSocialProfileActive: Bool = false,
         socialAuthProvider: String? = nil,
+        preferences: [String: Any]? = nil,
         availabilityTimes: [String]? = nil,
         availableDays: [String]? = nil,
         favoriteActivities: [String]? = nil,
@@ -74,6 +76,7 @@ final class UserModel {
         self.gradientIndex = gradientIndex
         self.isSocialProfileActive = isSocialProfileActive
         self.socialAuthProvider = socialAuthProvider
+        self.preferencesJSON = Self.encodePreferences(preferences)
         self.availabilityTimes = availabilityTimes
         self.availableDays = availableDays
         self.favoriteActivities = favoriteActivities
@@ -119,6 +122,11 @@ final class UserModel {
         if let calendarConnections = calendarConnections { dict["calendarConnections"] = calendarConnections }
         if let travelRadius = travelRadius { dict["travelRadius"] = travelRadius }
         
+        // Add any additional preferences
+        if let preferences = getPreferences() {
+            dict["preferences"] = preferences
+        }
+        
         return dict
     }
     
@@ -157,6 +165,44 @@ final class UserModel {
         user.calendarConnections = additionalData["calendarConnections"] as? [String]
         user.travelRadius = additionalData["travelRadius"] as? String
         
+        // Set any additional preferences
+        if let prefs = additionalData["preferences"] as? [String: Any] {
+            user.preferencesJSON = Self.encodePreferences(prefs)
+        }
+        
         return user
+    }
+    
+    // MARK: - Preferences Handling
+    
+    // Encode dictionary to JSON string
+    private static func encodePreferences(_ preferences: [String: Any]?) -> String? {
+        guard let preferences = preferences else { return nil }
+        
+        do {
+            let data = try JSONSerialization.data(withJSONObject: preferences, options: [])
+            return String(data: data, encoding: .utf8)
+        } catch {
+            print("Failed to encode preferences: \(error)")
+            return nil
+        }
+    }
+    
+    // Decode JSON string to dictionary
+    func getPreferences() -> [String: Any]? {
+        guard let jsonString = preferencesJSON,
+              let data = jsonString.data(using: .utf8) else { return nil }
+        
+        do {
+            return try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any]
+        } catch {
+            print("Failed to decode preferences: \(error)")
+            return nil
+        }
+    }
+    
+    // Convenience method to set preferences
+    func setPreferences(_ preferences: [String: Any]?) {
+        preferencesJSON = Self.encodePreferences(preferences)
     }
 }

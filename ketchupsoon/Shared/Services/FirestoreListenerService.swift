@@ -20,6 +20,37 @@ class FirestoreListenerService: ObservableObject {
     private var friendshipListeners: [ListenerRegistration] = []
     private var authStateListener: AuthStateDidChangeListenerHandle?
     
+    // Nonisolated copies for access from nonisolated contexts
+    private nonisolated var _userListeners: [ListenerRegistration] {
+        get async {
+            await withCheckedContinuation { continuation in
+                Task { @MainActor in
+                    continuation.resume(returning: userListeners)
+                }
+            }
+        }
+    }
+    
+    private nonisolated var _friendshipListeners: [ListenerRegistration] {
+        get async {
+            await withCheckedContinuation { continuation in
+                Task { @MainActor in
+                    continuation.resume(returning: friendshipListeners)
+                }
+            }
+        }
+    }
+    
+    private nonisolated var _authStateListener: AuthStateDidChangeListenerHandle? {
+        get async {
+            await withCheckedContinuation { continuation in
+                Task { @MainActor in
+                    continuation.resume(returning: authStateListener)
+                }
+            }
+        }
+    }
+    
     // Published properties for UI reactivity
     @Published var isListening: Bool = false
     @Published var lastUpdateTimestamp: Date?
@@ -66,27 +97,43 @@ class FirestoreListenerService: ObservableObject {
     }
     
     /// Stop all active listeners
-    func stopAllListeners() {
-        // Remove Auth state listener
-        if let authStateListener = authStateListener {
-            Auth.auth().removeStateDidChangeListener(authStateListener)
-            self.authStateListener = nil
+    /// This method is marked as nonisolated so it can be called from deinit
+    nonisolated func stopAllListeners() {
+        Task {
+            // Remove Auth state listener
+            if let authListener = await _authStateListener {
+                Auth.auth().removeStateDidChangeListener(authListener)
+                
+                // Update on main actor
+                Task { @MainActor in
+                    self.authStateListener = nil
+                }
+            }
+            
+            // Remove all user listeners
+            let userListenersSnapshot = await _userListeners
+            for listener in userListenersSnapshot {
+                listener.remove()
+            }
+            
+            // Update on main actor
+            Task { @MainActor in
+                self.userListeners.removeAll()
+            }
+            
+            // Remove all friendship listeners
+            let friendshipListenersSnapshot = await _friendshipListeners
+            for listener in friendshipListenersSnapshot {
+                listener.remove()
+            }
+            
+            // Update on main actor
+            Task { @MainActor in
+                self.friendshipListeners.removeAll()
+                self.isListening = false
+                self.logger.info("Stopped all Firestore listeners")
+            }
         }
-        
-        // Remove all user listeners
-        for listener in userListeners {
-            listener.remove()
-        }
-        userListeners.removeAll()
-        
-        // Remove all friendship listeners
-        for listener in friendshipListeners {
-            listener.remove()
-        }
-        friendshipListeners.removeAll()
-        
-        isListening = false
-        logger.info("Stopped all Firestore listeners")
     }
     
     /// Stop listening for a specific user
@@ -225,7 +272,7 @@ class FirestoreListenerService: ObservableObject {
             
             let localUsers = try modelContext.fetch(descriptor)
             
-            if var existingUser = localUsers.first {
+            if let existingUser = localUsers.first {
                 // Update existing user with remote data
                 if let name = data["name"] as? String { existingUser.name = name }
                 if let email = data["email"] as? String { existingUser.email = email }
@@ -316,7 +363,7 @@ class FirestoreListenerService: ObservableObject {
                 
                 let localFriendships = try modelContext.fetch(descriptor)
                 
-                if var existingFriendship = localFriendships.first {
+                if let existingFriendship = localFriendships.first {
                     // Check if remote data is newer
                     if let remoteUpdated = data["updatedAt"] as? TimeInterval,
                        Date(timeIntervalSince1970: remoteUpdated) > existingFriendship.updatedAt {

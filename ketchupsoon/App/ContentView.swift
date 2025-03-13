@@ -6,7 +6,7 @@ import FirebaseAuth
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     @EnvironmentObject private var onboardingManager: OnboardingManager
-    @EnvironmentObject private var firebaseSyncService: FirebaseSyncService?
+    @EnvironmentObject private var firebaseSyncService: FirebaseSyncService
     @State private var selectedTab = 0
     @State private var showingContactPicker = false
     @State private var showingDebugAlert = false
@@ -143,7 +143,7 @@ struct ContentView: View {
             // Sync Firebase data when ContentView appears if user is logged in
             if Auth.auth().currentUser != nil {
                 Task {
-                    await firebaseSyncService?.performFullSync()
+                    await firebaseSyncService.performFullSync()
                 }
             }
         }
@@ -151,9 +151,9 @@ struct ContentView: View {
 }
 
 #Preview {
-    let container = try! ModelContainer(for: [UserModel.self], inMemory: true)
-    return ContentView()
-        .modelContainer(for: [UserModel.self], inMemory: true)
+    let container = try! ModelContainer(for: UserModel.self)
+    ContentView()
+        .modelContainer(for: UserModel.self)
         .environmentObject(OnboardingManager.shared)
         .environmentObject(FirebaseSyncServiceFactory.createService(modelContext: container.mainContext))
 }

@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct MeetupDetailView: View {
-    let meetup: Meetup
+    let meetup: MeetupModel
     @Environment(\.dismiss) private var dismiss
     
     var body: some View {
@@ -84,16 +84,16 @@ struct MeetupDetailView: View {
         HStack(spacing: 14) {
             ZStack {
                 RoundedRectangle(cornerRadius: 16)
-                    .fill(meetup.activityType.gradient)
+                    .fill(meetup.activityTypeEnum.gradient)
                     .frame(width: 70, height: 70)
-                    .glow(color: meetup.activityType.gradient.stops[0].color, radius: 6, opacity: 0.5)
+                    .glow(color: meetup.activityTypeEnum.gradient.stops[0].color, radius: 6, opacity: 0.5)
                 
-                Text(meetup.activityType.emoji)
+                Text(meetup.activityTypeEnum.emoji)
                     .font(.system(size: 28))
             }
             
             VStack(alignment: .leading, spacing: 4) {
-                Text(meetup.activityType.name.capitalized)
+                Text(meetup.activityTypeEnum.name.capitalized)
                     .font(.system(size: 18, weight: .semibold))
                     .foregroundColor(.white)
                 
@@ -288,7 +288,7 @@ struct MeetupDetailView: View {
 
 struct MeetupDetailView_Previews: PreviewProvider {
     static var previews: some View {
-        MeetupDetailView(meetup: Meetup.samples[0])
+        MeetupDetailView(meetup: MeetupModel.samples[0])
     }
 }
 
