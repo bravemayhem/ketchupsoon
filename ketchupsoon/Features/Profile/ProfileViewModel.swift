@@ -258,15 +258,28 @@ class CombinedProfileViewModel: ObservableObject, ProfileViewModel {
             return
         }
         
-        // Set loading state
-        await MainActor.run {
-            isLoading = true
-            isCurrentlyLoading = true
+        // Track loading without immediately showing UI indicator
+        isCurrentlyLoading = true
+        
+        // Use a delayed loading indicator to prevent flashing for quick operations
+        var shouldShowLoading = true
+        
+        // Start a delayed task to show loading only if operation takes longer than 300ms
+        let loadingTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 300_000_000) // 300ms delay
+            if shouldShowLoading && !Task.isCancelled {
+                isLoading = true
+            }
         }
         
         // Ensure loading state is reset when we exit
         defer {
             Task { @MainActor [weak self] in
+                // Cancel the delayed loading task
+                loadingTask.cancel()
+                // Mark that we shouldn't show loading anymore
+                shouldShowLoading = false
+                // Reset states
                 self?.isLoading = false
                 self?.isCurrentlyLoading = false
                 self?.logger.debug("📋 Profile loading completed")

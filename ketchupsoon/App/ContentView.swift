@@ -118,16 +118,17 @@ struct ContentView: View {
                 if let profileView = cachedProfileView {
                     profileView
                 } else {
-                    Text("Loading profile...")
+                    // Replace text with EmptyView or transparent view to avoid the flash
+                    EmptyView()
                         .onAppear {
+                            // Create the profile view immediately
                             let view = ProfileFactory.createProfileView(
                                 for: .currentUser,
                                 modelContext: modelContext,
                                 firebaseSyncService: firebaseSyncService
                             )
-                            DispatchQueue.main.async {
-                                cachedProfileView = AnyView(view)
-                            }
+                            // Use immediate assignment instead of DispatchQueue
+                            cachedProfileView = AnyView(view)
                         }
                 }
             }
@@ -173,13 +174,13 @@ struct ContentView: View {
         // Only proceed if a user is logged in
         guard Auth.auth().currentUser != nil else { return }
         
+        // Create the profile view immediately to avoid loading flash
+        ensureProfileViewIsCached()
+        
         // Check if we've synced recently to avoid unnecessary operations
         let now = Date()
         if let lastSync = lastSyncTime, now.timeIntervalSince(lastSync) < minSyncInterval {
             print("🔄 DEBUG: Skipping Firebase sync - too soon since last sync (\(now.timeIntervalSince(lastSync)) seconds)")
-            
-            // Still ensure profile view is cached even if we skip sync
-            ensureProfileViewIsCached()
             return
         }
         
@@ -191,9 +192,6 @@ struct ContentView: View {
                 lastSyncTime = Date()
                 print("✅ DEBUG: Firebase data sync complete")
             }
-            
-            // Cache the profile view after sync completes
-            ensureProfileViewIsCached()
         }
     }
     
@@ -201,15 +199,14 @@ struct ContentView: View {
     private func ensureProfileViewIsCached() {
         // Only create the view if it's not already cached
         if cachedProfileView == nil {
-            DispatchQueue.main.async {
-                print("🧩 DEBUG: Creating cached profile view")
-                let profileView = ProfileFactory.createProfileView(
-                    for: .currentUser,
-                    modelContext: modelContext,
-                    firebaseSyncService: firebaseSyncService
-                )
-                self.cachedProfileView = AnyView(profileView)
-            }
+            print("🧩 DEBUG: Creating cached profile view")
+            let profileView = ProfileFactory.createProfileView(
+                for: .currentUser,
+                modelContext: modelContext,
+                firebaseSyncService: firebaseSyncService
+            )
+            // Assign directly on the main thread since we're likely already there
+            cachedProfileView = AnyView(profileView)
         }
     }
     

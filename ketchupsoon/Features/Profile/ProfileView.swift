@@ -96,7 +96,9 @@ struct ProfileView<ViewModel>: View where ViewModel: AnyObject & ProfileViewMode
             }
             
             // Loading overlay
-            if viewModel.isLoading {
+            if viewModel.isLoading && viewModel.isInitialDataLoad {
+                // Only show the loading overlay during initial data load
+                // This prevents the flash when quickly navigating to the profile
                 LoadingOverlay()
             }
         }

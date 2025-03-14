@@ -13,7 +13,7 @@ import FirebaseAuth
 import CoreData
 
 @Model
-final class UserModel {
+final class UserModel: Codable {
     // Basic properties
     var id: String        // Firebase UID (using String to match Firebase)
     var name: String?
@@ -212,6 +212,94 @@ final class UserModel {
     // Convenience method to set preferences
     func setPreferences(_ preferences: [String: Any]?) {
         preferencesJSON = Self.encodePreferences(preferences)
+    }
+    
+    // MARK: - Codable Implementation
+    
+    enum CodingKeys: String, CodingKey {
+        case id, name, profileImageURL, email, phoneNumber
+        case bio, birthday, gradientIndex, isSocialProfileActive, socialAuthProvider
+        case availabilityTimes, availableDays, favoriteActivities, calendarConnections
+        case travelRadius, createdAt, updatedAt, preferences
+    }
+    
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        
+        try container.encode(id, forKey: .id)
+        try container.encodeIfPresent(name, forKey: .name)
+        try container.encodeIfPresent(profileImageURL, forKey: .profileImageURL)
+        try container.encodeIfPresent(email, forKey: .email)
+        try container.encodeIfPresent(phoneNumber, forKey: .phoneNumber)
+        try container.encodeIfPresent(bio, forKey: .bio)
+        
+        if let birthday = birthday {
+            try container.encode(birthday.timeIntervalSince1970, forKey: .birthday)
+        }
+        
+        try container.encode(gradientIndex, forKey: .gradientIndex)
+        try container.encode(isSocialProfileActive, forKey: .isSocialProfileActive)
+        try container.encodeIfPresent(socialAuthProvider, forKey: .socialAuthProvider)
+        try container.encodeIfPresent(availabilityTimes, forKey: .availabilityTimes)
+        try container.encodeIfPresent(availableDays, forKey: .availableDays)
+        try container.encodeIfPresent(favoriteActivities, forKey: .favoriteActivities)
+        try container.encodeIfPresent(calendarConnections, forKey: .calendarConnections)
+        try container.encodeIfPresent(travelRadius, forKey: .travelRadius)
+        try container.encode(createdAt.timeIntervalSince1970, forKey: .createdAt)
+        try container.encode(updatedAt.timeIntervalSince1970, forKey: .updatedAt)
+        
+        // Encode preferences as a JSON string
+        try container.encodeIfPresent(preferencesJSON, forKey: .preferences)
+    }
+    
+    required init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        
+        id = try container.decode(String.self, forKey: .id)
+        name = try container.decodeIfPresent(String.self, forKey: .name)
+        profileImageURL = try container.decodeIfPresent(String.self, forKey: .profileImageURL)
+        email = try container.decodeIfPresent(String.self, forKey: .email)
+        phoneNumber = try container.decodeIfPresent(String.self, forKey: .phoneNumber)
+        bio = try container.decodeIfPresent(String.self, forKey: .bio)
+        
+        if let birthdayTimestamp = try container.decodeIfPresent(TimeInterval.self, forKey: .birthday) {
+            birthday = Date(timeIntervalSince1970: birthdayTimestamp)
+        } else {
+            birthday = nil
+        }
+        
+        gradientIndex = try container.decodeIfPresent(Int.self, forKey: .gradientIndex) ?? 0
+        isSocialProfileActive = try container.decodeIfPresent(Bool.self, forKey: .isSocialProfileActive) ?? false
+        socialAuthProvider = try container.decodeIfPresent(String.self, forKey: .socialAuthProvider)
+        availabilityTimes = try container.decodeIfPresent([String].self, forKey: .availabilityTimes)
+        availableDays = try container.decodeIfPresent([String].self, forKey: .availableDays)
+        favoriteActivities = try container.decodeIfPresent([String].self, forKey: .favoriteActivities)
+        calendarConnections = try container.decodeIfPresent([String].self, forKey: .calendarConnections)
+        travelRadius = try container.decodeIfPresent(String.self, forKey: .travelRadius)
+        
+        // Handle dates with default values if not present
+        if let createdTimestamp = try container.decodeIfPresent(TimeInterval.self, forKey: .createdAt) {
+            createdAt = Date(timeIntervalSince1970: createdTimestamp)
+        } else {
+            createdAt = Date()
+        }
+        
+        if let updatedTimestamp = try container.decodeIfPresent(TimeInterval.self, forKey: .updatedAt) {
+            updatedAt = Date(timeIntervalSince1970: updatedTimestamp)
+        } else {
+            updatedAt = Date()
+        }
+        
+        // For preferences, try to decode either as a String (JSON) or as a dictionary
+        if let prefsString = try container.decodeIfPresent(String.self, forKey: .preferences) {
+            // If it's already a JSON string, use it directly
+            preferencesJSON = prefsString
+        } else {
+            // If it's not found as a string, check if Firebase stored it as a map
+            // This custom handling is needed since we can't directly decode [String: Any]
+            // We'll need to handle this specially for Firebase's Firestore data
+            preferencesJSON = nil
+        }
     }
 }
 

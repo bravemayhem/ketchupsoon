@@ -166,4 +166,22 @@ extension View {
             self
         }
     }
-} 
+}
+
+
+#Preview {
+    FriendAvatarView(
+        friend: FriendItem(
+            id: "1", 
+            name: "Sarah Johnson",
+            bio: "Adventure seeker and coffee enthusiast.",                
+            phoneNumber: "+1 (206) 555-1234",
+            email: "sarah.j@example.com",
+            birthday: Date(),
+            emoji: "🌟",
+            lastHangout: "3 months",
+            gradient: [AppColors.gradient1Start, AppColors.gradient1End]
+        ),
+        isSelected: true
+    )
+}

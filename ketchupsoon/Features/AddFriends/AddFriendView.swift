@@ -4,6 +4,8 @@ import FirebaseAuth
 import SwiftData
 import OSLog
 import Combine
+import Contacts
+import MessageUI
 
 struct AddFriendView: View {
     // MARK: - Properties
@@ -12,6 +14,9 @@ struct AddFriendView: View {
     
     // Firebase sync service
     @EnvironmentObject private var firebaseSyncService: FirebaseSyncService
+    
+    // Contact matching manager
+    @StateObject private var contactMatchingManager = ContactMatchingManager.shared
     
     // Simple state properties - kept for UI display only
     @State private var searchQuery = ""
@@ -165,18 +170,81 @@ struct AddFriendView: View {
             }
         }
         .navigationBarHidden(true)
+        .task {
+            // Set the Firebase sync service in the contact matching manager
+            contactMatchingManager.setFirebaseSyncService(firebaseSyncService)
+            
+            // Load contact matches when the view appears
+            if selectedTab == 0 && !contactMatchingManager.hasLoadedContacts {
+                await contactMatchingManager.loadAndMatchContacts()
+            }
+        }
+        .onChange(of: selectedTab) { oldValue, newValue in
+            if newValue == 0 && !contactMatchingManager.hasLoadedContacts {
+                Task {
+                    await contactMatchingManager.loadAndMatchContacts()
+                }
+            }
+        }
     }
     
     // MARK: - Contacts Tab Content
     private var contactsTabContent: some View {
-        VStack(spacing: 10) {
-            // Section Title - On KetchupSoon
+        VStack(spacing: 20) {
+            // Manual search results section (only shown when search is active)
+            if !searchQuery.isEmpty {
+                manualSearchResultsSection
+            } else {
+                // Only show matched contacts section when not actively searching
+                // Contacts already on KetchupSoon
+                MatchedContactsList(
+                    contactMatchingManager: contactMatchingManager,
+                    onAddFriend: { user in
+                        addFriend(user)
+                    }
+                )
+                
+                // Invite to KetchupSoon section
+                NonMatchedContactsList(
+                    contactMatchingManager: contactMatchingManager,
+                    onInvite: { contact in
+                        // Handle invitation for a single contact
+                        inviteContact(contact)
+                    }
+                )
+            }
+            
+            // Success message
+            if showSuccessMessage {
+                HStack {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundColor(AddFriendViewColors.mint)
+                    
+                    Text(successMessage)
+                        .font(.system(size: 14))
+                        .foregroundColor(AddFriendViewColors.textPrimary)
+                }
+                .padding(.vertical, 12)
+                .padding(.horizontal, 16)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(AddFriendViewColors.cardBackground.opacity(0.7))
+                )
+                .padding(.top, 20)
+            }
+        }
+        .padding(.top, 20)
+    }
+    
+    // MARK: - Manual Search Results Section
+    private var manualSearchResultsSection: some View {
+        VStack(alignment: .leading, spacing: 15) {
+            // Section Title
             Text("search results")
                 .font(.system(size: 16, weight: .semibold))
                 .foregroundColor(AddFriendViewColors.textPrimary)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 20)
-                .padding(.top, 30)
             
             if isSearching {
                 // Loading indicator
@@ -215,109 +283,12 @@ struct AddFriendView: View {
                         }
                     )
                 }
-            } else {
-                // Initial state - prompt to search
-                Text("Enter a name or email to search for users")
-                    .font(.system(size: 16))
-                    .multilineTextAlignment(.center)
-                    .foregroundColor(AddFriendViewColors.textSecondary)
-                    .padding(20)
-                    .frame(maxWidth: .infinity, minHeight: 120)
             }
-            
-            if showSuccessMessage {
-                // Success message
-                HStack {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(AddFriendViewColors.mint)
-                    
-                    Text(successMessage)
-                        .font(.system(size: 14))
-                        .foregroundColor(AddFriendViewColors.textPrimary)
-                }
-                .padding(.vertical, 12)
-                .padding(.horizontal, 16)
-                .background(
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(AddFriendViewColors.cardBackground.opacity(0.7))
-                )
-                .padding(.top, 20)
-            }
-            
-            // Section title for invite section
-            Text("invite others")
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundColor(AddFriendViewColors.textPrimary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 20)
-                .padding(.top, 20)
-            
-            // Invite button
-            Button(action: {
-                // Show the invite tab
-                withAnimation {
-                    selectedTab = 2
-                }
-            }) {
-                HStack {
-                    Image(systemName: "person.crop.circle.badge.plus")
-                        .font(.system(size: 18))
-                        .foregroundColor(AddFriendViewColors.purple)
-                    
-                    Text("Invite friends to join ketchupsoon")
-                        .font(.system(size: 16))
-                        .foregroundColor(AddFriendViewColors.textPrimary)
-                    
-                    Spacer()
-                    
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 14))
-                        .foregroundColor(AddFriendViewColors.textSecondary)
-                }
-                .padding(.vertical, 15)
-                .padding(.horizontal, 20)
-                .background(
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(AddFriendViewColors.cardBackground.opacity(0.7))
-                )
-                .padding(.horizontal, 20)
-            }
-            
-            ContactRow(
-                name: "Jordan Lee",
-                phone: "555-4321",
-                initials: "JL",
-                buttonType: .invite
-            )
-            
-            ContactRow(
-                name: "Morgan Park",
-                phone: "555-9876",
-                initials: "MP",
-                buttonType: .invite
-            )
-            
-            // Multi-invite button
-            Button(action: {}) {
-                Text("invite multiple")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(AddFriendViewColors.textPrimary)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 50)
-                    .background(
-                        AddFriendViewColors.purplePinkGradient
-                            .cornerRadius(25)
-                    )
-                    .glow(color: AddFriendViewColors.purple, radius: 8, opacity: 0.5)
-            }
-            .padding(.top, 20)
-            .padding(.bottom, 40)
         }
-        .padding(.horizontal, 20)
     }
 }
 
-// MARK: - Search and Friend Management Functions
+// MARK: - Contact and Friend Management Functions
 extension AddFriendView {
     // Search for users using FirebaseSyncService
     private func searchUsers() {
@@ -353,6 +324,7 @@ extension AddFriendView {
         }
     }
     
+    // Add a friend
     @MainActor
     private func addFriend(_ user: UserModel) {
         guard !addedFriendIds.contains(user.id) else { return }
@@ -375,6 +347,28 @@ extension AddFriendView {
                 errorMessage = "Error adding friend: \(error)"
             }
         }
+    }
+    
+    // Invite a contact
+    private func inviteContact(_ contact: CNContact) {
+        // Switch to the invite tab with the contact pre-selected
+        withAnimation {
+            selectedTab = 2
+        }
+        
+        // Show success message
+        successMessage = "Switched to invite tab"
+        showSuccessMessage = true
+        
+        // Auto-hide after 3 seconds
+        Task {
+            try? await Task.sleep(nanoseconds: 3_000_000_000)
+            withAnimation {
+                showSuccessMessage = false
+            }
+        }
+        
+        // In a full implementation, you'd pass the selected contact to the invite tab
     }
     
     // Get gradient colors for a user based on their gradient index
