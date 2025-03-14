@@ -347,6 +347,11 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		A5BBC7512D83FB5D00BC320F /* Badges */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Badges;
+			sourceTree = "<group>";
+		};
 		F4070A3B2D0A184000B11C0B /* ketchupsoonTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = ketchupsoonTests;
@@ -775,6 +780,7 @@
 		A5BBC67E2D83D34400BC320F /* Components */ = {
 			isa = PBXGroup;
 			children = (
+				A5BBC7512D83FB5D00BC320F /* Badges */,
 				A5BBC65F2D83D34400BC320F /* Backgrounds */,
 				A5BBC6602D83D34400BC320F /* Colors */,
 				A5BBC6642D83D34400BC320F /* Confetti */,
@@ -1031,6 +1037,9 @@
 			buildRules = (
 			);
 			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				A5BBC7512D83FB5D00BC320F /* Badges */,
 			);
 			name = ketchupsoon;
 			packageProductDependencies = (

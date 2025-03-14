@@ -102,28 +102,11 @@ struct CustomNavigationBar: View {
                             enableDebugMode: enableDebugMode,
                             action: debugModeAction
                         ))
-                        .overlay(
-                            // Badge for friend requests
-                            Group {
-                                if pendingFriendRequests > 0 {
-                                    ZStack {
-                                        Circle()
-                                            .fill(LinearGradient(
-                                                gradient: Gradient(colors: [AppColors.gradient5Start, AppColors.pureBlue]),
-                                                startPoint: .topLeading,
-                                                endPoint: .bottomTrailing
-                                            ))
-                                            .frame(width: 18, height: 18)
-                                            .shadow(color: AppColors.pureBlue.opacity(0.4), radius: 2, x: 0, y: 0)
-                                        
-                                        Text("\(pendingFriendRequests)")
-                                            .font(.system(size: 10, weight: .bold))
-                                            .foregroundColor(.white)
-                                    }
-                                    .offset(x: 1, y: -6)
-                                }
-                            },
-                            alignment: .topTrailing
+                        // Use the new NotificationBadge withBadge extension
+                        .withBadge(
+                            count: pendingFriendRequests, 
+                            style: .gradient, 
+                            fontSize: 10
                         )
                     }
                     

@@ -11,6 +11,8 @@ enum AppColors {
     static let primary = Color(hex: "5E17EB") // Vibrant purple (to maintain compatibility)
     static let secondary = Color(hex: "FF2D55") // Pink-red (to maintain compatibility)
     static let purple = Color(hex: "5E17EB") // Vibrant purple
+    static let limeGreen = Color(hex: "32CD32") // Vibrant lime green
+    static let emeraldTeal = Color(hex: "00B4AB") // Emerald teal color
     static let highlight = Color(hex: "00F5A0") // Bright mint (to maintain compatibility)
     static let mint = Color(hex: "00F5A0") // Bright mint
     static let pureBlue = Color(hex: "0073E6") // Pure blue color (RGB: 0, 115, 230 ≈ 0.0, 0.45, 0.9)
@@ -63,6 +65,10 @@ enum AppColors {
     // Adding gradient5 from React file (blue-purple to mint)
     static let gradient5Start = Color(hex: "6B66FF") // Blue-purple
     static let gradient5End = Color(hex: "00F5A0") // Mint
+    
+    // Adding new green gradient (gradient6)
+    static let gradient6Start = Color(hex: "32CD32") // Lime green
+    static let gradient6End = Color(hex: "00B4AB") // Emerald teal
     
     // Gradient Presets
     static let backgroundGradient = LinearGradient(
@@ -117,6 +123,13 @@ enum AppColors {
         endPoint: .bottomTrailing
     )
     
+    // Adding new green gradient preset
+    static let accentGradient6 = LinearGradient(
+        colors: [gradient6Start, gradient6End],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+    )
+    
     // For compatibility with existing code
     static let addButtonGradient = accentGradient1
     
@@ -124,6 +137,7 @@ enum AppColors {
     static let purplePink = [primary, secondary] // For compatibility
     static let redOrange = [accent, accentSecondary] // For compatibility
     static let greenPurple = [mint, primary] // For compatibility
+    static let greenTeal = [limeGreen, emeraldTeal] // New green gradient pair
     
     // Avatar Background Gradients
     static let avatarGradients: [LinearGradient] = [
@@ -131,7 +145,8 @@ enum AppColors {
         accentGradient2,
         accentGradient3,
         accentGradient4,
-        accentGradient5
+        accentGradient5,
+        accentGradient6
     ]
     
     // Avatar Colors (compatibility with existing code)

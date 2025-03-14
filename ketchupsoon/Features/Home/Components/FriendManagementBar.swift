@@ -54,21 +54,8 @@ struct FriendManagementBar: View {
                     )
                     .clipShape(Capsule())
                 }
-                .overlay(
-                    // Notification badge
-                    ZStack {
-                        Circle()
-                            .fill(AppColors.accent)
-                            .frame(width: 24, height: 24)
-                            .shadow(color: AppColors.accent.opacity(0.5), radius: 4, x: 0, y: 0)
-                        
-                        Text("\(pendingFriendRequests)")
-                            .font(.system(size: 12, weight: .bold))
-                            .foregroundColor(.white)
-                    }
-                    .offset(x: 8, y: -10), // Adjusted for perfect centering on the edge
-                    alignment: .topTrailing
-                )
+                // Use the new badged extension from ButtonBadge
+                .badged(count: pendingFriendRequests)
             }
             .padding(.horizontal, 15)
         }

@@ -25,6 +25,7 @@ struct PermissionsScreen: View {
                     .padding(.top, 30)
                     
                     // Notifications permission
+                    /*
                     PermissionCard(
                         title: "Notifications",
                         description: "Get reminders when it's time to catch up with friends",
@@ -37,6 +38,7 @@ struct PermissionsScreen: View {
                             }
                         }
                     )
+                    */
                     
                     // Contacts permission
                     PermissionCard(
