@@ -34,6 +34,11 @@ protocol UserRepository {
     
     /// Sync local data with remote data
     func syncLocalWithRemote() async throws
+    
+    /// Check if a phone number is already associated with an existing user account
+    /// - Parameter phoneNumber: The phone number to check
+    /// - Returns: A tuple containing a boolean indicating if the phone number exists and the user ID if found
+    func checkPhoneNumberExists(_ phoneNumber: String) async throws -> (exists: Bool, userId: String?)
 }
 
 /// Factory for creating UserRepository instances
@@ -50,5 +55,16 @@ struct UserRepositoryFactory {
         // You could implement a mock version here
         let container = try! ModelContainer(for: UserModel.self)
         return FirebaseUserRepository(modelContext: container.mainContext)
+    }
+}
+
+// Extension to provide default implementations for optional methods
+extension UserRepository {
+    func searchUsersByName(query: String) async throws -> [UserModel] {
+        return []
+    }
+    
+    func checkPhoneNumberExists(_ phoneNumber: String) async throws -> (exists: Bool, userId: String?) {
+        return (false, nil)
     }
 } 

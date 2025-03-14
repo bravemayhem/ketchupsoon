@@ -21,21 +21,27 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         // Configure Firebase
         FirebaseApp.configure()  // Uncomment to enable Firebase
         
-        // Initialize central services
+        // Initialize core services that should run regardless of auth state
         _ = LoggingService.shared
         _ = AuthStateService.shared
         _ = FirebaseOperationCoordinator.shared
         
-        // Configure Firebase Messaging
-        // Messaging.messaging().delegate = self  // Temporarily commented out for testing
-        
         // Set UNUserNotificationCenter delegate
         UNUserNotificationCenter.current().delegate = self
         
-        // Schedule Firebase user lookup for existing friends
-        DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) {
-            Task {
-                await self.checkForFirebaseUsersInContacts()
+        // Only schedule Firebase-dependent operations if/when user is authenticated
+        // This prevents unnecessary resource usage for non-authenticated users
+        Auth.auth().addStateDidChangeListener { [weak self] _, user in
+            if user != nil {
+                // User is authenticated, schedule contacts check
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+                    Task {
+                        await self?.checkForFirebaseUsersInContacts()
+                    }
+                }
+                
+                // Initialize Firebase Messaging only for authenticated users
+                // self.setupFirebaseMessaging()
             }
         }
         
@@ -53,8 +59,20 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
             return
         }
         
+        // Only proceed if user is authenticated
+        guard Auth.auth().currentUser != nil else {
+            print("⚠️ Cannot check for Firebase users in contacts - no authenticated user")
+            return
+        }
+        
         // Search for existing users in Firebase
         await FirebaseUserSearchService.shared.checkExistingFriendsForFirebaseUsers(in: context)
+    }
+    
+    // Private method to set up Firebase Messaging when needed
+    private func setupFirebaseMessaging() {
+        // Configure Firebase Messaging
+        // Messaging.messaging().delegate = self
     }
     
     // MARK: - Firebase Cloud Messaging

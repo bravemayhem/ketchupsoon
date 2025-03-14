@@ -109,6 +109,22 @@ struct PhoneAuthScreen: View {
                 dismissButton: .default(Text("OK"))
             )
         }
+        .alert("Existing Account Found", isPresented: $viewModel.showExistingAccountAlert) {
+            Button("Continue with Existing Account", role: .none) {
+                viewModel.handleExistingAccountConfirmation()
+            }
+            Button("Cancel", role: .cancel) {
+                // User wants to try a different phone number
+                viewModel.showVerificationView = false
+                viewModel.verificationCode = ""
+                viewModel.formattedPhoneNumber = ""
+                viewModel.phoneNumber = ""
+                viewModel.existingAccountFound = false
+                viewModel.existingUserId = nil
+            }
+        } message: {
+            Text("We found an existing account with this phone number. Would you like to sign in to your existing account instead of creating a new one?")
+        }
     }
 }
 

@@ -471,4 +471,38 @@ class FirebaseUserRepository: UserRepository {
         user.calendarConnections = data["calendarConnections"] as? [String]
         user.travelRadius = data["travelRadius"] as? String
     }
+
+    // MARK: - User Operations
+
+    /// Check if a phone number already exists in the system
+    /// - Parameter phoneNumber: The phone number to check (should be normalized)
+    /// - Returns: A tuple containing a boolean indicating if the phone number exists and the user ID if found
+    func checkPhoneNumberExists(_ phoneNumber: String) async throws -> (exists: Bool, userId: String?) {
+        // Normalize the phone number if needed (remove any spaces, dashes, etc.)
+        let normalizedPhone = phoneNumber.filter { $0.isNumber }
+        
+        logger.debug("Checking if phone number exists in Firebase")
+        
+        do {
+            // Query Firestore for users with this phone number
+            let querySnapshot = try await db.collection(usersCollection)
+                .whereField("phoneNumber", isEqualTo: normalizedPhone)
+                .limit(to: 1)
+                .getDocuments()
+            
+            // If any documents are found, the phone number exists
+            if let document = querySnapshot.documents.first {
+                let userId = document.documentID
+                logger.info("Found existing user with phone number: \(normalizedPhone), userId: \(userId)")
+                return (true, userId)
+            }
+            
+            // No documents found, phone number is not in use
+            logger.debug("No user found with phone number: \(normalizedPhone)")
+            return (false, nil)
+        } catch {
+            logger.error("Error checking phone number in Firebase: \(error.localizedDescription)")
+            throw error
+        }
+    }
 } 

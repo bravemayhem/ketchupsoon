@@ -18,6 +18,11 @@ struct ContentView: View {
         }
     }
     
+    // Track authentication state
+    @State private var isAuthenticated = false
+    // Track if initial auth check has completed
+    @State private var hasCheckedAuth = false
+    
     // IMPORTANT: Cache the profile view to prevent repeated recreation
     // This prevents the infinite loading loop by ensuring we only create it once
     @State private var cachedProfileView: AnyView? = nil
@@ -25,6 +30,28 @@ struct ContentView: View {
     // Track Firebase sync operations to prevent excessive calls
     @State private var lastSyncTime: Date? = nil
     private let minSyncInterval: TimeInterval = 30.0 // Minimum seconds between syncs
+    
+    // MARK: - Auth State Management
+    
+    private func setupAuthStateListener() {
+        // Set up auth state listener once at initialization
+        // This runs before views are loaded
+        let _ = Auth.auth().addStateDidChangeListener { _, user in
+            // Update on main thread
+            Task { @MainActor in
+                self.isAuthenticated = user != nil
+                self.hasCheckedAuth = true
+                
+                if user != nil {
+                    // Only sync data when authenticated
+                    self.syncAndCacheProfileOnAppear()
+                } else {
+                    // Clear any cached views when signing out
+                    self.cachedProfileView = nil
+                }
+            }
+        }
+    }
     
     // MARK: - Tab Content Views
     
@@ -171,7 +198,7 @@ struct ContentView: View {
     // MARK: - Lifecycle Methods
     
     private func syncAndCacheProfileOnAppear() {
-        // Only proceed if a user is logged in
+        // Only proceed if a user is logged in - double check to be safe
         guard Auth.auth().currentUser != nil else { return }
         
         // Create the profile view immediately to avoid loading flash
@@ -210,28 +237,68 @@ struct ContentView: View {
         }
     }
     
+    // MARK: - Loading View
+    
+    private var loadingView: some View {
+        ZStack {
+            AppColors.backgroundGradient
+                .ignoresSafeArea()
+            
+            VStack {
+                // App name with gradient and glow effect
+                Text("ketchupsoon")
+                    .font(.custom("SpaceGrotesk-Bold", size: 42))
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [AppColors.accent, AppColors.accentSecondary],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .shadow(color: AppColors.accent.opacity(0.7), radius: 10, x: 0, y: 0)
+                
+                ProgressView()
+                    .tint(.white)
+                    .scaleEffect(1.5)
+                    .padding(.top, 20)
+            }
+        }
+    }
+    
     // MARK: - Body
     
     var body: some View {
-        ZStack {
-            mainContent
-        }
-        .alert("Debug Mode", isPresented: $showingDebugAlert) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text("Debug mode activated!")
+        Group {
+            if !hasCheckedAuth {
+                // Show loading view until auth check completes
+                loadingView
+            } else if !isAuthenticated {
+                // Show auth view directly if not authenticated
+                AuthView(onAuthSuccess: {
+                    // This will be called when authentication is successful
+                    isAuthenticated = true
+                })
+            } else {
+                // Show main content only if authenticated
+                ZStack {
+                    mainContent
+                }
+                .alert("Debug Mode", isPresented: $showingDebugAlert) {
+                    Button("OK", role: .cancel) {}
+                } message: {
+                    Text("Debug mode activated!")
+                }
+                // Show onboarding if needed (only when authenticated)
+                .fullScreenCover(isPresented: $onboardingManager.isShowingOnboarding) {
+                    UserOnboardingView(container: modelContext.container)
+                        .environmentObject(firebaseSyncService)
+                        .edgesIgnoringSafeArea(.all)
+                }
+            }
         }
         .onAppear {
-            syncAndCacheProfileOnAppear()
-        }
-        // Add back the fullScreenCover to show onboarding when isShowingOnboarding becomes true
-        .fullScreenCover(isPresented: $onboardingManager.isShowingOnboarding) {
-            UserOnboardingView(container: modelContext.container)
-                .environmentObject(firebaseSyncService)
-                .edgesIgnoringSafeArea(.all)
-        }
-        .onAppear {
-            syncAndCacheProfileOnAppear()
+            // Set up auth state listener when ContentView appears
+            setupAuthStateListener()
         }
     }
 }

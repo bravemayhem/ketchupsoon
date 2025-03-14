@@ -36,7 +36,9 @@ struct AddFriendView: View {
     private let logger = Logger(subsystem: "com.ketchupsoon", category: "AddFriendView")
     
     // Tab options
-    let tabs = ["contacts", "qr code", "invite via text"]
+    // Commenting out QR code tab for MVP
+    // let tabs = ["contacts", "qr code", "invite via text"]
+    let tabs = ["contacts", "invite via text"]
     
     // MARK: - Body
     var body: some View {
@@ -86,15 +88,14 @@ struct AddFriendView: View {
                 
                 // Method selection tabs
                 HStack(spacing: 10) {
-                    ForEach(0..<3) { index in
+                    // Adjusting for only 2 tabs (removing QR code tab for MVP)
+                    ForEach(0..<tabs.count, id: \.self) { index in
                         Button(action: {
-                            if index == 0 || index == 1 || index == 2 {
-                                // For all tabs, just update the selected tab with animation
-                                withAnimation(.easeInOut(duration: 0.3)) {
-                                    selectedTab = index
-                                }
-                                showComingSoonPopup = false
+                            // For all tabs, just update the selected tab with animation
+                            withAnimation(.easeInOut(duration: 0.3)) {
+                                selectedTab = index
                             }
+                            showComingSoonPopup = false
                         }) {
                             Text(tabs[index])
                                 .font(.system(size: 14, weight: index == selectedTab ? .semibold : .regular))
@@ -144,10 +145,14 @@ struct AddFriendView: View {
                     if selectedTab == 0 {
                         // CONTACTS TAB CONTENT
                         contactsTabContent
-                    } else if selectedTab == 1 {
+                    }
+                    /* Commenting out QR code tab for MVP
+                    else if selectedTab == 1 {
                         // QR CODE TAB CONTENT - Use the dedicated component from QRCodeScreen.swift
                         QRCodeContent()
-                    } else if selectedTab == 2 {
+                    }
+                    */
+                    else if selectedTab == 1 { // Changed from 2 to 1 since we removed the QR code tab
                         // INVITE VIA TEXT TAB CONTENT - Use the dedicated component from InviteViaTextContent.swift
                         InviteViaTextContent()
                     }
@@ -353,7 +358,7 @@ extension AddFriendView {
     private func inviteContact(_ contact: CNContact) {
         // Switch to the invite tab with the contact pre-selected
         withAnimation {
-            selectedTab = 2
+            selectedTab = 1
         }
         
         // Show success message
@@ -602,21 +607,6 @@ struct SimpleFriend: Identifiable {
     var initials: String {
         let components = name.components(separatedBy: " ")
         return components.prefix(2).compactMap { $0.first }.map(String.init).joined()
-    }
-}
-
-// MARK: - Helper Extensions
-// Helper extension for placeholder text
-extension View {
-    func placeholder<Content: View>(
-        when shouldShow: Bool,
-        alignment: Alignment = .leading,
-        @ViewBuilder placeholder: () -> Content) -> some View {
-        
-        ZStack(alignment: alignment) {
-            placeholder().opacity(shouldShow ? 1 : 0)
-            self
-        }
     }
 }
 

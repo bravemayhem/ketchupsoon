@@ -45,6 +45,11 @@ class UserOnboardingViewModel: ObservableObject {
     // User profile data
     @Published var profileData = ProfileData()
     
+    // Add new properties for handling existing accounts
+    @Published var existingAccountFound = false
+    @Published var existingUserId: String? = nil
+    @Published var showExistingAccountAlert = false
+    
     // Profile data structure
     struct ProfileData {
         var name: String = ""
@@ -158,23 +163,106 @@ class UserOnboardingViewModel: ObservableObject {
         
         // Sign in with credential
         Auth.auth().signIn(with: credential) { [weak self] (authResult, error) in
-            DispatchQueue.main.async {
-                self?.isVerifying = false
+            guard let self = self else { return }
+            
+            Task { @MainActor in
+                defer {
+                    self.isVerifying = false
+                }
                 
                 if let error = error {
-                    self?.authError = error
-                    self?.showingError = true
+                    self.authError = error
+                    self.showingError = true
                     return
                 }
                 
-                // Authentication successful
-                self?.isVerified = true
-                self?.savePhoneNumber()
-                
-                // Move to next screen
-                self?.nextStep()
+                // Check if this phone number already has an account
+                do {
+                    let (exists, userId) = try await self.userRepository.checkPhoneNumberExists(self.phoneNumber)
+                    
+                    if exists, let existingUserId = userId {
+                        // An account with this phone number already exists
+                        self.logger.info("Found existing account with phone number \(self.phoneNumber), user ID: \(existingUserId)")
+                        
+                        // Store the existing user ID
+                        self.existingAccountFound = true
+                        self.existingUserId = existingUserId
+                        
+                        // Check if the current authenticated user has the same ID
+                        if let currentUser = Auth.auth().currentUser, currentUser.uid == existingUserId {
+                            // Already signed in to the existing account
+                            self.logger.info("Already signed in to existing account")
+                            
+                            // Save the phone number
+                            self.savePhoneNumber()
+                            self.isVerified = true
+                            
+                            // Show alert about existing account
+                            self.showExistingAccountAlert = true
+                        } else {
+                            // Need to sign in to the existing account
+                            self.logger.info("Need to sign in to existing account")
+                            
+                            // Attempting to automatically sign in to the correct account
+                            try await self.signInToExistingAccount(userId: existingUserId)
+                        }
+                        
+                        return
+                    }
+                    
+                    // No existing account found, continue with new account flow
+                    self.logger.info("No existing account found, continuing with new account creation")
+                    self.isVerified = true
+                    self.savePhoneNumber()
+                    
+                    // Move to next screen
+                    self.nextStep()
+                    
+                } catch {
+                    self.logger.error("Error checking for existing account: \(error.localizedDescription)")
+                    self.authError = error
+                    self.showingError = true
+                }
             }
         }
+    }
+    
+    // New method to sign in to an existing account
+    private func signInToExistingAccount(userId: String) async throws {
+        // This is a bit tricky since we've already authenticated with Firebase Auth
+        // but with potentially a different UID
+        
+        // We need to store that this phone number is associated with the existing userId
+        logger.info("Signing in to existing account with ID: \(userId)")
+        
+        // Store the existing user ID for reference
+        existingUserId = userId
+        
+        // Save the phone number
+        savePhoneNumber()
+        isVerified = true
+        
+        // Show the alert to inform the user about the existing account
+        showExistingAccountAlert = true
+    }
+    
+    // Function to handle what happens when user acknowledges they have an existing account
+    func handleExistingAccountConfirmation() {
+        // Clear any new account data
+        self.profileData = ProfileData()
+        
+        // Mark the user as verified
+        self.isVerified = true
+        
+        // Skip to the success screen
+        self.goToStep(4)
+        
+        // Notify the app that onboarding is complete
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            OnboardingManager.shared.completeOnboarding()
+        }
+        
+        logger.info("User confirmed existing account, skipping to end of onboarding")
     }
     
     // Save authenticated phone number to user profile

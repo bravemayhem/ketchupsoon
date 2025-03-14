@@ -20,6 +20,7 @@ struct SettingsView: View {
     @EnvironmentObject private var firebaseSyncService: FirebaseSyncService
     @State private var errorMessage: String?
     @State private var isLoading = false
+    @State private var showingSignOutAlert = false
     
     var body: some View {
         ZStack {
@@ -78,6 +79,18 @@ struct SettingsView: View {
                                     icon: "person.circle",
                                     iconColor: AppColors.accent,
                                     hasChevron: true,
+                                    isLast: false
+                                )
+                            }
+                            
+                            Button {
+                                showingSignOutAlert = true
+                            } label: {
+                                menuItem(
+                                    title: "Sign Out",
+                                    icon: "rectangle.portrait.and.arrow.right",
+                                    iconColor: Color(hex: "FF2D55"),
+                                    textColor: Color(hex: "FF2D55"),
                                     isLast: true
                                 )
                             }
@@ -210,6 +223,16 @@ struct SettingsView: View {
             }
         } message: {
             Text("This will reset the onboarding flow and take you to the onboarding process immediately.")
+        }
+        .alert("Sign Out", isPresented: $showingSignOutAlert) {
+            Button("Cancel", role: .cancel) { }
+            Button("Sign Out", role: .destructive) {
+                Task {
+                    await signOut()
+                }
+            }
+        } message: {
+            Text("Are you sure you want to sign out?")
         }
         .alert("Error", isPresented: .constant(errorMessage != nil), actions: {
             Button("OK") {
@@ -459,6 +482,29 @@ extension SettingsView {
             isLoading = false
             errorMessage = "Failed to delete data store: \(error.localizedDescription)"
             logger.error("Error deleting data store: \(error.localizedDescription)")
+        }
+    }
+}
+
+// MARK: - Authentication Methods
+extension SettingsView {
+    private func signOut() async {
+        do {
+            isLoading = true
+            errorMessage = nil
+            
+            // Use SocialAuthManager for sign out since it handles both Firebase Auth
+            // and updating profile status
+            try await socialAuthManager.signOut()
+            
+            // Close the settings view after signing out
+            dismiss()
+            
+            logger.info("User successfully signed out")
+        } catch {
+            isLoading = false
+            errorMessage = "Failed to sign out: \(error.localizedDescription)"
+            logger.error("Error signing out: \(error.localizedDescription)")
         }
     }
 }
