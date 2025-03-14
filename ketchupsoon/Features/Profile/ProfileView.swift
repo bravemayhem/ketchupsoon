@@ -47,7 +47,6 @@ struct ProfileView<ViewModel>: View where ViewModel: AnyObject & ProfileViewMode
                         profileContent
                     }
                 }
-                .padding(.horizontal)
                 .padding(.bottom, 80) // Extra padding for bottom action buttons
             }
             .refreshable {
@@ -94,7 +93,7 @@ struct ProfileView<ViewModel>: View where ViewModel: AnyObject & ProfileViewMode
                     }
                 }
             }
-        }
+        }                        
         .onAppear {
             // Add debugging to track view lifecycle
             // Use a UUID instead of ObjectIdentifier since 'self' is a struct
@@ -244,7 +243,7 @@ struct ProfileView<ViewModel>: View where ViewModel: AnyObject & ProfileViewMode
             
             // User name
             Text(viewModel.userName)
-                .font(.system(size: 30, weight: .bold))
+                .font(.system(size: 25, weight: .bold))
                 .foregroundColor(.white)
                 .multilineTextAlignment(.center)
                 .shadow(color: Color.black.opacity(0.3), radius: 2, x: 0, y: 1)
@@ -260,9 +259,32 @@ struct ProfileView<ViewModel>: View where ViewModel: AnyObject & ProfileViewMode
                     .padding(.top, 5)
             }
             
-            // Additional profile sections can be customized and added here
-            // This could be conditionally shown based on view model properties
+            // User info section for phone and birthday
+            VStack(spacing: 12) {
+                if !viewModel.phoneNumber.isEmpty {
+                    HStack(spacing: 8) {
+                        Text("📱")
+                        Text(formatPhoneForDisplay(viewModel.phoneNumber))
+                            .font(.system(size: 16))
+                    }
+                    .frame(maxWidth: .infinity, alignment: .center)
+                }
+                
+                if let birthday = viewModel.birthday {
+                    HStack(spacing: 8) {
+                        Text("🎂")
+                        Text(formatBirthdayForDisplay(birthday))
+                            .font(.system(size: 16))
+                    }
+                    .frame(maxWidth: .infinity, alignment: .center)
+                }
+            }
+            .padding(.top, 10)
         }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 20)
+        .clayMorphism(cornerRadius: 30)
+        .padding(.horizontal, 10)
     }
     
     // MARK: - Edit Form
@@ -355,6 +377,56 @@ extension ProfileView {
     }
 }
 
+// MARK: - Helper Methods
+extension ProfileView {
+    // Helper to format phone number for display
+    private func formatPhoneForDisplay(_ phone: String) -> String {
+        // Only keep digits
+        let cleaned = phone.filter { $0.isNumber }
+        
+        // For short numbers, just return the original
+        if cleaned.count < 10 {
+            return phone
+        }
+        
+        var formatted = ""
+        
+        // If there are more than 10 digits, add the extra digits at the beginning
+        if cleaned.count > 10 {
+            let extraDigits = String(cleaned.prefix(cleaned.count - 10))
+            formatted += extraDigits + " "
+        }
+        
+        // Get the last 10 digits for standard formatting
+        let lastTenDigits = cleaned.count > 10 ? 
+            String(cleaned.suffix(10)) : cleaned
+        
+        // Format the last 10 digits as (XXX) XXX-XXXX
+        for (index, character) in lastTenDigits.enumerated() {
+            if index == 0 {
+                formatted += "("
+            }
+            if index == 3 {
+                formatted += ") "
+            }
+            if index == 6 {
+                formatted += "-"
+            }
+            formatted.append(character)
+        }
+        
+        return formatted
+    }
+    
+    // Helper to format birthday for display
+    private func formatBirthdayForDisplay(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
+        return formatter.string(from: date)
+    }
+}
+
 // MARK: - Preview
 #Preview {
     // Create a sample user for preview
@@ -385,6 +457,8 @@ class PreviewProfileViewModel: ProfileViewModel {
     var canEdit: Bool = true
     var showActions: Bool = false
     var isInitialDataLoad: Bool = true
+    var phoneNumber: String = "(555) 123-4567" 
+    var birthday: Date? = Date() // Current date as placeholder
     
     // Repository and services
     var userRepository: UserRepository?

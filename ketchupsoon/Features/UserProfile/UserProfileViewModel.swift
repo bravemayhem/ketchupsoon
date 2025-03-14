@@ -605,21 +605,39 @@ class UserProfileViewModel: ObservableObject, ProfileViewModel {
         self.userBio = profile.bio ?? ""
         self.logger.debug("Setting userBio to '\(self.userBio)' from profile manager")
         
+        // Always set the birthday from profile if available
         if let profileBirthday = profile.birthday {
             self.birthday = profileBirthday
-            self.logger.debug("Setting birthday to \(profileBirthday)")
+            self.logger.debug("Setting birthday to \(profileBirthday) from profile manager")
         }
         
-        // Email and phone from Auth if available
+        // Get phone number from profile if available
+        if let profilePhone = profile.phoneNumber, !profilePhone.isEmpty {
+            self.phoneNumber = profilePhone
+            self.logger.debug("Setting phoneNumber to '\(self.phoneNumber)' from profile manager")
+        }
+        
+        // Get email from profile if available
+        if let profileEmail = profile.email, !profileEmail.isEmpty {
+            self.email = profileEmail
+            self.logger.debug("Setting email to '\(self.email)' from profile manager")
+        }
+        
+        // Fallback to Auth for email and phone if still empty
         if let user = Auth.auth().currentUser {
             if !user.email.isNilOrEmpty && self.email.isEmpty {
                 self.email = user.email ?? ""
+                self.logger.debug("Setting email to '\(self.email)' from Auth")
             }
             
             if !user.phoneNumber.isNilOrEmpty && self.phoneNumber.isEmpty {
                 self.phoneNumber = user.phoneNumber ?? ""
+                self.logger.debug("Setting phoneNumber to '\(self.phoneNumber)' from Auth")
             }
         }
+        
+        // Force UI update to ensure all fields are refreshed
+        self.objectWillChange.send()
     }
 }
 

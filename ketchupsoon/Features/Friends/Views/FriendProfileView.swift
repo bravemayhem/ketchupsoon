@@ -82,13 +82,13 @@ struct FriendProfileView: View {
             Task {
                 // Initial data load when view appears
                 await refreshFriendData()
-                // Start listening for real-time updates
-                startRealTimeUpdates()
+                // Start listening for real-time updates - REMOVED
+                // startRealTimeUpdates()
             }
         }
         .onDisappear {
-            // Clean up listener when view disappears
-            stopRealTimeUpdates()
+            // Clean up listener when view disappears - REMOVED
+            // stopRealTimeUpdates()
         }
         .alert("Error", isPresented: .constant(errorMessage != nil), actions: {
             Button("OK") {
@@ -361,6 +361,11 @@ extension FriendProfileView {
         }
     }
     
+    // The real-time update methods below are now marked as unused and can be removed
+    // in a future cleanup, but we'll keep them commented out for now in case we need
+    // to revert changes
+    
+    /*
     // Set up real-time updates for this friend
     private func startRealTimeUpdates() {
         // Create a listener for this specific user document
@@ -407,8 +412,6 @@ extension FriendProfileView {
         self.userDocumentListener = listener
     }
     
-    // Track our listener is managed with @State above
-    
     // Clean up listeners when the view disappears
     private func stopRealTimeUpdates() {
         // Remove the listener if it exists
@@ -416,6 +419,7 @@ extension FriendProfileView {
         userDocumentListener = nil
         logger.info("Stopped real-time updates for friend profile")
     }
+    */
 }
 
 // Refreshable scroll view implementation

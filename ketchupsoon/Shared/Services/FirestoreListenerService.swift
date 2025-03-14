@@ -182,8 +182,8 @@ class FirestoreListenerService: ObservableObject, AuthStateSubscriber {
         currentUserID = userID
         lastListenerStartTime = Date()
         
-        // Start listening for user profile updates
-        startUserListener(for: userID)
+        // We're removing real-time profile updates - no longer calling startUserListener
+        // Keep only friendship listeners which are more critical for app functionality
         
         // Start listening for friendship updates
         startFriendshipsListener(for: userID)
@@ -191,7 +191,7 @@ class FirestoreListenerService: ObservableObject, AuthStateSubscriber {
         isListening = true
         
         if FirebaseOperationCoordinator.shared.logVerbosity >= .important {
-            logger.notice("Started listening for real-time updates for user \(userID)")
+            logger.notice("Started listening for friendship updates for user \(userID)")
         }
         
         // Queue an operation to sync data
@@ -202,6 +202,7 @@ class FirestoreListenerService: ObservableObject, AuthStateSubscriber {
             minInterval: 5.0,
             operation: { [self] in
                 do {
+                    // We still do an initial sync of user data, just not real-time updates
                     try await self.userRepository.refreshCurrentUser()
                     try await self.friendshipRepository.syncLocalWithRemote(for: userID)
                 } catch {

@@ -23,18 +23,8 @@ enum ProfileFactory {
             firebaseSyncService: firebaseSyncService
         )
         
-        switch viewModel {
-        case let userViewModel as UserProfileViewModel:
-            return AnyView(ProfileView(viewModel: userViewModel)
-                .environmentObject(firebaseSyncService))
-            
-        case let friendViewModel as FriendProfileViewModel:
-            return AnyView(ProfileView(viewModel: friendViewModel)
-                .environmentObject(firebaseSyncService))
-            
-        default:
-            // This should never happen if the factory is properly implemented
-            return AnyView(Text("Invalid profile type"))
-        }
+        // Now we're directly using the concrete CombinedProfileViewModel, no need for type casting
+        return AnyView(ProfileView(viewModel: viewModel)
+            .environmentObject(firebaseSyncService))
     }
 }
