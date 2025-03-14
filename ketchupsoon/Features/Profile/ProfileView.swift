@@ -67,53 +67,33 @@ struct ProfileView<ViewModel>: View where ViewModel: AnyObject & ProfileViewMode
                 profileActionButtons
             }
             
-            // TEST BUTTON OVERLAY - Bright and positioned at top to confirm it appears
-            VStack {
-                HStack {
-                    Spacer()
-                    Button(action: {
-                        print("🔴 DEBUG: TEST EDIT BUTTON TAPPED")
-                        viewModel.isEditMode = true
-                    }) {
-                        Text("EDIT")
-                            .bold()
-                            .padding(8)
-                            .background(Color.red)
-                            .foregroundColor(.white)
-                            .cornerRadius(8)
-                    }
-                    .padding(.top, 50)
-                    .padding(.trailing, 20)
-                }
-                Spacer()
-            }
-            
-            // Old edit button (commented out for now)
-            /*
-            VStack {
-                Spacer()
-                HStack {
-                    Spacer()
-                    Button(action: {
-                        print("🛠️ DEBUG: Edit button tapped")
-                        viewModel.isEditMode = true
-                    }) {
-                        ZStack {
-                            Circle()
-                                .fill(AppColors.accentGradient)
-                                .frame(width: 56, height: 56)
-                                .shadow(color: AppColors.purple.opacity(0.5), radius: 5, x: 0, y: 3)
-                            
-                            Image(systemName: "pencil")
-                                .font(.system(size: 22, weight: .bold))
-                                .foregroundColor(.white)
+            // Edit button with the proper styling and position
+            if viewModel.canEdit && !viewModel.isEditMode {
+                VStack {
+                    Spacer() // Push to bottom
+                    HStack {
+                        Spacer() // Push to right side
+                        Button(action: {
+                            print("🛠️ DEBUG: Edit button tapped")
+                            viewModel.isEditMode = true
+                        }) {
+                            ZStack {
+                                Circle()
+                                    .fill(AppColors.accentGradient)
+                                    .frame(width: 56, height: 56)
+                                    .shadow(color: AppColors.purple.opacity(0.5), radius: 5, x: 0, y: 3)
+                                
+                                Image(systemName: "pencil")
+                                    .font(.system(size: 22, weight: .bold))
+                                    .foregroundColor(.white)
+                            }
                         }
+                        .padding(.trailing, 24)
+                        .padding(.bottom, 100)
+                        .zIndex(10) // Ensure it's above other content
                     }
-                    .padding(.trailing, 24)
-                    .padding(.bottom, 24)
                 }
             }
-            */
             
             // Loading overlay
             if viewModel.isLoading {
@@ -343,6 +323,10 @@ struct ProfileView<ViewModel>: View where ViewModel: AnyObject & ProfileViewMode
                         Text("📱")
                         Text(formatPhoneForDisplay(viewModel.phoneNumber))
                             .font(.system(size: 16))
+                        // Add lock icon to show phone number is not editable
+                        Image(systemName: "lock.fill")
+                            .font(.system(size: 12))
+                            .foregroundColor(.white.opacity(0.7))
                     }
                     .frame(maxWidth: .infinity, alignment: .center)
                 }
@@ -374,87 +358,147 @@ struct ProfileView<ViewModel>: View where ViewModel: AnyObject & ProfileViewMode
                 .foregroundColor(.white)
                 .padding(.top, 10)
             
-            // Profile image section
-            ZStack {
-                // Circle background with gradient
-                Circle()
-                    .fill(viewModel.profileRingGradient)
-                    .frame(width: 150, height: 150)
-                    .modifier(GlowModifier(color: AppColors.purple, radius: 12, opacity: 0.8))
-                    .shadow(color: AppColors.purple.opacity(0.5), radius: 8, x: 0, y: 0)
-                
-                // Profile image or emoji
-                if let image = viewModel.profileImage ?? viewModel.cachedProfileImage {
-                    Image(uiImage: image)
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                        .frame(width: 140, height: 140)
-                        .clipShape(Circle())
-                } else {
-                    Text(viewModel.profileEmoji)
-                        .font(.system(size: 50))
-                        .frame(width: 140, height: 140)
-                }
-                
-                // Camera button
-                VStack {
-                    Spacer()
-                    HStack {
+            // Wrap the entire content in claymorphism, not just the form fields
+            VStack(spacing: 20) {
+                // Profile image section
+                ZStack {
+                    // Circle background with gradient
+                    Circle()
+                        .fill(viewModel.profileRingGradient)
+                        .frame(width: 150, height: 150)
+                        .modifier(GlowModifier(color: AppColors.purple, radius: 12, opacity: 0.8))
+                        .shadow(color: AppColors.purple.opacity(0.5), radius: 8, x: 0, y: 0)
+                    
+                    // Profile image or emoji
+                    if let image = viewModel.profileImage ?? viewModel.cachedProfileImage {
+                        Image(uiImage: image)
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(width: 140, height: 140)
+                            .clipShape(Circle())
+                    } else {
+                        Text(viewModel.profileEmoji)
+                            .font(.system(size: 50))
+                            .frame(width: 140, height: 140)
+                    }
+                    
+                    // Camera button
+                    VStack {
                         Spacer()
-                        Button {
-                            showSourceTypeActionSheet = true
-                        } label: {
-                            ZStack {
-                                Circle()
-                                    .fill(AppColors.accentGradient)
-                                    .frame(width: 44, height: 44)
-                                    .shadow(color: Color.black.opacity(0.3), radius: 4, x: 0, y: 2)
+                        HStack {
+                            Spacer()
+                            Button {
+                                showSourceTypeActionSheet = true
+                            } label: {
+                                ZStack {
+                                    Circle()
+                                        .fill(AppColors.accentGradient)
+                                        .frame(width: 44, height: 44)
+                                        .shadow(color: Color.black.opacity(0.3), radius: 4, x: 0, y: 2)
+                                    
+                                    Image(systemName: "camera.fill")
+                                        .font(.system(size: 18, weight: .bold))
+                                        .foregroundColor(.white)
+                                }
+                            }
+                            .offset(x: 10, y: 10)
+                        }
+                    }
+                    .frame(width: 140, height: 140)
+                }
+                .padding(.bottom, 10)
+                
+                // Form fields
+                VStack(spacing: 16) {
+                    // Name field - Now using local state variable
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Name")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(.white.opacity(0.8))
+                        
+                        TextField("Your name", text: $editName)
+                            .padding()
+                            .background(Color.white.opacity(0.1))
+                            .cornerRadius(10)
+                            .foregroundColor(.white)
+                    }
+                    
+                    // Bio field - Now using local state variable
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Bio")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(.white.opacity(0.8))
+                        
+                        TextField("Your bio", text: $editBio)
+                            .padding()
+                            .background(Color.white.opacity(0.1))
+                            .cornerRadius(10)
+                            .foregroundColor(.white)
+                    }
+                    
+                    // Birthday field
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Birthday")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(.white.opacity(0.8))
+                        
+                        // Get a date 18 years ago for default birthday
+                        let defaultDate = Calendar.current.date(byAdding: .year, value: -18, to: Date()) ?? Date()
+                        
+                        DatePicker(
+                            "",
+                            selection: Binding(
+                                get: { viewModel.birthday ?? defaultDate },
+                                set: { newDate in
+                                    // This is needed since ProfileViewModel has birthday as a get-only property
+                                    if let userVM = viewModel as? UserProfileViewModel {
+                                        userVM.birthday = newDate
+                                    } else if let combinedVM = viewModel as? CombinedProfileViewModel {
+                                        combinedVM.birthday = newDate
+                                    }
+                                }
+                            ),
+                            in: ...Date(),
+                            displayedComponents: .date
+                        )
+                        .padding()
+                        .background(Color.white.opacity(0.1))
+                        .cornerRadius(10)
+                        .foregroundColor(.white)
+                        .datePickerStyle(.compact)
+                        .tint(.white)
+                    }
+                    
+                    // Phone number display (not editable) with lock icon
+                    if !viewModel.phoneNumber.isEmpty {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Phone")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundColor(.white.opacity(0.8))
+                            
+                            HStack {
+                                Text(formatPhoneForDisplay(viewModel.phoneNumber))
+                                    .padding()
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .background(Color.white.opacity(0.05))
+                                    .cornerRadius(10)
+                                    .foregroundColor(.white.opacity(0.8))
                                 
-                                Image(systemName: "camera.fill")
-                                    .font(.system(size: 18, weight: .bold))
-                                    .foregroundColor(.white)
+                                Image(systemName: "lock.fill")
+                                    .font(.system(size: 14))
+                                    .foregroundColor(.white.opacity(0.7))
+                                    .padding(.trailing, 10)
                             }
                         }
-                        .offset(x: 10, y: 10)
                     }
-                }
-                .frame(width: 140, height: 140)
-            }
-            .padding(.bottom, 20)
-            
-            // Form fields with clayMorphism styling
-            VStack(spacing: 16) {
-                // Name field - Now using local state variable
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Name")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(.white.opacity(0.8))
                     
-                    TextField("Your name", text: $editName)
-                        .padding()
-                        .background(Color.white.opacity(0.1))
-                        .cornerRadius(10)
-                        .foregroundColor(.white)
+                    // Add other fields as needed
                 }
-                
-                // Bio field - Now using local state variable
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Bio")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(.white.opacity(0.8))
-                    
-                    TextField("Your bio", text: $editBio)
-                        .padding()
-                        .background(Color.white.opacity(0.1))
-                        .cornerRadius(10)
-                        .foregroundColor(.white)
-                }
-                
-                // Add other fields as needed
+                .padding(.horizontal, 20)
             }
-            .padding(.horizontal, 20)
-            .clayMorphism(cornerRadius: 20)
-            .padding(.horizontal, 16)
+            .padding(.vertical, 20)
+            .clayMorphism(cornerRadius: 30)
+            .padding(.horizontal, 10)
             
             // Save and cancel buttons
             HStack(spacing: 16) {
@@ -493,7 +537,7 @@ struct ProfileView<ViewModel>: View where ViewModel: AnyObject & ProfileViewMode
                 )
             }
             .padding(.horizontal, 16)
-            .padding(.top, 24)
+            .padding(.top, 16)
         }
         .padding(.vertical, 20)
     }
@@ -553,17 +597,22 @@ struct ProfileView<ViewModel>: View where ViewModel: AnyObject & ProfileViewMode
             // Set the edited values on the view model before saving
             userProfileViewModel.name = name
             userProfileViewModel.bio = bio
-            // Can't set userName/userBio directly as they're read-only in the protocol
+            // Birthday changes are set directly on the viewModel via the DatePicker binding
             
             userProfileViewModel.saveProfile()
             viewModel.isEditMode = false
+            
+            print("🔍 DEBUG: Saving profile with name: \(name), bio: \(bio), birthday: \(String(describing: userProfileViewModel.birthday))")
         } else if let combinedViewModel = viewModel as? CombinedProfileViewModel {
             // If using the CombinedProfileViewModel
             combinedViewModel.name = name
             combinedViewModel.bio = bio
+            // Birthday changes are set directly on the viewModel via the DatePicker binding
             
             await combinedViewModel.saveProfile()
             viewModel.isEditMode = false
+            
+            print("🔍 DEBUG: Saving profile with name: \(name), bio: \(bio), birthday: \(String(describing: combinedViewModel.birthday))")
         }
     }
     
