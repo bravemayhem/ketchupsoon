@@ -77,6 +77,17 @@ class CombinedProfileViewModel: ObservableObject, ProfileViewModel {
     // MARK: - Profile Type
     private let profileType: ProfileType
     
+    // MARK: - Debug Properties
+    // This is added for debugging purposes
+    var profileTypeDescription: String {
+        switch profileType {
+        case .currentUser:
+            return "currentUser"
+        case .friend(let model):
+            return "friend(\(model.id))"
+        }
+    }
+    
     // MARK: - ProfileViewModel Protocol Properties
     var id: String {
         switch profileType {

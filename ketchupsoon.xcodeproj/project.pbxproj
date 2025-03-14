@@ -761,13 +761,6 @@
 			path = Forms;
 			sourceTree = "<group>";
 		};
-		A5BBC66F2D83D34400BC320F /* FriendProfileComponents */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = FriendProfileComponents;
-			sourceTree = "<group>";
-		};
 		A5BBC6742D83D34400BC320F /* Navigation */ = {
 			isa = PBXGroup;
 			children = (
@@ -786,7 +779,6 @@
 				A5BBC6602D83D34400BC320F /* Colors */,
 				A5BBC6642D83D34400BC320F /* Confetti */,
 				A5BBC66E2D83D34400BC320F /* Forms */,
-				A5BBC66F2D83D34400BC320F /* FriendProfileComponents */,
 				A5BBC6742D83D34400BC320F /* Navigation */,
 				A5BBC6752D83D34400BC320F /* CropView.swift */,
 				A5BBC6762D83D34400BC320F /* FirebaseConfigDebugView.swift */,

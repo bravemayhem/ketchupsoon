@@ -50,6 +50,9 @@ Package.resolved
 
 Carthage/Build/
 
+# Firebase
+GoogleService-Info.plist
+
 # Accidental generated files
 .DS_Store
 .Trashes

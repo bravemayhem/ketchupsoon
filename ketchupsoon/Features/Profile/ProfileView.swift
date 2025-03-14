@@ -22,6 +22,11 @@ struct ProfileView<ViewModel>: View where ViewModel: AnyObject & ProfileViewMode
     @State private var sourceType: UIImagePickerController.SourceType = .photoLibrary
     @State private var showCropView: Bool = false
     
+    // Edit form state
+    @State private var editName: String = ""
+    @State private var editBio: String = ""
+    @State private var isSaving: Bool = false
+    
     // MARK: - Logger
     private let logger = Logger(subsystem: "com.ketchupsoon", category: "ProfileView")
     
@@ -62,6 +67,54 @@ struct ProfileView<ViewModel>: View where ViewModel: AnyObject & ProfileViewMode
                 profileActionButtons
             }
             
+            // TEST BUTTON OVERLAY - Bright and positioned at top to confirm it appears
+            VStack {
+                HStack {
+                    Spacer()
+                    Button(action: {
+                        print("🔴 DEBUG: TEST EDIT BUTTON TAPPED")
+                        viewModel.isEditMode = true
+                    }) {
+                        Text("EDIT")
+                            .bold()
+                            .padding(8)
+                            .background(Color.red)
+                            .foregroundColor(.white)
+                            .cornerRadius(8)
+                    }
+                    .padding(.top, 50)
+                    .padding(.trailing, 20)
+                }
+                Spacer()
+            }
+            
+            // Old edit button (commented out for now)
+            /*
+            VStack {
+                Spacer()
+                HStack {
+                    Spacer()
+                    Button(action: {
+                        print("🛠️ DEBUG: Edit button tapped")
+                        viewModel.isEditMode = true
+                    }) {
+                        ZStack {
+                            Circle()
+                                .fill(AppColors.accentGradient)
+                                .frame(width: 56, height: 56)
+                                .shadow(color: AppColors.purple.opacity(0.5), radius: 5, x: 0, y: 3)
+                            
+                            Image(systemName: "pencil")
+                                .font(.system(size: 22, weight: .bold))
+                                .foregroundColor(.white)
+                        }
+                    }
+                    .padding(.trailing, 24)
+                    .padding(.bottom, 24)
+                }
+            }
+            */
+            
             // Loading overlay
             if viewModel.isLoading {
                 LoadingOverlay()
@@ -78,17 +131,11 @@ struct ProfileView<ViewModel>: View where ViewModel: AnyObject & ProfileViewMode
             }
             
             ToolbarItem(placement: .navigationBarTrailing) {
-                if viewModel.canEdit {
-                    if viewModel.isEditMode {
-                        Button("Save") {
-                            // Save logic handled by view model
-                            Task {
-                                await saveProfile()
-                            }
-                        }
-                    } else {
-                        Button("Edit") {
-                            viewModel.isEditMode = true
+                if viewModel.canEdit && viewModel.isEditMode {
+                    Button("Save") {
+                        // Save logic handled by view model
+                        Task {
+                            await saveProfile(name: editName, bio: editBio)
                         }
                     }
                 }
@@ -100,6 +147,28 @@ struct ProfileView<ViewModel>: View where ViewModel: AnyObject & ProfileViewMode
             let viewInstanceId = UUID().uuidString.prefix(6)
             print("🔍 DEBUG: ProfileView.onAppear - Instance: \(viewInstanceId)")
             
+            // ADDED: Additional detailed debug information
+            print("🔬 DETAILED DEBUG: Profile View Model Analysis:")
+            print("- Type: \(type(of: viewModel))")
+            print("- canEdit: \(viewModel.canEdit)")
+            print("- isEditMode: \(viewModel.isEditMode)")
+            print("- userName: \"\(viewModel.userName)\"")
+            print("- Protocol conformance: Yes (guaranteed by generic constraint)")
+            
+            // Original debug
+            print("🛠️ DEBUG: canEdit = \(viewModel.canEdit), isEditMode = \(viewModel.isEditMode)")
+            print("🛠️ DEBUG: View model type: \(type(of: viewModel))")
+            print("🛠️ DEBUG: userName = \(viewModel.userName)")
+            
+            // ADDED: Debug the profile type in CombinedProfileViewModel
+            if let combinedVM = viewModel as? CombinedProfileViewModel {
+                print("🔍 DEBUG: ProfileType = \(combinedVM.profileTypeDescription)")
+            }
+            
+            // Initialize edit form state with current values
+            editName = viewModel.userName
+            editBio = viewModel.userBio
+            
             // Only trigger a fresh load if we have no data yet to avoid unnecessary loading
             // This works with our debouncing mechanism in UserProfileViewModel
             if viewModel.isInitialDataLoad {
@@ -107,6 +176,14 @@ struct ProfileView<ViewModel>: View where ViewModel: AnyObject & ProfileViewMode
                 Task {
                     print("🔍 DEBUG: ProfileView starting loadProfile task - Instance: \(viewInstanceId)")
                     await viewModel.loadProfile()
+            
+                    // Update edit form state after loading
+                    editName = viewModel.userName
+                    editBio = viewModel.userBio
+                    
+                    // Print debug info after loading
+                    print("🛠️ DEBUG: After loading - canEdit = \(viewModel.canEdit), isEditMode = \(viewModel.isEditMode)")
+            
                     print("🔍 DEBUG: ProfileView completed loadProfile task - Instance: \(viewInstanceId)")
                 }
             } else {
@@ -291,7 +368,134 @@ struct ProfileView<ViewModel>: View where ViewModel: AnyObject & ProfileViewMode
     private var profileEditContent: some View {
         // This is a placeholder that should be implemented based on your app's requirements
         // This should only be visible when the profile is editable and in edit mode
-        Text("Edit form would go here")
+        VStack(spacing: 20) {
+            Text("Edit Profile")
+                .font(.system(size: 24, weight: .bold))
+                .foregroundColor(.white)
+                .padding(.top, 10)
+            
+            // Profile image section
+            ZStack {
+                // Circle background with gradient
+                Circle()
+                    .fill(viewModel.profileRingGradient)
+                    .frame(width: 150, height: 150)
+                    .modifier(GlowModifier(color: AppColors.purple, radius: 12, opacity: 0.8))
+                    .shadow(color: AppColors.purple.opacity(0.5), radius: 8, x: 0, y: 0)
+                
+                // Profile image or emoji
+                if let image = viewModel.profileImage ?? viewModel.cachedProfileImage {
+                    Image(uiImage: image)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: 140, height: 140)
+                        .clipShape(Circle())
+                } else {
+                    Text(viewModel.profileEmoji)
+                        .font(.system(size: 50))
+                        .frame(width: 140, height: 140)
+                }
+                
+                // Camera button
+                VStack {
+                    Spacer()
+                    HStack {
+                        Spacer()
+                        Button {
+                            showSourceTypeActionSheet = true
+                        } label: {
+                            ZStack {
+                                Circle()
+                                    .fill(AppColors.accentGradient)
+                                    .frame(width: 44, height: 44)
+                                    .shadow(color: Color.black.opacity(0.3), radius: 4, x: 0, y: 2)
+                                
+                                Image(systemName: "camera.fill")
+                                    .font(.system(size: 18, weight: .bold))
+                                    .foregroundColor(.white)
+                            }
+                        }
+                        .offset(x: 10, y: 10)
+                    }
+                }
+                .frame(width: 140, height: 140)
+            }
+            .padding(.bottom, 20)
+            
+            // Form fields with clayMorphism styling
+            VStack(spacing: 16) {
+                // Name field - Now using local state variable
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Name")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(.white.opacity(0.8))
+                    
+                    TextField("Your name", text: $editName)
+                        .padding()
+                        .background(Color.white.opacity(0.1))
+                        .cornerRadius(10)
+                        .foregroundColor(.white)
+                }
+                
+                // Bio field - Now using local state variable
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Bio")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(.white.opacity(0.8))
+                    
+                    TextField("Your bio", text: $editBio)
+                        .padding()
+                        .background(Color.white.opacity(0.1))
+                        .cornerRadius(10)
+                        .foregroundColor(.white)
+                }
+                
+                // Add other fields as needed
+            }
+            .padding(.horizontal, 20)
+            .clayMorphism(cornerRadius: 20)
+            .padding(.horizontal, 16)
+            
+            // Save and cancel buttons
+            HStack(spacing: 16) {
+                Button("Cancel") {
+                    // Reset edit form state and exit edit mode
+                    editName = viewModel.userName
+                    editBio = viewModel.userBio
+                    viewModel.isEditMode = false
+                }
+                .padding()
+                .frame(maxWidth: .infinity)
+                .background(Color.white.opacity(0.1))
+                .cornerRadius(10)
+                .foregroundColor(.white)
+                
+                Button("Save") {
+                    Task {
+                        // Pass the edited values to save method
+                        await saveProfile(name: editName, bio: editBio)
+                    }
+                }
+                .padding()
+                .frame(maxWidth: .infinity)
+                .background(AppColors.accentGradient)
+                .cornerRadius(10)
+                .foregroundColor(.white)
+                .disabled(isSaving)
+                .overlay(
+                    Group {
+                        if isSaving {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                .scaleEffect(0.8)
+                        }
+                    }
+                )
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 24)
+        }
+        .padding(.vertical, 20)
     }
     
     // MARK: - Action Buttons
@@ -339,10 +543,26 @@ struct ProfileView<ViewModel>: View where ViewModel: AnyObject & ProfileViewMode
     }
     
     // MARK: - Helper Methods
-    private func saveProfile() async {
+    private func saveProfile(name: String, bio: String) async {
+        // Set local save progress state
+        isSaving = true
+        defer { isSaving = false }
+        
         // Profile save logic would depend on which view model is being used
         if let userProfileViewModel = viewModel as? UserProfileViewModel {
+            // Set the edited values on the view model before saving
+            userProfileViewModel.name = name
+            userProfileViewModel.bio = bio
+            // Can't set userName/userBio directly as they're read-only in the protocol
+            
             userProfileViewModel.saveProfile()
+            viewModel.isEditMode = false
+        } else if let combinedViewModel = viewModel as? CombinedProfileViewModel {
+            // If using the CombinedProfileViewModel
+            combinedViewModel.name = name
+            combinedViewModel.bio = bio
+            
+            await combinedViewModel.saveProfile()
             viewModel.isEditMode = false
         }
     }
