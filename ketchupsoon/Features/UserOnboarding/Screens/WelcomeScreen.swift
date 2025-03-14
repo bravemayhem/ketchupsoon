@@ -2,6 +2,7 @@ import SwiftUI
 
 struct WelcomeScreen: View {
     @EnvironmentObject var viewModel: UserOnboardingViewModel
+    @Environment(\.dismiss) private var dismiss
     
     var body: some View {
         VStack(spacing: 0) {
@@ -13,6 +14,31 @@ struct WelcomeScreen: View {
                 }
             )
             .padding(.horizontal, 16)
+            .padding(.bottom, 16)
+            
+            Spacer()
+            
+            // Back to Sign In button
+            Button(action: {
+                // Dismiss the onboarding view to return to sign-in
+                dismiss()
+            }) {
+                HStack {
+                    Image(systemName: "arrow.left")
+                        .font(.system(size: 14))
+                    Text("Back to Sign In")
+                        .font(.custom("SpaceGrotesk-Regular", size: 14))
+                }
+                .foregroundColor(.white.opacity(0.8))
+                .padding(.vertical, 12)
+                .padding(.horizontal, 24)
+                .background(Color.black.opacity(0.3))
+                .cornerRadius(20)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20)
+                        .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                )
+            }
             .padding(.bottom, 16)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

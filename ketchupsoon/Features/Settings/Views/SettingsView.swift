@@ -21,6 +21,8 @@ struct SettingsView: View {
     @State private var errorMessage: String?
     @State private var isLoading = false
     @State private var showingSignOutAlert = false
+    @State private var showingDeleteAccountAlert = false
+    @StateObject private var authManager = AuthManager.shared
     
     var body: some View {
         ZStack {
@@ -89,6 +91,18 @@ struct SettingsView: View {
                                 menuItem(
                                     title: "Sign Out",
                                     icon: "rectangle.portrait.and.arrow.right",
+                                    iconColor: Color(hex: "FF2D55"),
+                                    textColor: Color(hex: "FF2D55"),
+                                    isLast: false
+                                )
+                            }
+                            
+                            Button {
+                                showingDeleteAccountAlert = true
+                            } label: {
+                                menuItem(
+                                    title: "Delete Account",
+                                    icon: "person.crop.circle.badge.xmark",
                                     iconColor: Color(hex: "FF2D55"),
                                     textColor: Color(hex: "FF2D55"),
                                     isLast: true
@@ -233,6 +247,16 @@ struct SettingsView: View {
             }
         } message: {
             Text("Are you sure you want to sign out?")
+        }
+        .alert("Delete Account", isPresented: $showingDeleteAccountAlert) {
+            Button("Cancel", role: .cancel) { }
+            Button("Delete", role: .destructive) {
+                Task {
+                    await deleteAccount()
+                }
+            }
+        } message: {
+            Text("Are you sure you want to delete your account? This action cannot be undone and all your data will be permanently deleted.")
         }
         .alert("Error", isPresented: .constant(errorMessage != nil), actions: {
             Button("OK") {
@@ -505,6 +529,35 @@ extension SettingsView {
             isLoading = false
             errorMessage = "Failed to sign out: \(error.localizedDescription)"
             logger.error("Error signing out: \(error.localizedDescription)")
+        }
+    }
+    
+    private func deleteAccount() async {
+        do {
+            isLoading = true
+            errorMessage = nil
+            
+            // First clear all user data from Firebase
+            if let user = Auth.auth().currentUser {
+                let syncService = firebaseSyncService
+                try await syncService.clearAllUserData(userID: user.uid)
+                logger.info("Successfully cleared all user data from Firebase for user: \(user.uid)")
+            }
+            
+            // Clear local data
+            try await clearLocalData()
+            
+            // Use AuthManager to delete the Firebase account
+            try await authManager.deleteAccount()
+            
+            // Close the settings view after deleting account
+            dismiss()
+            
+            logger.info("User account successfully deleted")
+        } catch {
+            isLoading = false
+            errorMessage = "Failed to delete account: \(error.localizedDescription)"
+            logger.error("Error deleting account: \(error.localizedDescription)")
         }
     }
 }

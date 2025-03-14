@@ -6,8 +6,10 @@ import UIKit
 struct AuthView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var onboardingManager: OnboardingManager
+    @EnvironmentObject private var firebaseSyncService: FirebaseSyncService
     @StateObject private var socialAuthManager = SocialAuthManager.shared
     @State private var phoneNumber = ""
+    @State private var formattedPhoneNumber = ""
     @State private var verificationID: String?
     @State private var verificationCode = ""
     @State private var isVerifying = false
@@ -16,6 +18,9 @@ struct AuthView: View {
     @State private var showError = false
     @State private var animateContent = false
     @State private var showCreateAccountPrompt = false
+    @State private var showOnboarding = false
+    
+    @Environment(\.modelContext) private var modelContext
     
     var onAuthSuccess: () -> Void
     
@@ -32,6 +37,32 @@ struct AuthView: View {
     
     private func hideKeyboard() {
         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+    }
+    
+    // Format phone number for display
+    private func formatPhoneNumber(_ input: String) -> String {
+        // Only keep digits
+        let cleaned = input.filter { $0.isNumber }
+        // Store raw digits for authentication
+        phoneNumber = cleaned
+        
+        // Format as (XXX) XXX-XXXX
+        var formatted = ""
+        for (index, character) in cleaned.enumerated() {
+            if index == 0 {
+                formatted += "("
+            }
+            if index == 3 {
+                formatted += ") "
+            }
+            if index == 6 {
+                formatted += "-"
+            }
+            if index < 10 { // Limit to 10 digits
+                formatted.append(character)
+            }
+        }
+        return formatted
     }
     
     var body: some View {
@@ -56,7 +87,7 @@ struct AuthView: View {
                             )
                             .shadow(color: AppColors.accent.opacity(0.7), radius: 10, x: 0, y: 0)
                         
-                        Text("a social app without all the noise")
+                        Text("but for real though")
                             .font(.custom("SpaceGrotesk-Regular", size: 18))
                             .foregroundColor(.white.opacity(0.8))
                             .multilineTextAlignment(.center)
@@ -66,14 +97,6 @@ struct AuthView: View {
                     .padding(.bottom, 20)
                     .offset(y: animateContent ? 0 : -20)
                     .opacity(animateContent ? 1 : 0)
-                    
-                    // Welcome message
-                    Text(isVerifying ? "Verify your number" : "Welcome to KetchupSoon")
-                        .font(.title2)
-                        .fontWeight(.bold)
-                        .foregroundColor(.white)
-                        .offset(y: animateContent ? 0 : -15)
-                        .opacity(animateContent ? 1 : 0)
                     
                     // Form fields
                     VStack(spacing: 16) {
@@ -86,25 +109,14 @@ struct AuthView: View {
                                 keyboardType: .numberPad
                             )
                             
-                            Text("Enter the 6-digit code sent to \(phoneNumber)")
+                            Text("Enter the 6-digit code sent to \(formattedPhoneNumber)")
                                 .font(.caption)
                                 .foregroundColor(.white.opacity(0.8))
                                 .multilineTextAlignment(.center)
                                 .padding(.horizontal)
                         } else {
                             // Phone number input
-                            customTextField(
-                                text: $phoneNumber,
-                                placeholder: "Phone Number",
-                                icon: "phone.fill",
-                                keyboardType: .phonePad
-                            )
-                            
-                            Text("We'll send a verification code to this number")
-                                .font(.caption)
-                                .foregroundColor(.white.opacity(0.8))
-                                .multilineTextAlignment(.center)
-                                .padding(.horizontal)
+                            AuthPhoneInputView(formattedPhoneNumber: $formattedPhoneNumber, formatFunction: formatPhoneNumber)
                         }
                     }
                     .padding(.horizontal, 30)
@@ -259,6 +271,13 @@ struct AuthView: View {
         } message: {
             Text(errorMessage ?? "An unknown error occurred")
         }
+        .fullScreenCover(isPresented: $showOnboarding) {
+            // Present UserOnboardingView directly
+            UserOnboardingView(container: modelContext.container)
+                .environmentObject(onboardingManager)
+                .environmentObject(firebaseSyncService)
+                .edgesIgnoringSafeArea(.all)
+        }
         .onAppear {
             // Animate content when view appears
             withAnimation(.easeOut(duration: 0.8)) {
@@ -269,6 +288,74 @@ struct AuthView: View {
             // Reset create account prompt if phone number changes
             if showCreateAccountPrompt {
                 showCreateAccountPrompt = false
+            }
+        }
+    }
+    
+    // MARK: - Phone Input Component
+    
+    private struct AuthPhoneInputView: View {
+        @Binding var formattedPhoneNumber: String
+        @FocusState private var isInputFocused: Bool
+        var formatFunction: (String) -> String
+        
+        var body: some View {
+            VStack(spacing: 16) {
+                // Phone number field
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("phone number")
+                        .font(.custom("SpaceGrotesk-SemiBold", size: 14))
+                        .foregroundColor(.white.opacity(0.8))
+                    
+                    HStack {
+                        // Country code prefix
+                        Text("+1")
+                            .font(.custom("SpaceGrotesk-Regular", size: 16))
+                            .foregroundColor(.white)
+                            .padding(.leading, 4)
+                        
+                        Divider()
+                            .frame(width: 1)
+                            .background(Color.white.opacity(0.3))
+                            .padding(.vertical, 4)
+                        
+                        // Phone number input
+                        TextField("(555) 555-5555", text: $formattedPhoneNumber)
+                            .font(.custom("SpaceGrotesk-Regular", size: 16))
+                            .foregroundColor(.white)
+                            .keyboardType(.phonePad)
+                            .focused($isInputFocused)
+                            .onAppear {
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                                    isInputFocused = true
+                                }
+                            }
+                            .onChange(of: formattedPhoneNumber) { _, newValue in
+                                formattedPhoneNumber = formatFunction(newValue)
+                            }
+                            .toolbar {
+                                ToolbarItemGroup(placement: .keyboard) {
+                                    Spacer()
+                                    Button("Done") {
+                                        isInputFocused = false
+                                    }
+                                    .font(.headline)
+                                    .foregroundColor(AppColors.accent)
+                                }
+                            }
+                    }
+                    .frame(height: 45)
+                    .padding(.vertical, 6)
+                    .padding(.horizontal, 10)
+                    .background(Color.white.opacity(0.1))
+                    .cornerRadius(12)
+                }
+                
+                // Privacy info
+                Text("We'll send a text with a verification code. Message and data rates may apply.")
+                    .font(.custom("SpaceGrotesk-Regular", size: 12))
+                    .foregroundColor(.white.opacity(0.6))
+                    .multilineTextAlignment(.leading)
             }
         }
     }
@@ -315,8 +402,8 @@ struct AuthView: View {
         showError = false
         showCreateAccountPrompt = false
         
-        // Format phone number (ensure it has a country code)
-        let formattedNumber = formatPhoneNumber(phoneNumber)
+        // Use the raw phone number that's been populated by the formatter
+        let formattedNumber = "+1" + phoneNumber
         
         Task {
             do {
@@ -385,6 +472,14 @@ struct AuthView: View {
                 
                 await MainActor.run {
                     isLoading = false
+                    
+                    // Check if we should show onboarding (for new accounts)
+                    if !UserDefaults.standard.bool(forKey: "hasCompletedOnboarding") {
+                        // Ensure onboarding will be shown
+                        onboardingManager.resetOnboarding()
+                    }
+                    
+                    // Call the completion handler
                     onAuthSuccess()
                 }
             } catch {
@@ -397,23 +492,10 @@ struct AuthView: View {
         }
     }
     
-    private func formatPhoneNumber(_ number: String) -> String {
-        let digits = number.filter { $0.isNumber }
-        
-        // If it doesn't start with a plus, assume US number
-        if !number.hasPrefix("+") {
-            return "+1\(digits)"
-        }
-        
-        return number
-    }
-    
     private func startOnboarding() {
-        // Trigger the onboarding flow
-        onboardingManager.isShowingOnboarding = true
-        
-        // Dismiss the auth view
-        dismiss()
+        // Simply show the onboarding flow directly
+        // No need for alerts or authentication first
+        showOnboarding = true
     }
 }
 
