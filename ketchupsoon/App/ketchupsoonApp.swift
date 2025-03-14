@@ -16,6 +16,8 @@ import UIKit
 import Observation
 
 class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate { // Removed MessagingDelegate
+    private var authStateDidChangeListenerHandle: AuthStateDidChangeListenerHandle?
+    
     func application(_ application: UIApplication,
                     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
         // Configure Firebase
@@ -31,7 +33,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         
         // Only schedule Firebase-dependent operations if/when user is authenticated
         // This prevents unnecessary resource usage for non-authenticated users
-        Auth.auth().addStateDidChangeListener { [weak self] _, user in
+        authStateDidChangeListenerHandle = Auth.auth().addStateDidChangeListener { [weak self] _, user in
             if user != nil {
                 // User is authenticated, schedule contacts check
                 DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {

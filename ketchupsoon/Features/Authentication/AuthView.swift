@@ -28,6 +28,12 @@ struct AuthView: View {
         return verificationCode.count == 6
     }
     
+    // MARK: - Keyboard Dismissal
+    
+    private func hideKeyboard() {
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+    }
+    
     var body: some View {
         ZStack {
             // Background gradient
@@ -244,6 +250,7 @@ struct AuthView: View {
                 .padding()
             }
         }
+        .simultaneousGesture(TapGesture().onEnded { hideKeyboard() })
         .preferredColorScheme(.dark)
         .alert("Authentication Error", isPresented: $showError) {
             Button("OK", role: .cancel) {
