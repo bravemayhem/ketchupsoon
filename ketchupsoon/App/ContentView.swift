@@ -58,7 +58,10 @@ struct ContentView: View {
                     
                     // Check if the user profile is incomplete
                     let userSettings = UserSettings.shared
-                    let hasIncompleteProfile = userSettings.name.isNilOrEmpty
+                    // Update the incomplete profile check to be more comprehensive
+                    // Consider more required fields, not just the name
+                    let hasIncompleteProfile = userSettings.name.isNilOrEmpty || 
+                        !onboardingManager.isOnboardingComplete // Use the public property instead of private hasCompletedOnboarding
                     
                     // If user profile is incomplete and we're not already in onboarding, force onboarding
                     if hasIncompleteProfile && !onboardingManager.isCurrentlyOnboarding {

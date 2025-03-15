@@ -100,8 +100,12 @@ struct UserOnboardingView: View {
             }
         }
         .onDisappear {
-            // Tell the OnboardingManager we're no longer in the onboarding process
-            onboardingManager.setCurrentlyOnboarding(false)
+            // Only mark onboarding as not in progress if we've reached at least the success screen (step 4)
+            // This prevents premature termination of the onboarding flow
+            if viewModel.currentStep >= 4 {
+                // Tell the OnboardingManager we're no longer in the onboarding process
+                onboardingManager.setCurrentlyOnboarding(false)
+            }
         }
         .onChange(of: viewModel.currentStep) { oldValue, newValue in
             // Only allow dismissal when reaching the final step or when explicitly set

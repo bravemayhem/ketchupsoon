@@ -414,8 +414,12 @@ class UserOnboardingViewModel: ObservableObject {
                 await MainActor.run {
                     isProcessingProfile = false
                     logger.debug("✅ DEBUG: Profile creation completed, updating UI")
-                    // Here you could navigate to main app or show success message
-                    // For example: appState.onboardingComplete = true
+                    
+                    // Mark onboarding as complete using the OnboardingManager
+                    OnboardingManager.shared.completeOnboarding()
+                    
+                    // Log the completion
+                    logger.debug("✅ DEBUG: Onboarding marked as complete in OnboardingManager")
                 }
             } catch {
                 // Handle errors

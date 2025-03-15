@@ -85,8 +85,10 @@ class OnboardingManager: ObservableObject {
         let hasPhone = userSettings.phoneNumber != nil && !userSettings.phoneNumber!.isEmpty
         
         if !hasName || !hasPhone {
-            // If critical fields are missing, log a warning but continue (for now)
-            logger.warning("⚠️ WARNING: Completing onboarding with incomplete profile - Name: \(hasName), Phone: \(hasPhone)")
+            // Don't complete onboarding if critical fields are missing
+            logger.warning("⚠️ WARNING: Cannot complete onboarding with incomplete profile - Name: \(hasName), Phone: \(hasPhone)")
+            logger.warning("⚠️ WARNING: Onboarding will not be marked as complete until all required fields are provided")
+            return // Exit without marking onboarding complete
         }
         
         hasCompletedOnboarding = true
