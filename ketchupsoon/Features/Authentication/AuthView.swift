@@ -41,6 +41,7 @@ struct AuthView: View {
     @Environment(\.modelContext) private var modelContext
     
     var onAuthSuccess: () -> Void
+    var onBackButtonTapped: () -> Void
     
     private var isPhoneValid: Bool {
         // Basic validation - requires at least 10 digits
@@ -92,6 +93,27 @@ struct AuthView: View {
             // Content
             ScrollView {
                 VStack(spacing: 30) {
+                    // Back button
+                    HStack {
+                        Button(action: onBackButtonTapped) {
+                            HStack(spacing: 4) {
+                                Image(systemName: "chevron.left")
+                                    .foregroundColor(.white.opacity(0.8))
+                                    .font(.system(size: 16, weight: .medium))
+                                Text("Back")
+                                    .font(.custom("SpaceGrotesk-Medium", size: 16))
+                                    .foregroundColor(.white.opacity(0.8))
+                            }
+                            .padding(.vertical, 8)
+                            .padding(.horizontal, 12)
+                        }
+                        .padding(.leading, 20)
+                        .padding(.top, 10)
+                        
+                        Spacer()
+                    }
+                    .opacity(animateContent ? 1 : 0)
+                    
                     // App logo and branding
                     VStack(spacing: 12) {
                         Text("ketchupsoon")
@@ -105,11 +127,11 @@ struct AuthView: View {
                             )
                             .shadow(color: AppColors.accent.opacity(0.7), radius: 10, x: 0, y: 0)
                     }
-                    .padding(.top, 60)
+                    .padding(.top, 20) // Reduced top padding to account for back button
                     .padding(.bottom, 20)
                     .offset(y: animateContent ? 0 : -20)
                     .opacity(animateContent ? 1 : 0)
-                      
+                    
                     // DEBUG MODE BUTTON
                     #if DEBUG
                     Button(action: {
@@ -282,7 +304,10 @@ struct AuthView: View {
         #endif
         .fullScreenCover(isPresented: $showOnboarding) {
             // Present UserOnboardingView directly
-            UserOnboardingView(container: modelContext.container)
+            UserOnboardingView(
+                container: modelContext.container,
+                dismissAction: { showOnboarding = false }
+            )
                 .environmentObject(onboardingManager)
                 .environmentObject(firebaseSyncService)
                 .edgesIgnoringSafeArea(.all)
@@ -521,5 +546,5 @@ struct AuthPhoneInputView: View {
 }
 
 #Preview {
-    AuthView(onAuthSuccess: {})
+    AuthView(onAuthSuccess: {}, onBackButtonTapped: {})
 } 

@@ -101,7 +101,7 @@ class UserProfileManager: ObservableObject {
     /// Updates an existing user profile in Firestore
     func updateUserProfile(updates: [String: Any]) async throws {
         guard let userId = Auth.auth().currentUser?.uid, 
-              let currentProfile = currentUserProfile else {
+                let currentProfile = currentUserProfile else {
             throw NSError(domain: "UserProfileManager", code: 1, userInfo: [NSLocalizedDescriptionKey: "No authenticated user or profile"])
         }
         
@@ -143,7 +143,7 @@ class UserProfileManager: ObservableObject {
                 currentProfile.birthday = Date(timeIntervalSince1970: birthdayTimestamp)
                 logger.info("Updated local profile birthday: \(currentProfile.birthday?.description ?? "nil")")
             }
-                                                  
+            
             // Handle user preference updates
             if let availabilityTimes = updates["availabilityTimes"] as? [String] {
                 currentProfile.availabilityTimes = availabilityTimes
@@ -259,5 +259,4 @@ class UserProfileManager: ObservableObject {
             }
         }
     }
-    
-
+}

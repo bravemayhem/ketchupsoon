@@ -1,8 +1,17 @@
 import SwiftUI
+import SwiftData
 
 struct WelcomeScreen: View {
     @EnvironmentObject var viewModel: UserOnboardingViewModel
     @Environment(\.dismiss) private var dismiss
+    @Binding var allowDismissal: Bool
+    var dismissAction: () -> Void
+    
+    // For preview
+    init(allowDismissal: Binding<Bool> = .constant(false), dismissAction: @escaping () -> Void = {}) {
+        self._allowDismissal = allowDismissal
+        self.dismissAction = dismissAction
+    }
     
     var body: some View {
         VStack(spacing: 0) {
@@ -20,8 +29,10 @@ struct WelcomeScreen: View {
             
             // Back to Sign In button
             Button(action: {
-                // Dismiss the onboarding view to return to sign-in
-                dismiss()
+                // Set allowDismissal to true
+                allowDismissal = true
+                // Use the dismissAction closure instead of the environment dismiss
+                dismissAction()
             }) {
                 HStack {
                     Image(systemName: "arrow.left")
@@ -214,5 +225,20 @@ struct GIFView: UIViewRepresentable {
 }
 
 #Preview {
-    WelcomeScreen()
+    let previewViewModel = UserOnboardingViewModel(container: try! ModelContainer(for: EmptyTestModel.self))
+    return WelcomeScreen(
+        allowDismissal: .constant(false),
+        dismissAction: { print("Dismiss action triggered") }
+    )
+    .environmentObject(previewViewModel)
+}
+
+// A simple model for preview purposes
+@Model
+class EmptyTestModel {
+    var id: String
+    
+    init(id: String = "test") {
+        self.id = id
+    }
 }

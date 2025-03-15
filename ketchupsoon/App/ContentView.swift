@@ -299,7 +299,10 @@ struct ContentView: View {
                 // Show auth choice screen for non-authenticated users
                 if showingCreateAccount {
                     // Show onboarding view for new users
-                    UserOnboardingView(container: modelContext.container)
+                    UserOnboardingView(
+                        container: modelContext.container,
+                        dismissAction: { showingCreateAccount = false }
+                    )
                         .environmentObject(firebaseSyncService)
                         .edgesIgnoringSafeArea(.all)
                         .transition(.opacity)
@@ -393,6 +396,11 @@ struct ContentView: View {
                         AuthView(onAuthSuccess: {
                             // This will be called when authentication is successful
                             isAuthenticated = true
+                        }, onBackButtonTapped: {
+                            // Return to auth choice screen when back button is tapped
+                            withAnimation {
+                                showingAuthChoiceScreen = true
+                            }
                         })
                         .transition(.opacity)
                     }
@@ -422,7 +430,10 @@ struct ContentView: View {
                 }
                 // Show onboarding if needed (only when authenticated)
                 .fullScreenCover(isPresented: $onboardingManager.isShowingOnboarding) {
-                    UserOnboardingView(container: modelContext.container)
+                    UserOnboardingView(
+                        container: modelContext.container,
+                        dismissAction: { onboardingManager.isShowingOnboarding = false }
+                    )
                         .environmentObject(firebaseSyncService)
                         .edgesIgnoringSafeArea(.all)
                 }

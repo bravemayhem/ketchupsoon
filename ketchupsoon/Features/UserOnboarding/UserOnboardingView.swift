@@ -10,9 +10,22 @@ struct UserOnboardingView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var allowDismissal = false
     
-    init(container: ModelContainer) {
+    // Add a closure to handle dismissal
+    var dismissAction: (() -> Void)?
+    
+    init(container: ModelContainer, dismissAction: (() -> Void)? = nil) {
         self._viewModel = StateObject(wrappedValue: UserOnboardingViewModel(container: container))
-    }    
+        self.dismissAction = dismissAction
+    }
+    
+    // Add a function to handle dismissal
+    func dismissView() {
+        if let customDismiss = dismissAction {
+            customDismiss()
+        } else {
+            dismiss()
+        }
+    }
     
     var body: some View {
         ZStack {
@@ -25,7 +38,7 @@ struct UserOnboardingView: View {
                 
                 // Main content
                 TabView(selection: $viewModel.currentStep) {
-                    WelcomeScreen()
+                    WelcomeScreen(allowDismissal: $allowDismissal, dismissAction: dismissView)
                         .tag(0)
                         .environmentObject(viewModel)
                     
