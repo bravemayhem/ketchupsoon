@@ -324,9 +324,7 @@ class FirebaseUserSearchService: ObservableObject {
         if let birthdayTimestamp = data["birthday"] as? TimeInterval {
             user.birthday = Date(timeIntervalSince1970: birthdayTimestamp)
         }
-        
-        user.isSocialProfileActive = data["isSocialProfileActive"] as? Bool ?? false
-        user.socialAuthProvider = data["socialAuthProvider"] as? String
+                
         user.gradientIndex = data["gradientIndex"] as? Int ?? 0
         
         // Set preference fields if they exist

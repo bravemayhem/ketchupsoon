@@ -123,7 +123,7 @@ struct PhoneAuthScreen: View {
                 viewModel.existingUserId = nil
             }
         } message: {
-            Text("We found an existing account with this phone number. Would you like to sign in to your existing account instead of creating a new one?")
+            Text("We found an existing account with this phone number.")
         }
     }
 }

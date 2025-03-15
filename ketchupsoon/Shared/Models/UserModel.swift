@@ -30,10 +30,6 @@ final class UserModel: Codable {
     // Appearance
     var gradientIndex: Int
     
-    // Social profile fields
-    var isSocialProfileActive: Bool
-    var socialAuthProvider: String?
-    
     // User preferences - stored as JSON string for SwiftData compatibility
     var preferencesJSON: String?
     @Attribute(.transformable(by: ArrayTransformer.self))
@@ -63,8 +59,6 @@ final class UserModel: Codable {
         bio: String? = nil,
         birthday: Date? = nil,
         gradientIndex: Int = 0,
-        isSocialProfileActive: Bool = false,
-        socialAuthProvider: String? = nil,
         preferences: [String: Any]? = nil,
         availabilityTimes: [String]? = nil,
         availableDays: [String]? = nil,
@@ -82,8 +76,6 @@ final class UserModel: Codable {
         self.bio = bio
         self.birthday = birthday
         self.gradientIndex = gradientIndex
-        self.isSocialProfileActive = isSocialProfileActive
-        self.socialAuthProvider = socialAuthProvider
         self.preferencesJSON = Self.encodePreferences(preferences)
         self.availabilityTimes = availabilityTimes
         self.availableDays = availableDays
@@ -97,7 +89,6 @@ final class UserModel: Codable {
     // Required empty initializer for SwiftData
     init() {
         self.id = UUID().uuidString
-        self.isSocialProfileActive = false
         self.gradientIndex = 0
         self.createdAt = Date()
         self.updatedAt = Date()
@@ -111,7 +102,6 @@ final class UserModel: Codable {
             "id": id,
             "createdAt": createdAt.timeIntervalSince1970,
             "updatedAt": updatedAt.timeIntervalSince1970,
-            "isSocialProfileActive": isSocialProfileActive,
             "gradientIndex": gradientIndex
         ]
         
@@ -121,7 +111,6 @@ final class UserModel: Codable {
         if let bio = bio { dict["bio"] = bio }
         if let profileImageURL = profileImageURL { dict["profileImageURL"] = profileImageURL }
         if let birthday = birthday { dict["birthday"] = birthday.timeIntervalSince1970 }
-        if let socialAuthProvider = socialAuthProvider { dict["socialAuthProvider"] = socialAuthProvider }
         
         // Add preference fields
         if let availabilityTimes = availabilityTimes { dict["availabilityTimes"] = availabilityTimes }
@@ -161,9 +150,7 @@ final class UserModel: Codable {
         if let updatedTimestamp = additionalData["updatedAt"] as? TimeInterval {
             user.updatedAt = Date(timeIntervalSince1970: updatedTimestamp)
         }
-        
-        user.isSocialProfileActive = additionalData["isSocialProfileActive"] as? Bool ?? false
-        user.socialAuthProvider = additionalData["socialAuthProvider"] as? String
+                
         user.gradientIndex = additionalData["gradientIndex"] as? Int ?? 0
         
         // Set preference fields
@@ -218,7 +205,7 @@ final class UserModel: Codable {
     
     enum CodingKeys: String, CodingKey {
         case id, name, profileImageURL, email, phoneNumber
-        case bio, birthday, gradientIndex, isSocialProfileActive, socialAuthProvider
+        case bio, birthday, gradientIndex
         case availabilityTimes, availableDays, favoriteActivities, calendarConnections
         case travelRadius, createdAt, updatedAt, preferences
     }
@@ -238,8 +225,6 @@ final class UserModel: Codable {
         }
         
         try container.encode(gradientIndex, forKey: .gradientIndex)
-        try container.encode(isSocialProfileActive, forKey: .isSocialProfileActive)
-        try container.encodeIfPresent(socialAuthProvider, forKey: .socialAuthProvider)
         try container.encodeIfPresent(availabilityTimes, forKey: .availabilityTimes)
         try container.encodeIfPresent(availableDays, forKey: .availableDays)
         try container.encodeIfPresent(favoriteActivities, forKey: .favoriteActivities)
@@ -269,8 +254,6 @@ final class UserModel: Codable {
         }
         
         gradientIndex = try container.decodeIfPresent(Int.self, forKey: .gradientIndex) ?? 0
-        isSocialProfileActive = try container.decodeIfPresent(Bool.self, forKey: .isSocialProfileActive) ?? false
-        socialAuthProvider = try container.decodeIfPresent(String.self, forKey: .socialAuthProvider)
         availabilityTimes = try container.decodeIfPresent([String].self, forKey: .availabilityTimes)
         availableDays = try container.decodeIfPresent([String].self, forKey: .availableDays)
         favoriteActivities = try container.decodeIfPresent([String].self, forKey: .favoriteActivities)

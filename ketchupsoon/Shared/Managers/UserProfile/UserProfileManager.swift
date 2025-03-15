@@ -143,19 +143,7 @@ class UserProfileManager: ObservableObject {
                 currentProfile.birthday = Date(timeIntervalSince1970: birthdayTimestamp)
                 logger.info("Updated local profile birthday: \(currentProfile.birthday?.description ?? "nil")")
             }
-            
-            // Add handling for social profile fields
-            if let isSocialProfileActive = updates["isSocialProfileActive"] as? Bool {
-                currentProfile.isSocialProfileActive = isSocialProfileActive
-            }
-            
-            if let socialAuthProvider = updates["socialAuthProvider"] as? String {
-                currentProfile.socialAuthProvider = socialAuthProvider
-            } else if updates["socialAuthProvider"] is NSNull {
-                // Handle case when socialAuthProvider is set to null
-                currentProfile.socialAuthProvider = nil
-            }
-            
+                                                  
             // Handle user preference updates
             if let availabilityTimes = updates["availabilityTimes"] as? [String] {
                 currentProfile.availabilityTimes = availabilityTimes
@@ -199,9 +187,7 @@ class UserProfileManager: ObservableObject {
         user.email = data["email"] as? String
         user.phoneNumber = data["phoneNumber"] as? String
         user.bio = data["bio"] as? String
-        user.profileImageURL = data["profileImageURL"] as? String
-        user.isSocialProfileActive = data["isSocialProfileActive"] as? Bool ?? false
-        user.socialAuthProvider = data["socialAuthProvider"] as? String
+        user.profileImageURL = data["profileImageURL"] as? String        
         user.gradientIndex = data["gradientIndex"] as? Int ?? 0
         
         // User preferences
@@ -274,22 +260,4 @@ class UserProfileManager: ObservableObject {
         }
     }
     
-    // MARK: - Social Profile Features
-    
-    /// Checks if a user has an active social profile
-    /// - Parameter userId: The user ID to check
-    /// - Returns: Boolean indicating if the user has an active social profile
-    func checkHasSocialProfile(userId: String) async -> Bool {
-        do {
-            let document = try await db.collection(usersCollection).document(userId).getDocument()
-            if document.exists, let data = document.data() {
-                return data["isSocialProfileActive"] as? Bool ?? false
-            }
-        } catch {
-            self.logger.error("Error checking social profile status: \(error.localizedDescription)")
-        }
-        
-        return false
-    }
-} 
 

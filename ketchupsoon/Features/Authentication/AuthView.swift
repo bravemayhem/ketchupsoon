@@ -3,11 +3,24 @@ import FirebaseAuth
 import FirebaseFirestore
 import UIKit
 
+// MARK: - Helper Extensions
+extension View {
+    func placeholder<Content: View>(
+        when shouldShow: Bool,
+        alignment: Alignment = .leading,
+        @ViewBuilder placeholder: () -> Content
+    ) -> some View {
+        ZStack(alignment: alignment) {
+            placeholder().opacity(shouldShow ? 1 : 0)
+            self
+        }
+    }
+}
+
 struct AuthView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var onboardingManager: OnboardingManager
     @EnvironmentObject private var firebaseSyncService: FirebaseSyncService
-    @StateObject private var socialAuthManager = SocialAuthManager.shared
     @State private var phoneNumber = ""
     @State private var formattedPhoneNumber = ""
     @State private var verificationID: String?
@@ -91,18 +104,12 @@ struct AuthView: View {
                                 )
                             )
                             .shadow(color: AppColors.accent.opacity(0.7), radius: 10, x: 0, y: 0)
-                        
-                        Text("but for real though")
-                            .font(.custom("SpaceGrotesk-Regular", size: 18))
-                            .foregroundColor(.white.opacity(0.8))
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 24)
                     }
                     .padding(.top, 60)
                     .padding(.bottom, 20)
                     .offset(y: animateContent ? 0 : -20)
                     .opacity(animateContent ? 1 : 0)
-                    
+                      
                     // DEBUG MODE BUTTON
                     #if DEBUG
                     Button(action: {
@@ -230,50 +237,6 @@ struct AuthView: View {
                         .padding(.top, 5)
                     }
                     
-                    // Divider
-                    HStack {
-                        Rectangle()
-                            .fill(Color.white.opacity(0.2))
-                            .frame(height: 1)
-                        
-                        Text("OR")
-                            .font(.footnote)
-                            .foregroundColor(.white.opacity(0.6))
-                            .padding(.horizontal, 10)
-                        
-                        Rectangle()
-                            .fill(Color.white.opacity(0.2))
-                            .frame(height: 1)
-                    }
-                    .padding(.horizontal, 30)
-                    .padding(.vertical, 20)
-                    .offset(y: animateContent ? 0 : -5)
-                    .opacity(animateContent ? 1 : 0)
-                    
-                    // Create Account button
-                    Button(action: startOnboarding) {
-                        HStack {
-                            Image(systemName: "person.badge.plus")
-                                .font(.title3)
-                                .foregroundColor(.white)
-                            
-                            Text("Create New Account")
-                                .font(.headline)
-                                .foregroundColor(.white)
-                        }
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 56)
-                        .background(
-                            RoundedRectangle(cornerRadius: 16)
-                                .fill(AppColors.cardBackground)
-                                .clayMorphism()
-                        )
-                    }
-                    .disabled(isLoading)
-                    .padding(.horizontal, 30)
-                    .offset(y: animateContent ? 0 : -5)
-                    .opacity(animateContent ? 1 : 0)
-                    
                     // Additional info
                     Text("By signing in, you agree to our Terms of Service and Privacy Policy")
                         .font(.caption)
@@ -338,77 +301,9 @@ struct AuthView: View {
         }
     }
     
-    // MARK: - Phone Input Component
-    
-    private struct AuthPhoneInputView: View {
-        @Binding var formattedPhoneNumber: String
-        @FocusState private var isInputFocused: Bool
-        var formatFunction: (String) -> String
-        
-        var body: some View {
-            VStack(spacing: 16) {
-                // Phone number field
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("phone number")
-                        .font(.custom("SpaceGrotesk-SemiBold", size: 14))
-                        .foregroundColor(.white.opacity(0.8))
-                    
-                    HStack {
-                        // Country code prefix
-                        Text("+1")
-                            .font(.custom("SpaceGrotesk-Regular", size: 16))
-                            .foregroundColor(.white)
-                            .padding(.leading, 4)
-                        
-                        Divider()
-                            .frame(width: 1)
-                            .background(Color.white.opacity(0.3))
-                            .padding(.vertical, 4)
-                        
-                        // Phone number input
-                        TextField("(555) 555-5555", text: $formattedPhoneNumber)
-                            .font(.custom("SpaceGrotesk-Regular", size: 16))
-                            .foregroundColor(.white)
-                            .keyboardType(.phonePad)
-                            .focused($isInputFocused)
-                            .onAppear {
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                                    isInputFocused = true
-                                }
-                            }
-                            .onChange(of: formattedPhoneNumber) { _, newValue in
-                                formattedPhoneNumber = formatFunction(newValue)
-                            }
-                            .toolbar {
-                                ToolbarItemGroup(placement: .keyboard) {
-                                    Spacer()
-                                    Button("Done") {
-                                        isInputFocused = false
-                                    }
-                                    .font(.headline)
-                                    .foregroundColor(AppColors.accent)
-                                }
-                            }
-                    }
-                    .frame(height: 45)
-                    .padding(.vertical, 6)
-                    .padding(.horizontal, 10)
-                    .background(Color.white.opacity(0.1))
-                    .cornerRadius(12)
-                }
-                
-                // Privacy info
-                Text("We'll send a text with a verification code. Message and data rates may apply.")
-                    .font(.custom("SpaceGrotesk-Regular", size: 12))
-                    .foregroundColor(.white.opacity(0.6))
-                    .multilineTextAlignment(.leading)
-            }
-        }
-    }
-    
     // MARK: - UI Components
     
-    private func customTextField(
+    func customTextField(
         text: Binding<String>,
         placeholder: String,
         icon: String,
@@ -421,10 +316,15 @@ struct AuthView: View {
                 .frame(width: 24)
             
             TextField("", text: text)
-                .placeholder(when: text.wrappedValue.isEmpty) {
-                    Text(placeholder).foregroundColor(.white.opacity(0.4))
-                }
-                .foregroundColor(.white)
+                .foregroundColor(Color.white)
+                .overlay(
+                    ZStack(alignment: .leading) {
+                        if text.wrappedValue.isEmpty {
+                            Text(placeholder)
+                                .foregroundColor(Color.white.opacity(0.4))
+                        }
+                    }
+                )
                 .keyboardType(keyboardType)
                 .textInputAutocapitalization(autocapitalization)
                 .autocorrectionDisabled()
@@ -442,7 +342,7 @@ struct AuthView: View {
     
     // MARK: - Authentication Methods
     
-    private func sendVerificationCode() {
+    func sendVerificationCode() {
         isLoading = true
         errorMessage = nil
         showError = false
@@ -483,7 +383,7 @@ struct AuthView: View {
         }
     }
     
-    private func checkIfUserExists(phoneNumber: String) async throws -> Bool {
+    func checkIfUserExists(phoneNumber: String) async throws -> Bool {
         // Query your Firestore users collection
         let querySnapshot = try await Firestore.firestore()
             .collection("users")
@@ -495,7 +395,7 @@ struct AuthView: View {
         return !querySnapshot.documents.isEmpty
     }
     
-    private func verifyCode() {
+    func verifyCode() {
         guard let verificationID = verificationID else {
             errorMessage = "Missing verification ID. Please try again."
             showError = true
@@ -539,27 +439,83 @@ struct AuthView: View {
         }
     }
     
-    private func startOnboarding() {
+    func startOnboarding() {
         // Set the OnboardingManager state to indicate we're starting onboarding
         // This prevents the app from interrupting the onboarding flow
         onboardingManager.setCurrentlyOnboarding(true)
         
-        // Show the onboarding flow directly
+        // For new users, we don't want to authenticate them in AuthView
+        // Instead, we immediately show the onboarding flow and let PhoneAuthScreen handle verification
         showOnboarding = true
+        
+        // Log that we're starting the onboarding flow for a new user
+        print("DEBUG: Starting onboarding flow for new user")
     }
 }
 
-// MARK: - Helper Extensions
-
-extension View {
-    func placeholder<Content: View>(
-        when shouldShow: Bool,
-        alignment: Alignment = .leading,
-        @ViewBuilder placeholder: () -> Content
-    ) -> some View {
-        ZStack(alignment: alignment) {
-            placeholder().opacity(shouldShow ? 1 : 0)
-            self
+// MARK: - Phone Input Component
+struct AuthPhoneInputView: View {
+    @Binding var formattedPhoneNumber: String
+    @FocusState private var isInputFocused: Bool
+    var formatFunction: (String) -> String
+    
+    var body: some View {
+        VStack(spacing: 16) {
+            // Phone number field
+            VStack(alignment: .leading, spacing: 6) {
+                Text("phone number")
+                    .font(.custom("SpaceGrotesk-SemiBold", size: 14))
+                    .foregroundColor(.white.opacity(0.8))
+                
+                HStack {
+                    // Country code prefix
+                    Text("+1")
+                        .font(.custom("SpaceGrotesk-Regular", size: 16))
+                        .foregroundColor(.white)
+                        .padding(.leading, 4)
+                    
+                    Divider()
+                        .frame(width: 1)
+                        .background(Color.white.opacity(0.3))
+                        .padding(.vertical, 4)
+                    
+                    // Phone number input
+                    TextField("(555) 555-5555", text: $formattedPhoneNumber)
+                        .font(.custom("SpaceGrotesk-Regular", size: 16))
+                        .foregroundColor(.white)
+                        .keyboardType(.phonePad)
+                        .focused($isInputFocused)
+                        .onAppear {
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                                isInputFocused = true
+                            }
+                        }
+                        .onChange(of: formattedPhoneNumber) { _, newValue in
+                            formattedPhoneNumber = formatFunction(newValue)
+                        }
+                        .toolbar {
+                            ToolbarItemGroup(placement: .keyboard) {
+                                Spacer()
+                                Button("Done") {
+                                    isInputFocused = false
+                                }
+                                .font(.headline)
+                                .foregroundColor(AppColors.accent)
+                            }
+                        }
+                }
+                .frame(height: 45)
+                .padding(.vertical, 6)
+                .padding(.horizontal, 10)
+                .background(Color.white.opacity(0.1))
+                .cornerRadius(12)
+            }
+            
+            // Privacy info
+            Text("We'll send a text with a verification code. Message and data rates may apply.")
+                .font(.custom("SpaceGrotesk-Regular", size: 12))
+                .foregroundColor(.white.opacity(0.6))
+                .multilineTextAlignment(.leading)
         }
     }
 }

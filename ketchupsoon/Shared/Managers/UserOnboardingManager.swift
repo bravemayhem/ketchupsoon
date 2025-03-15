@@ -51,16 +51,9 @@ class OnboardingManager: ObservableObject {
             self.isShowingOnboarding = isAuthenticated && !hasCompletedOnboarding
             logger.debug("🔍 DEBUG: Setting isShowingOnboarding to \(self.isShowingOnboarding)")
         } else {
-            // If we're already in the onboarding process, don't change isShowingOnboarding
-            // This prevents the onboarding flow from being interrupted
+            // If we're already in the onboarding process, don't change isShowingOnboarding at all
+            // This prevents the onboarding flow from being interrupted or restarted
             logger.debug("🔍 DEBUG: Already in onboarding process, not changing isShowingOnboarding")
-            
-            // Ensure that if we're currently onboarding, isShowingOnboarding is true
-            // This prevents the app from showing HomeView during onboarding
-            if isAuthenticated && !hasCompletedOnboarding && !self.isShowingOnboarding {
-                logger.debug("🔍 DEBUG: Forcing isShowingOnboarding to true because user is in onboarding process")
-                self.isShowingOnboarding = true
-            }
         }
         
         self.isOnboardingComplete = hasCompletedOnboarding

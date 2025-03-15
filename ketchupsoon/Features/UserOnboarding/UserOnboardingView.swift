@@ -59,7 +59,7 @@ struct UserOnboardingView: View {
         }
         .preferredColorScheme(.dark) // Force dark mode for this view
         .ignoresSafeArea(edges: .top) // For the status bar
-        .allowsHitTesting(allowDismissal || viewModel.currentStep >= 4) // Prevent dismissal until completion or explicitly allowed
+        .interactiveDismissDisabled(!allowDismissal && viewModel.currentStep < 4) // Prevent dismissal until completion or explicitly allowed
         .onAppear {
             // Tell the OnboardingManager we're in the onboarding process
             onboardingManager.setCurrentlyOnboarding(true)

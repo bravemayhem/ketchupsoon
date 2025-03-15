@@ -15,7 +15,6 @@ struct SettingsView: View {
     @State private var showingClearDataAlert = false
     @State private var showingDeleteStoreAlert = false
     @State private var showingResetOnboardingAlert = false
-    @StateObject private var socialAuthManager = SocialAuthManager.shared
     @State private var isCalendarIntegrated = true
     @EnvironmentObject private var firebaseSyncService: FirebaseSyncService
     @State private var errorMessage: String?
@@ -517,9 +516,8 @@ extension SettingsView {
             isLoading = true
             errorMessage = nil
             
-            // Use SocialAuthManager for sign out since it handles both Firebase Auth
-            // and updating profile status
-            try await socialAuthManager.signOut()
+            // Call the AuthManager to sign out (this can throw errors)
+            try await authManager.signOut()
             
             // Close the settings view after signing out
             dismiss()

@@ -334,9 +334,7 @@ class UserOnboardingViewModel: ObservableObject {
             phoneNumber: self.phoneNumber.isEmpty ? nil : self.phoneNumber,
             bio: self.profileData.bio.isEmpty ? nil : self.profileData.bio,
             birthday: self.profileData.birthday,
-            gradientIndex: Int.random(in: 0...5), // Set a default gradient
-            isSocialProfileActive: false,
-            socialAuthProvider: Auth.auth().currentUser?.providerData.first?.providerID,
+            gradientIndex: Int.random(in: 0...5), // Set a default gradient            
             createdAt: Date(),
             updatedAt: Date()
         )

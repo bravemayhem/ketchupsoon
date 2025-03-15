@@ -30,12 +30,14 @@ struct SplashScreenView: View {
                         )
                         .shadow(color: AppColors.accent.opacity(0.7), radius: 10, x: 0, y: 0)
                     
-                    // Tagline
-                    Text("but for real though")
+                    /*
+                    // Tagline - Placeholder
+                    Text("")
                         .font(.custom("SpaceGrotesk-Regular", size: 18))
                         .foregroundColor(.white.opacity(0.8))
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 24)
+                     */
                 }
             }
             .ignoresSafeArea() // Ignore safe areas to use entire screen

@@ -42,7 +42,20 @@ struct ContentView: View {
                 self.isAuthenticated = user != nil
                 self.hasCheckedAuth = true
                 
-                if user != nil {
+                // Reset auth choice screens when auth state changes
+                if user == nil {
+                    // If user becomes unauthenticated, show the auth choice screen again
+                    withAnimation {
+                        showingAuthChoiceScreen = true
+                        showingCreateAccount = false
+                    }
+                } else {
+                    // If user becomes authenticated, hide auth choice screens
+                    withAnimation {
+                        showingAuthChoiceScreen = false
+                        showingCreateAccount = false
+                    }
+                    
                     // Check if the user profile is incomplete
                     let userSettings = UserSettings.shared
                     let hasIncompleteProfile = userSettings.name.isNilOrEmpty
@@ -54,9 +67,6 @@ struct ContentView: View {
                     
                     // Only sync data when authenticated
                     self.syncAndCacheProfileOnAppear()
-                } else {
-                    // Clear any cached views when signing out
-                    self.cachedProfileView = nil
                 }
             }
         }
@@ -276,17 +286,117 @@ struct ContentView: View {
     
     // MARK: - Body
     
+    // State to handle auth choice screen
+    @State private var showingAuthChoiceScreen = false
+    @State private var showingCreateAccount = false
+    
     var body: some View {
         Group {
             if !hasCheckedAuth {
                 // Show loading view until auth check completes
                 loadingView
             } else if !isAuthenticated {
-                // Show auth view directly if not authenticated
-                AuthView(onAuthSuccess: {
-                    // This will be called when authentication is successful
-                    isAuthenticated = true
-                })
+                // Show auth choice screen for non-authenticated users
+                if showingCreateAccount {
+                    // Show onboarding view for new users
+                    UserOnboardingView(container: modelContext.container)
+                        .environmentObject(firebaseSyncService)
+                        .edgesIgnoringSafeArea(.all)
+                        .transition(.opacity)
+                } else {
+                    // Show auth choice or auth view
+                    if showingAuthChoiceScreen {
+                        // Display auth choice screen with sign in and create account options
+                        ZStack {
+                            // Background gradient
+                            AppColors.backgroundGradient
+                                .ignoresSafeArea()
+                            
+                            VStack(spacing: 30) {
+                                Spacer()
+                                
+                                // App logo
+                                Text("ketchupsoon")
+                                    .font(.custom("SpaceGrotesk-Bold", size: 42))
+                                    .foregroundStyle(
+                                        LinearGradient(
+                                            colors: [AppColors.accent, AppColors.accentSecondary],
+                                            startPoint: .leading,
+                                            endPoint: .trailing
+                                        )
+                                    )
+                                    .shadow(color: AppColors.accent.opacity(0.7), radius: 10, x: 0, y: 0)
+                              /*
+                                // Placeholder for a subtitle
+                                Text("")
+                                    .font(.custom("SpaceGrotesk-Regular", size: 18))
+                                    .foregroundColor(.white.opacity(0.8))
+                               */
+                               
+                                Spacer()
+                                
+                                // Sign In Button
+                                Button(action: {
+                                    // Go to sign in (AuthView)
+                                    showingAuthChoiceScreen = false
+                                }) {
+                                    HStack {
+                                        Image(systemName: "person.fill")
+                                            .font(.title3)
+                                            .foregroundColor(.white)
+                                        
+                                        Text("Sign In")
+                                            .font(.headline)
+                                            .foregroundColor(.white)
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 56)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 16)
+                                            .fill(AppColors.accentGradient1)
+                                    )
+                                    .glow(color: AppColors.accent, radius: 5)
+                                }
+                                .padding(.horizontal, 30)
+                                
+                                // Create Account Button
+                                Button(action: {
+                                    // Go directly to onboarding flow
+                                    showingCreateAccount = true
+                                }) {
+                                    HStack {
+                                        Image(systemName: "person.badge.plus")
+                                            .font(.title3)
+                                            .foregroundColor(.white)
+                                        
+                                        Text("Create New Account")
+                                            .font(.headline)
+                                            .foregroundColor(.white)
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 56)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 16)
+                                            .fill(AppColors.cardBackground)
+                                            .clayMorphism()
+                                    )
+                                }
+                                .padding(.horizontal, 30)
+                                
+                                Spacer()
+                            }
+                            .padding()
+                        }
+                        .transition(.opacity)
+                    } else {
+                        // Show regular auth view for sign in
+                        AuthView(onAuthSuccess: {
+                            // This will be called when authentication is successful
+                            isAuthenticated = true
+                        })
+                        .transition(.opacity)
+                    }
+                }
             } else {
                 // Show main content only if authenticated
                 ZStack {
@@ -321,6 +431,13 @@ struct ContentView: View {
         .onAppear {
             // Set up auth state listener when ContentView appears
             setupAuthStateListener()
+            
+            // If not authenticated, show the auth choice screen
+            if !isAuthenticated && hasCheckedAuth {
+                withAnimation {
+                    showingAuthChoiceScreen = true
+                }
+            }
         }
     }
 }

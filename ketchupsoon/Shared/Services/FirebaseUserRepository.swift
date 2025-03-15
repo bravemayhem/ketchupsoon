@@ -459,9 +459,7 @@ class FirebaseUserRepository: UserRepository {
             user.updatedAt = Date() // Set to now if no timestamp
         }
         
-        // Social profile fields
-        user.isSocialProfileActive = data["isSocialProfileActive"] as? Bool ?? false
-        user.socialAuthProvider = data["socialAuthProvider"] as? String
+        // Profile 
         user.gradientIndex = data["gradientIndex"] as? Int ?? 0
         
         // Preferences
