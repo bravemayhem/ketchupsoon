@@ -2,6 +2,7 @@ import SwiftUI
 import UIKit
 import FirebaseStorage
 import FirebaseAuth
+import OSLog
 
 struct SuccessScreen: View {
     @EnvironmentObject var viewModel: UserOnboardingViewModel
@@ -11,6 +12,7 @@ struct SuccessScreen: View {
     @State private var showError = false
     @State private var errorMessage = ""
     @State private var isUploadingImage = false
+    private let logger = Logger(subsystem: "com.ketchupsoon", category: "SuccessScreen")
     
     var body: some View {
         VStack(spacing: 0) {
@@ -100,11 +102,21 @@ struct SuccessScreen: View {
         } message: {
             Text(errorMessage)
         }
+        .onAppear {
+            logger.debug("🔍 DEBUG: SuccessScreen appeared with profile data:")
+            logger.debug("🔍 DEBUG: - Name: '\(viewModel.profileData.name)'")
+            logger.debug("🔍 DEBUG: - Email: '\(viewModel.profileData.email)'")
+            logger.debug("🔍 DEBUG: - Bio: '\(viewModel.profileData.bio)'")
+            logger.debug("🔍 DEBUG: - Using image avatar: \(viewModel.profileData.useImageAvatar)")
+            logger.debug("🔍 DEBUG: - Has image: \(viewModel.profileData.avatarImage != nil)")
+        }
     }
     
     private func saveProfileAndContinue() {
         // Create updates dictionary
         Task {
+            logger.debug("🔄 DEBUG: Starting profile save process")
+            
             await MainActor.run {
                 isUploadingImage = true
             }
@@ -117,35 +129,51 @@ struct SuccessScreen: View {
                     updates["bio"] = viewModel.profileData.bio
                 }
                 
+                logger.debug("📝 DEBUG: Prepared updates dictionary:")
+                logger.debug("📝 DEBUG: - Name: '\(String(describing: updates["name"]))'")
+                logger.debug("📝 DEBUG: - Email: '\(String(describing: updates["email"]))'")
+                logger.debug("📝 DEBUG: - Bio: '\(String(describing: updates["bio"] ?? "nil"))'")
+                
                 // Handle profile image - either upload image or use emoji
                 if viewModel.profileData.useImageAvatar, let image = viewModel.profileData.avatarImage {
                     // Upload image to Firebase and get URL
+                    logger.debug("🖼️ DEBUG: Starting image upload to Firebase Storage")
                     let imageURL = try await uploadProfileImage(image)
                     updates["profileImageURL"] = imageURL
+                    logger.debug("🖼️ DEBUG: Image uploaded successfully, URL: \(imageURL)")
                 } else {
                     // Use emoji avatar
                     updates["profileImageURL"] = viewModel.profileData.avatarEmoji
+                    logger.debug("🖼️ DEBUG: Using emoji avatar: \(viewModel.profileData.avatarEmoji)")
                 }
                 
                 // Parse birthday if provided
                 if let birthday = viewModel.profileData.birthday {
                     // Store as timestamp for Firestore
                     updates["birthday"] = birthday.timeIntervalSince1970
+                    logger.debug("📅 DEBUG: Adding birthday timestamp: \(birthday.timeIntervalSince1970)")
                 }
                 
                 // Update UserProfileManager
+                logger.debug("💾 DEBUG: Updating user profile in UserProfileManager")
                 try await userProfileManager.updateUserProfile(updates: updates)
+                logger.debug("💾 DEBUG: UserProfileManager update successful")
                 
                 // Update UserSettings
+                logger.debug("⚙️ DEBUG: Updating UserSettings with name: \(viewModel.profileData.name)")
                 userSettings.updateName(viewModel.profileData.name)
+                
+                logger.debug("⚙️ DEBUG: Updating UserSettings with email: \(viewModel.profileData.email)")
                 userSettings.updateEmail(viewModel.profileData.email)
                 
                 // Continue to permissions screen
                 await MainActor.run {
+                    logger.debug("✅ DEBUG: Profile save complete, continuing to permissions")
                     isUploadingImage = false
                     viewModel.nextStep()
                 }
             } catch {
+                logger.error("❌ ERROR: Failed to save profile: \(error.localizedDescription)")
                 await MainActor.run {
                     isUploadingImage = false
                     showError = true
@@ -156,30 +184,46 @@ struct SuccessScreen: View {
     }
     
     private func uploadProfileImage(_ image: UIImage) async throws -> String {
+        logger.debug("🖼️ DEBUG: Starting image upload process")
+        
         // Resize image for storage efficiency
         guard let resizedImage = image.resized(to: CGSize(width: 500, height: 500)) else {
+            logger.error("❌ ERROR: Failed to resize image")
             throw NSError(domain: "SuccessScreen", code: 1, userInfo: [NSLocalizedDescriptionKey: "Could not resize image"])
         }
         
+        logger.debug("🖼️ DEBUG: Image resized to 500x500")
+        
         guard let imageData = resizedImage.jpegData(compressionQuality: 0.7) else {
+            logger.error("❌ ERROR: Failed to convert image to JPEG data")
             throw NSError(domain: "SuccessScreen", code: 2, userInfo: [NSLocalizedDescriptionKey: "Could not convert image to JPEG data"])
         }
         
+        logger.debug("🖼️ DEBUG: Image compressed to JPEG, size: \(imageData.count) bytes")
+        
         // Get user ID for storage path
         guard let userId = Auth.auth().currentUser?.uid else {
+            logger.error("❌ ERROR: User not authenticated")
             throw NSError(domain: "SuccessScreen", code: 3, userInfo: [NSLocalizedDescriptionKey: "User not authenticated"])
         }
+        
+        logger.debug("🖼️ DEBUG: User ID for image storage: \(userId)")
         
         // Create a reference to Firebase Storage
         let storage = Storage.storage()
         let storageRef = storage.reference()
         let profileImagesRef = storageRef.child("profile_images/\(userId).jpg")
         
+        logger.debug("🖼️ DEBUG: Uploading to Firebase Storage path: profile_images/\(userId).jpg")
+        
         // Upload the image
         _ = try await profileImagesRef.putDataAsync(imageData)
+        logger.debug("🖼️ DEBUG: Image upload complete!")
         
         // Get the download URL
         let downloadURL = try await profileImagesRef.downloadURL()
+        logger.debug("🖼️ DEBUG: Got download URL: \(downloadURL.absoluteString)")
+        
         return downloadURL.absoluteString
     }
 } 

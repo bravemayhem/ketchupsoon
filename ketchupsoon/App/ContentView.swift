@@ -38,11 +38,20 @@ struct ContentView: View {
         // This runs before views are loaded
         let _ = Auth.auth().addStateDidChangeListener { _, user in
             // Update on main thread
-            Task { @MainActor in
+            Task<Void, Never>(priority: .userInitiated) { @MainActor in
                 self.isAuthenticated = user != nil
                 self.hasCheckedAuth = true
                 
                 if user != nil {
+                    // Check if the user profile is incomplete
+                    let userSettings = UserSettings.shared
+                    let hasIncompleteProfile = userSettings.name.isNilOrEmpty
+                    
+                    // If user profile is incomplete, force onboarding
+                    if hasIncompleteProfile {
+                        onboardingManager.resetOnboarding()
+                    }
+                    
                     // Only sync data when authenticated
                     self.syncAndCacheProfileOnAppear()
                 } else {
@@ -284,9 +293,22 @@ struct ContentView: View {
                     mainContent
                 }
                 .alert("Debug Mode", isPresented: $showingDebugAlert) {
-                    Button("OK", role: .cancel) {}
+                    Button("Reset Onboarding State", role: .destructive) {
+                        UserDefaults.standard.set(false, forKey: "hasCompletedOnboarding")
+                        onboardingManager.resetOnboardingAndNavigateToOnboarding()
+                        print("DEBUG: Reset onboarding state to false")
+                    }
+                    
+                    Button("Clear All UserDefaults", role: .destructive) {
+                        let domain = Bundle.main.bundleIdentifier!
+                        UserDefaults.standard.removePersistentDomain(forName: domain)
+                        UserDefaults.standard.synchronize()
+                        print("DEBUG: Cleared all UserDefaults")
+                    }
+                    
+                    Button("Cancel", role: .cancel) {}
                 } message: {
-                    Text("Debug mode activated!")
+                    Text("Debug options for testing:")
                 }
                 // Show onboarding if needed (only when authenticated)
                 .fullScreenCover(isPresented: $onboardingManager.isShowingOnboarding) {

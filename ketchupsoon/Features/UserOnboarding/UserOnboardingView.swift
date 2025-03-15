@@ -7,6 +7,8 @@ struct UserOnboardingView: View {
     @StateObject private var onboardingManager = OnboardingManager.shared
     @StateObject private var userSettings = UserSettings.shared
     @StateObject private var userProfileManager = UserProfileManager.shared
+    @Environment(\.dismiss) private var dismiss
+    @State private var allowDismissal = false
     
     init(container: ModelContainer) {
         self._viewModel = StateObject(wrappedValue: UserOnboardingViewModel(container: container))
@@ -57,7 +59,11 @@ struct UserOnboardingView: View {
         }
         .preferredColorScheme(.dark) // Force dark mode for this view
         .ignoresSafeArea(edges: .top) // For the status bar
+        .allowsHitTesting(allowDismissal || viewModel.currentStep >= 4) // Prevent dismissal until completion or explicitly allowed
         .onAppear {
+            // Tell the OnboardingManager we're in the onboarding process
+            onboardingManager.setCurrentlyOnboarding(true)
+            
             // Pre-populate with any existing data
             if let name = userSettings.name {
                 viewModel.profileData.name = name
@@ -79,6 +85,14 @@ struct UserOnboardingView: View {
                     viewModel.formattedPhoneNumber = viewModel.formatPhoneNumber(viewModel.phoneNumber)
                 }
             }
+        }
+        .onDisappear {
+            // Tell the OnboardingManager we're no longer in the onboarding process
+            onboardingManager.setCurrentlyOnboarding(false)
+        }
+        .onChange(of: viewModel.currentStep) { oldValue, newValue in
+            // Only allow dismissal when reaching the final step or when explicitly set
+            allowDismissal = (newValue >= 4)
         }
         .gesture(
             DragGesture(minimumDistance: 20, coordinateSpace: .global)

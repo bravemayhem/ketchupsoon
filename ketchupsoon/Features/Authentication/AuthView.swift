@@ -20,6 +20,11 @@ struct AuthView: View {
     @State private var showCreateAccountPrompt = false
     @State private var showOnboarding = false
     
+    // Debug mode state
+    #if DEBUG
+    @State private var showDebugOptions = false
+    #endif
+    
     @Environment(\.modelContext) private var modelContext
     
     var onAuthSuccess: () -> Void
@@ -97,6 +102,27 @@ struct AuthView: View {
                     .padding(.bottom, 20)
                     .offset(y: animateContent ? 0 : -20)
                     .opacity(animateContent ? 1 : 0)
+                    
+                    // DEBUG MODE BUTTON
+                    #if DEBUG
+                    Button(action: {
+                        showDebugOptions = true
+                    }) {
+                        HStack {
+                            Image(systemName: "ladybug.fill")
+                                .foregroundColor(.white)
+                            Text("Debug Options")
+                                .font(.custom("SpaceGrotesk-Regular", size: 14))
+                                .foregroundColor(.white)
+                        }
+                        .padding(.vertical, 8)
+                        .padding(.horizontal, 16)
+                        .background(Color.red.opacity(0.7))
+                        .cornerRadius(20)
+                    }
+                    .padding(.bottom, 10)
+                    .transition(.opacity)
+                    #endif
                     
                     // Form fields
                     VStack(spacing: 16) {
@@ -271,6 +297,26 @@ struct AuthView: View {
         } message: {
             Text(errorMessage ?? "An unknown error occurred")
         }
+        #if DEBUG
+        .alert("Debug Options", isPresented: $showDebugOptions) {
+            Button("Reset Onboarding State", role: .destructive) {
+                UserDefaults.standard.set(false, forKey: "hasCompletedOnboarding")
+                onboardingManager.resetOnboardingAndNavigateToOnboarding()
+                print("DEBUG: Reset onboarding state to false")
+            }
+            
+            Button("Clear All UserDefaults", role: .destructive) {
+                let domain = Bundle.main.bundleIdentifier!
+                UserDefaults.standard.removePersistentDomain(forName: domain)
+                UserDefaults.standard.synchronize()
+                print("DEBUG: Cleared all UserDefaults")
+            }
+            
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Debug options for testing (not visible in release builds)")
+        }
+        #endif
         .fullScreenCover(isPresented: $showOnboarding) {
             // Present UserOnboardingView directly
             UserOnboardingView(container: modelContext.container)
@@ -473,14 +519,15 @@ struct AuthView: View {
                 await MainActor.run {
                     isLoading = false
                     
-                    // Check if we should show onboarding (for new accounts)
+                    // Check if the user needs to go through onboarding
                     if !UserDefaults.standard.bool(forKey: "hasCompletedOnboarding") {
-                        // Ensure onboarding will be shown
-                        onboardingManager.resetOnboarding()
+                        // This is a new user or they haven't completed onboarding
+                        // Show the onboarding flow
+                        startOnboarding()
+                    } else {
+                        // User has completed onboarding before, proceed to home
+                        onAuthSuccess()
                     }
-                    
-                    // Call the completion handler
-                    onAuthSuccess()
                 }
             } catch {
                 await MainActor.run {
@@ -493,8 +540,11 @@ struct AuthView: View {
     }
     
     private func startOnboarding() {
-        // Simply show the onboarding flow directly
-        // No need for alerts or authentication first
+        // Set the OnboardingManager state to indicate we're starting onboarding
+        // This prevents the app from interrupting the onboarding flow
+        onboardingManager.setCurrentlyOnboarding(true)
+        
+        // Show the onboarding flow directly
         showOnboarding = true
     }
 }

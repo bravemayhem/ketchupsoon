@@ -215,8 +215,16 @@ class UserOnboardingViewModel: ObservableObject {
                     self.isVerified = true
                     self.savePhoneNumber()
                     
-                    // Move to next screen
-                    self.nextStep()
+                    // IMPORTANT: Make sure we're setting the current step directly rather than letting 
+                    // another process update it. This ensures we move forward in the flow.
+                    let currentStep = self.currentStep
+                    if currentStep == 1 {
+                        self.logger.info("Advancing to next step of onboarding (step 2)")
+                        self.goToStep(2)
+                    } else {
+                        self.logger.info("Not on expected step (expected 1, got \(currentStep)). Moving to step 2.")
+                        self.goToStep(2)
+                    }
                     
                 } catch {
                     self.logger.error("Error checking for existing account: \(error.localizedDescription)")
@@ -257,12 +265,7 @@ class UserOnboardingViewModel: ObservableObject {
         // Skip to the success screen
         self.goToStep(4)
         
-        // Notify the app that onboarding is complete
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            OnboardingManager.shared.completeOnboarding()
-        }
-        
-        logger.info("User confirmed existing account, skipping to end of onboarding")
+        logger.info("User confirmed existing account, moving to the success screen")
     }
     
     // Save authenticated phone number to user profile
@@ -277,12 +280,14 @@ class UserOnboardingViewModel: ObservableObject {
     func setEmojiAvatar(_ emoji: String) {
         profileData.avatarEmoji = emoji
         profileData.useImageAvatar = false
+        logger.debug("🧩 DEBUG: Set emoji avatar to \(emoji), useImageAvatar=false")
     }
     
     // Set avatar to use image
     func setImageAvatar(_ image: UIImage) {
         profileData.avatarImage = image
         profileData.useImageAvatar = true
+        logger.debug("DEBUG: Set image avatar, useImageAvatar=true, image size: \(String(describing: image.size))")
     }
     
     // Show camera for taking photo
@@ -303,9 +308,22 @@ class UserOnboardingViewModel: ObservableObject {
     @MainActor // Mark this method as running on the Main actor
     func completeOnboarding() async throws {
         guard let userId = Auth.auth().currentUser?.uid else {
+            logger.error("❌ ERROR: User not authenticated")
             throw NSError(domain: "com.ketchupsoon", code: 3, 
                          userInfo: [NSLocalizedDescriptionKey: "User not authenticated"])
         }
+        
+        // Log collected data
+        logger.debug("📝 DEBUG: Profile creation started for user \(userId)")
+        logger.debug("📝 DEBUG: Profile data collected:")
+        logger.debug("📝 DEBUG: - Name: '\(self.profileData.name)'")
+        logger.debug("📝 DEBUG: - Email: '\(self.profileData.email)'")
+        logger.debug("📝 DEBUG: - Bio: '\(self.profileData.bio)'")
+        logger.debug("📝 DEBUG: - Phone: '\(self.phoneNumber)'")
+        logger.debug("📝 DEBUG: - Birthday: \(self.profileData.birthday?.description ?? "nil")")
+        logger.debug("📝 DEBUG: - Using image avatar: \(self.profileData.useImageAvatar)")
+        logger.debug("📝 DEBUG: - Avatar emoji: \(self.profileData.avatarEmoji)")
+        logger.debug("📝 DEBUG: - Avatar image exists: \(self.profileData.avatarImage != nil)")
         
         // Create UserModel from collected data with all required fields
         let newUser = UserModel(
@@ -323,39 +341,65 @@ class UserOnboardingViewModel: ObservableObject {
             updatedAt: Date()
         )
         
+        logger.debug("📝 DEBUG: Created UserModel:")
+        logger.debug("📝 DEBUG: - ID: \(newUser.id)")
+        logger.debug("📝 DEBUG: - Name: \(newUser.name ?? "nil")")
+        logger.debug("📝 DEBUG: - Email: \(newUser.email ?? "nil")")
+        logger.debug("📝 DEBUG: - Phone: \(newUser.phoneNumber ?? "nil")")
+        logger.debug("📝 DEBUG: - Bio: \(newUser.bio ?? "nil")")
+        logger.debug("📝 DEBUG: - Birthday: \(newUser.birthday?.description ?? "nil")")
+        
         // Upload profile image if needed
         if self.profileData.useImageAvatar, let image = self.profileData.avatarImage {
+            logger.debug("🖼️ DEBUG: Starting profile image upload")
+            
             // Compress image
             guard let compressedImage = image.jpegData(compressionQuality: 0.7) else {
+                logger.error("❌ ERROR: Failed to compress image")
                 throw NSError(domain: "com.ketchupsoon", code: 4, 
                              userInfo: [NSLocalizedDescriptionKey: "Failed to compress image"])
             }
             
+            logger.debug("🖼️ DEBUG: Image compressed, size: \(compressedImage.count) bytes")
+            
             // Upload to Firebase Storage
             let storageRef = Storage.storage().reference().child("profile_images/\(userId).jpg")
+            logger.debug("🖼️ DEBUG: Uploading to Firebase Storage: profile_images/\(userId).jpg")
+            
             _ = try await storageRef.putDataAsync(compressedImage)
+            logger.debug("🖼️ DEBUG: Image upload to Firebase Storage complete!")
             
             // Get download URL
             let downloadURL = try await storageRef.downloadURL()
+            logger.debug("🖼️ DEBUG: Got download URL: \(downloadURL.absoluteString)")
             
             // Update model with image URL
             newUser.profileImageURL = downloadURL.absoluteString
+            logger.debug("🖼️ DEBUG: Updated UserModel with profileImageURL")
+        } else {
+            logger.debug("🖼️ DEBUG: No profile image to upload (useImageAvatar=\(self.profileData.useImageAvatar))")
         }
         
         logger.info("Creating user with name: \(newUser.name ?? "unnamed"), email: \(newUser.email ?? "no email"), bio: \(newUser.bio ?? "no bio")")
         
         // Use UserRepository to create the user in Firebase and SwiftData
+        logger.debug("💾 DEBUG: Saving user to repository (Firebase and SwiftData)")
         try await userRepository.createUser(user: newUser)
+        logger.debug("💾 DEBUG: User successfully saved to repository!")
         
         // Update UserSettings with additional user info
         if !self.profileData.name.isEmpty {
+            logger.debug("⚙️ DEBUG: Updating UserSettings with name: \(self.profileData.name)")
             UserSettings.shared.updateName(self.profileData.name)
         }
         
         if !self.profileData.email.isEmpty {
+            logger.debug("⚙️ DEBUG: Updating UserSettings with email: \(self.profileData.email)")
             UserSettings.shared.updateEmail(self.profileData.email)
         }
         // Phone number already saved in savePhoneNumber()
+        
+        logger.debug("✅ DEBUG: Profile creation completed successfully!")
     }
     
     /// UI-facing function to start the profile creation process
@@ -365,11 +409,13 @@ class UserOnboardingViewModel: ObservableObject {
         
         Task {
             do {
+                logger.debug("🚀 DEBUG: Starting profile creation process")
                 try await completeOnboarding()
                 
                 // Update UI on success
                 await MainActor.run {
                     isProcessingProfile = false
+                    logger.debug("✅ DEBUG: Profile creation completed, updating UI")
                     // Here you could navigate to main app or show success message
                     // For example: appState.onboardingComplete = true
                 }
@@ -379,6 +425,7 @@ class UserOnboardingViewModel: ObservableObject {
                     isProcessingProfile = false
                     self.authError = error
                     self.showingError = true
+                    logger.error("❌ DEBUG: Profile creation failed: \(error.localizedDescription)")
                 }
             }
         }

@@ -195,6 +195,7 @@ class UserProfileViewModel: ObservableObject, ProfileViewModel {
             // Handle any errors from tasks inside their result case statements
             
             // Simple timeout with a direct call
+            logger.debug("👀 DEBUG: Attempting to load user from repository...")
             let getUserTask = Task { 
                 do {
                     return try await userRepository.getCurrentUser()
@@ -213,9 +214,13 @@ class UserProfileViewModel: ObservableObject, ProfileViewModel {
             // Wait for either task to complete
             if let userModel = await getUserTask.value {
                 localUserModel = userModel
+                logger.debug("✅ DEBUG: Got user from repository: id=\(userModel.id)")
+                logger.debug("📄 DEBUG: Retrieved model - name: '\(userModel.name ?? "nil")', email: '\(userModel.email ?? "nil")'")
+                logger.debug("📄 DEBUG: Image URL from repository: '\(userModel.profileImageURL ?? "nil")'")
                 // Cancel the timeout task as we already have a result
                 timeoutTask.cancel()
             } else {
+                logger.debug("⚠️ DEBUG: Failed to get user from repository or timed out")
                 // If the first task failed or returned nil, wait for the timeout
                 let _ = await timeoutTask.value  // Just wait for timeout
             }
@@ -223,44 +228,67 @@ class UserProfileViewModel: ObservableObject, ProfileViewModel {
             // Step 2: Update UI if we have local data
             if let user = localUserModel {
                 await MainActor.run {
+                    logger.debug("🔄 DEBUG: Updating UI from local repository data")
                     self.updateUIFromUserModel(user)
+                    logger.debug("✅ DEBUG: Updated UI from local user model")
+                    logger.debug("📄 DEBUG: UI state - userName: '\(self.userName)', bio: '\(self.userBio)'")
+                    logger.debug("📄 DEBUG: UI profileImageURL: '\(self.profileImageURL ?? "nil")'")
                     self.logger.info("✅ Updated UI from local user model")
                 }
             } else {
                 self.logger.warning("⚠️ No local user model found, trying ProfileManager")
+                logger.debug("🔄 DEBUG: No local data, falling back to ProfileManager")
                 
                 // Step 3: Fall back to ProfileManager if needed
+                logger.debug("🔄 DEBUG: Fetching user profile from ProfileManager: \(currentUser.uid)")
                 await profileManager.fetchUserProfile(userId: currentUser.uid)
                 
                 // Step 4: Update from ProfileManager
                 await MainActor.run {
                     if let profile = profileManager.currentUserProfile {
+                        logger.debug("✅ DEBUG: Got profile from ProfileManager")
+                        logger.debug("📄 DEBUG: ProfileManager data - name: '\(profile.name ?? "nil")', email: '\(profile.email ?? "nil")'")
+                        logger.debug("📄 DEBUG: Image URL from ProfileManager: '\(profile.profileImageURL ?? "nil")'")
+                        
+                        logger.debug("🔄 DEBUG: Updating UI from ProfileManager data")
                         self.updateUIFromProfileManager(profile)
+                        logger.debug("✅ DEBUG: UI updated from ProfileManager")
+                        logger.debug("📄 DEBUG: UI state after update - userName: '\(self.userName)', bio: '\(self.userBio)'")
+                        logger.debug("📄 DEBUG: UI profileImageURL after update: '\(self.profileImageURL ?? "nil")'")
                         self.logger.info("✅ Updated UI from ProfileManager")
                         
                         // Load profile image in background if available
                         if let photoURL = profile.profileImageURL, !photoURL.isEmpty {
+                            logger.debug("🖼️ DEBUG: Found profile image URL, starting preload: \(photoURL)")
                             Task {
                                 self.preloadProfileImage(from: photoURL)
                             }
+                        } else {
+                            logger.debug("⚠️ DEBUG: No profile image URL found in ProfileManager")
                         }
                     } else {
+                        logger.debug("❌ DEBUG: No profile found in ProfileManager")
                         self.logger.warning("⚠️ No profile found in ProfileManager")
                     }
                 }
             }
             
             // Step 5: Trigger a background refresh without blocking profile load
+            logger.debug("🔄 DEBUG: Starting background refresh of user data")
             Task.detached {
                 do {
                     try await self.userRepository.refreshCurrentUser()
                     self.logger.info("✅ Background refresh completed successfully")
+                    self.logger.debug("✅ DEBUG: Background refresh completed")
                     
                     // Once refresh is done, sync in background
+                    self.logger.debug("🔄 DEBUG: Starting background sync between local and remote data")
                     try await self.userRepository.syncLocalWithRemote()
                     self.logger.info("✅ Background sync completed successfully")
+                    self.logger.debug("✅ DEBUG: Background sync completed")
                 } catch {
                     self.logger.error("❌ Background refresh/sync error: \(error.localizedDescription)")
+                    self.logger.debug("❌ DEBUG: Background refresh/sync failed: \(error.localizedDescription)")
                 }
             }
             
@@ -276,6 +304,8 @@ class UserProfileViewModel: ObservableObject, ProfileViewModel {
                 self.isLoading = false
                 self.isCurrentlyLoading = false
                 print("🛠 DEBUG: Profile loading completed [\(operationId)]")
+                logger.debug("🏁 DEBUG: Profile load complete, final UI state - userName: '\(self.userName)', userBio: '\(self.userBio)'")
+                logger.debug("🏁 DEBUG: Profile image state - cached: \(self.cachedProfileImage != nil)")
                 self.logger.info("📋 Profile loading completed")
             }
             
@@ -289,6 +319,7 @@ class UserProfileViewModel: ObservableObject, ProfileViewModel {
             // Handle top-level errors
             await MainActor.run {
                 self.logger.error("❌ Error loading profile: \(loadError.localizedDescription)")
+                self.logger.debug("❌ DEBUG: Profile loading error: \(loadError.localizedDescription)")
                 self.alertTitle = "Profile Error"
                 self.alertMessage = "Failed to load profile: \(loadError.localizedDescription)"
                 self.showAlert = true

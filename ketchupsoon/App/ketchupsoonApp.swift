@@ -20,6 +20,9 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
     
     func application(_ application: UIApplication,
                     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
+        // Check for command line arguments for development/testing
+        self.processCommandLineArguments()
+        
         // Configure Firebase
         FirebaseApp.configure()  // Uncomment to enable Firebase
         
@@ -133,6 +136,28 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         // Process notification data here
         
         completionHandler()
+    }
+    
+    // Process command line arguments for testing/development
+    private func processCommandLineArguments() {
+        let arguments = CommandLine.arguments
+        
+        // Check for reset UserDefaults flag
+        if arguments.contains("-resetUserDefaults") {
+            print("DEBUG: Command line argument detected - Resetting all UserDefaults")
+            let domain = Bundle.main.bundleIdentifier!
+            UserDefaults.standard.removePersistentDomain(forName: domain)
+            UserDefaults.standard.synchronize()
+        }
+        
+        // Check for reset onboarding flag
+        if arguments.contains("-resetOnboarding") {
+            print("DEBUG: Command line argument detected - Resetting onboarding state")
+            UserDefaults.standard.set(false, forKey: "hasCompletedOnboarding")
+            UserDefaults.standard.synchronize()
+            
+            // Note: OnboardingManager might not be initialized yet, so we just set the UserDefaults value
+        }
     }
 }
 

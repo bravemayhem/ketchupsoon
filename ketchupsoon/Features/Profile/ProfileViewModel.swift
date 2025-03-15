@@ -258,6 +258,8 @@ class CombinedProfileViewModel: ObservableObject, ProfileViewModel {
             return
         }
         
+        logger.debug("🔄 DEBUG: Starting loadProfile task for \(self.profileTypeDescription), user ID: \(self.id)")
+        
         // Track loading without immediately showing UI indicator
         isCurrentlyLoading = true
         
@@ -309,7 +311,16 @@ class CombinedProfileViewModel: ObservableObject, ProfileViewModel {
         // Try loading from local repository first
         let userModel: UserModel?
         do {
+            logger.debug("🔍 DEBUG: Attempting to load user data from local repository")
             userModel = try await userRepository.getCurrentUser()
+            
+            if let userModel = userModel {
+                logger.debug("✅ DEBUG: Found user in local database: \(userModel.id)")
+                logger.debug("📄 DEBUG: Local user data - Name: '\(userModel.name ?? "nil")', Email: '\(userModel.email ?? "nil")', Bio: '\(userModel.bio ?? "nil")'")
+                logger.debug("📄 DEBUG: Local user profileImageURL: \(userModel.profileImageURL ?? "nil")")
+            } else {
+                logger.debug("⚠️ DEBUG: User not found in local database")
+            }
         } catch {
             self.logger.warning("⚠️ Failed to load user from repository: \(error.localizedDescription)")
             userModel = nil
@@ -317,13 +328,23 @@ class CombinedProfileViewModel: ObservableObject, ProfileViewModel {
         
         // If found locally, update the UI
         if let userModel = userModel {
+            logger.debug("🔄 DEBUG: Updating UI from local user model")
             await updateUIFromUserModel(userModel)
+            logger.debug("✅ DEBUG: UI updated from local data - userName: '\(self.userName)', userBio: '\(self.userBio)'")
         }
         
         // Also try to refresh from Firebase for the latest data
         do {
+            logger.debug("🔄 DEBUG: Refreshing user data from Firebase: \(currentUser.uid)")
             let userModel = try await userRepository.getUser(id: currentUser.uid)
+            logger.debug("✅ DEBUG: Successfully got user from Firebase")
+            logger.debug("📄 DEBUG: Firebase user data - Name: '\(userModel.name ?? "nil")', Email: '\(userModel.email ?? "nil")', Bio: '\(userModel.bio ?? "nil")'")
+            logger.debug("📄 DEBUG: Firebase profileImageURL: \(userModel.profileImageURL ?? "nil")")
+            
+            logger.debug("🔄 DEBUG: Updating UI with data from Firebase")
             await updateUIFromUserModel(userModel)
+            logger.debug("✅ DEBUG: UI updated from Firebase - userName: '\(self.userName)', userBio: '\(self.userBio)'")
+            
             self.logger.info("✅ Successfully refreshed user data from Firebase")
         } catch {
             self.logger.warning("⚠️ Failed to refresh from Firebase: \(error.localizedDescription)")
@@ -336,10 +357,18 @@ class CombinedProfileViewModel: ObservableObject, ProfileViewModel {
         }
         
         // Load profile image if we have a URL
+        logger.debug("🖼️ DEBUG: Checking for profile image to load")
+        if let imageURL = profileImageURL, !imageURL.isEmpty {
+            logger.debug("🖼️ DEBUG: Found profileImageURL: \(imageURL)")
+        } else {
+            logger.debug("🖼️ DEBUG: No profileImageURL found")
+        }
         await loadProfileImage()
         
         await MainActor.run {
             self.isInitialDataLoad = false
+            logger.debug("🏁 DEBUG: Profile load complete, final UI state - userName: '\(self.userName)', userBio: '\(self.userBio)'")
+            logger.debug("🏁 DEBUG: Profile image state - cached: \(self.cachedProfileImage != nil), loaded: \(self.profileImage != nil)")
         }
     }
     
@@ -386,6 +415,10 @@ class CombinedProfileViewModel: ObservableObject, ProfileViewModel {
     // MARK: - UI Update Helpers
     
     private func updateUIFromUserModel(_ userModel: UserModel) async {
+        logger.debug("🔄 DEBUG: Updating UI from UserModel - ID: \(userModel.id)")
+        logger.debug("📄 DEBUG: Source data - Name: '\(userModel.name ?? "nil")', Bio: '\(userModel.bio ?? "nil")'")
+        logger.debug("📄 DEBUG: Source data - ProfileImageURL: \(userModel.profileImageURL ?? "nil")")
+        
         await MainActor.run {
             self.name = userModel.name ?? ""
             self.userName = userModel.name ?? ""
@@ -395,6 +428,9 @@ class CombinedProfileViewModel: ObservableObject, ProfileViewModel {
             self.phoneNumber = userModel.phoneNumber ?? ""
             self.birthday = userModel.birthday
             self.profileImageURL = userModel.profileImageURL
+            
+            logger.debug("📄 DEBUG: UI updated - userName: '\(self.userName)', userBio: '\(self.userBio)'")
+            logger.debug("📄 DEBUG: UI updated - profileImageURL: \(self.profileImageURL ?? "nil")")
             
             // Set gradient based on user's gradient index
             let gradientIndex = min(max(userModel.gradientIndex, 0), AppColors.avatarGradients.count - 1)
@@ -406,30 +442,39 @@ class CombinedProfileViewModel: ObservableObject, ProfileViewModel {
     
     private func loadProfileImage() async {
         guard let imageURL = profileImageURL, !imageURL.isEmpty else {
+            logger.debug("🖼️ DEBUG: No profile image URL to load")
             return
         }
+        
+        logger.debug("🖼️ DEBUG: Attempting to load profile image from URL: \(imageURL)")
         
         do {
             // Load cached image first if available
             if let cachedImage = ImageCacheManager.shared.getImage(for: imageURL) {
+                logger.debug("🖼️ DEBUG: Found image in cache")
                 await MainActor.run {
                     self.cachedProfileImage = cachedImage
                     self.profileImage = cachedImage
+                    logger.debug("🖼️ DEBUG: Set profile image from cache")
                 }
                 return
             }
             
             // Otherwise download from Firebase
+            logger.debug("🖼️ DEBUG: No cached image, downloading from Firebase Storage")
             let downloadedImage = try await FirebaseStorageManager.downloadImage(from: imageURL)
+            logger.debug("🖼️ DEBUG: Successfully downloaded image from Firebase")
             
             // Update UI and cache the image
             await MainActor.run {
                 self.profileImage = downloadedImage
                 self.cachedProfileImage = downloadedImage
                 ImageCacheManager.shared.storeImage(downloadedImage, for: imageURL)
+                logger.debug("🖼️ DEBUG: Image set in UI and stored in cache")
             }
         } catch {
             self.logger.error("Failed to load profile image: \(error.localizedDescription)")
+            logger.debug("❌ DEBUG: Image load error: \(error.localizedDescription)")
         }
     }
     
@@ -444,6 +489,8 @@ class CombinedProfileViewModel: ObservableObject, ProfileViewModel {
             return
         }
         
+        logger.debug("🔄 DEBUG: Starting profile refresh for \(self.profileTypeDescription), user ID: \(self.id)")
+        
         // Cancel any existing refresh operation
         pendingRefreshTask?.cancel()
         
@@ -454,7 +501,9 @@ class CombinedProfileViewModel: ObservableObject, ProfileViewModel {
             isRefreshing = true
             defer { isRefreshing = false }
             
+            logger.debug("🔄 DEBUG: Loading fresh profile data")
             await loadProfile()
+            logger.debug("✅ DEBUG: Profile refresh completed")
             
             // Update refresh timestamp
             lastRefreshTime = Date()
