@@ -8,19 +8,53 @@ import FirebaseFirestore
 import FirebaseStorage
 import SwiftData
 import OSLog
+import Combine
 
 @MainActor
-class UserOnboardingViewModel: ObservableObject {
+class UserOnboardingViewModel: ObservableObject, AuthStateSubscriber {
     private let container: ModelContainer
     private let userRepository: UserRepository
     private let logger = Logger(subsystem: "com.ketchupsoon", category: "UserOnboardingViewModel")
+    
+    // Auth state
+    private var currentUserId: String?
+    private var authStateSubscription: AnyCancellable?
     
     // Initialize with the container
     init(container: ModelContainer) {
         self.container = container
         self.userRepository = UserRepositoryFactory.createRepository(modelContext: container.mainContext)
+        
+        // Subscribe to auth state changes
+        AuthStateService.shared.subscribe(self)
     }
-
+    
+    deinit {
+        // Unsubscribe from auth state changes when this view model is deallocated
+        AuthStateService.shared.unsubscribe(self)
+    }
+    
+    // AuthStateSubscriber implementation
+    func onAuthStateChanged(newState: AuthState, previousState: AuthState?) {
+        self.currentUserId = newState.userID
+        
+        // If we become authenticated during the onboarding process, update the UI state
+        if previousState?.userID == nil && newState.userID != nil {
+            isVerified = true
+            
+            // If we just got authenticated during verification, move to the next step
+            if currentStep == 1 && showVerificationView {
+                logger.info("Authentication state changed to authenticated, moving to next step")
+                
+                // Use a slight delay to let any UI updates complete
+                Task {
+                    try? await Task.sleep(nanoseconds: 300_000_000) // 300ms
+                    goToStep(2)
+                }
+            }
+        }
+    }
+    
     // Current step in the onboarding flow
     @Published var currentStep = 0
     
@@ -127,6 +161,12 @@ class UserOnboardingViewModel: ObservableObject {
         isVerifying = true
         let fullPhoneNumber = "+1\(phoneNumber)" // Assuming US numbers, add country code logic as needed
         
+        // Use a specific operation name for tracking
+        let operationName = "phone_verification_request"
+        
+        // Notify auth service that an operation is starting
+        AuthStateService.shared.onAuthOperationPending(operation: operationName)
+        
         // Request verification code from Firebase
         PhoneAuthProvider.provider().verifyPhoneNumber(fullPhoneNumber, uiDelegate: nil) { [weak self] verificationID, error in
             DispatchQueue.main.async {
@@ -135,12 +175,17 @@ class UserOnboardingViewModel: ObservableObject {
                 if let error = error {
                     self?.authError = error
                     self?.showingError = true
+                    // Notify auth service that operation failed
+                    AuthStateService.shared.onAuthOperationComplete(operation: operationName, success: false, error: error)
                     return
                 }
                 
                 // Store verification ID for later use
                 self?.verificationID = verificationID
                 self?.showVerificationView = true
+                
+                // Notify auth service that operation succeeded
+                AuthStateService.shared.onAuthOperationComplete(operation: operationName, success: true, error: nil)
             }
         }
     }
@@ -154,6 +199,12 @@ class UserOnboardingViewModel: ObservableObject {
         }
         
         isVerifying = true
+        
+        // Use a specific operation name for tracking
+        let operationName = "phone_verification_confirm"
+        
+        // Notify auth service that an operation is starting
+        AuthStateService.shared.onAuthOperationPending(operation: operationName)
         
         // Create credential
         let credential = PhoneAuthProvider.provider().credential(
@@ -173,8 +224,11 @@ class UserOnboardingViewModel: ObservableObject {
                 if let error = error {
                     self.authError = error
                     self.showingError = true
+                    AuthStateService.shared.onAuthOperationComplete(operation: operationName, success: false, error: error)
                     return
                 }
+                
+                // AuthStateService will handle updating currentUserId via onAuthStateChanged
                 
                 // Check if this phone number already has an account
                 do {
@@ -189,7 +243,7 @@ class UserOnboardingViewModel: ObservableObject {
                         self.existingUserId = existingUserId
                         
                         // Check if the current authenticated user has the same ID
-                        if let currentUser = Auth.auth().currentUser, currentUser.uid == existingUserId {
+                        if let currentUserId = self.currentUserId, currentUserId == existingUserId {
                             // Already signed in to the existing account
                             self.logger.info("Already signed in to existing account")
                             
@@ -207,6 +261,7 @@ class UserOnboardingViewModel: ObservableObject {
                             try await self.signInToExistingAccount(userId: existingUserId)
                         }
                         
+                        AuthStateService.shared.onAuthOperationComplete(operation: operationName, success: true, error: nil)
                         return
                     }
                     
@@ -226,10 +281,13 @@ class UserOnboardingViewModel: ObservableObject {
                         self.goToStep(2)
                     }
                     
+                    AuthStateService.shared.onAuthOperationComplete(operation: operationName, success: true, error: nil)
+                    
                 } catch {
                     self.logger.error("Error checking for existing account: \(error.localizedDescription)")
                     self.authError = error
                     self.showingError = true
+                    AuthStateService.shared.onAuthOperationComplete(operation: operationName, success: false, error: error)
                 }
             }
         }
@@ -307,7 +365,7 @@ class UserOnboardingViewModel: ObservableObject {
     /// Create and save user profile to both SwiftData and Firebase
     @MainActor // Mark this method as running on the Main actor
     func completeOnboarding() async throws {
-        guard let userId = Auth.auth().currentUser?.uid else {
+        guard let userId = currentUserId else {
             logger.error("❌ ERROR: User not authenticated")
             throw NSError(domain: "com.ketchupsoon", code: 3, 
                          userInfo: [NSLocalizedDescriptionKey: "User not authenticated"])

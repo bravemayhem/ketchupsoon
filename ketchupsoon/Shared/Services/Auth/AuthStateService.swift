@@ -26,12 +26,35 @@ enum AuthState: Equatable {
             return true
         }
     }
+    
+    var description: String {
+        switch self {
+        case .notAuthenticated:
+            return "not authenticated"
+        case .authenticated(let userID):
+            return "authenticated(userID: \"\(userID)\")"
+        case .refreshing(let userID):
+            return "refreshing(userID: \"\(userID)\")"
+        }
+    }
 }
 
 /// Protocol for components that need to be notified of auth state changes
 protocol AuthStateSubscriber: AnyObject {
     /// Called when the auth state changes
     func onAuthStateChanged(newState: AuthState, previousState: AuthState?)
+    
+    /// Optional: Called when auth operations are pending
+    func onAuthOperationPending(operation: String)
+    
+    /// Optional: Called when auth operations complete
+    func onAuthOperationComplete(operation: String, success: Bool, error: Error?)
+}
+
+// Provide default implementations for optional methods
+extension AuthStateSubscriber {
+    func onAuthOperationPending(operation: String) {}
+    func onAuthOperationComplete(operation: String, success: Bool, error: Error?) {}
 }
 
 /// Central service for managing and broadcasting authentication state
@@ -48,7 +71,7 @@ class AuthStateService: ObservableObject {
     
     // State management
     @Published private(set) var currentState: AuthState = .notAuthenticated
-    private var previousState: AuthState?
+    private(set) var previousState: AuthState?
     
     // Debouncing
     private var lastStateChangeTime: Date?
@@ -74,17 +97,25 @@ class AuthStateService: ObservableObject {
     
     /// Register a component to receive auth state notifications
     func subscribe(_ subscriber: AuthStateSubscriber) {
-        subscribers.add(subscriber)
-        
-        // Immediately notify new subscriber of current state
-        subscriber.onAuthStateChanged(newState: currentState, previousState: nil)
-        logger.debug("Subscribed new component to auth state changes")
+        // Check if already subscribed to avoid duplicates
+        if !subscribers.contains(subscriber as AnyObject) {
+            subscribers.add(subscriber)
+            
+            // Immediately notify new subscriber of current state
+            subscriber.onAuthStateChanged(newState: currentState, previousState: nil)
+            logger.debug("Subscribed new component to auth state changes")
+        }
     }
     
     /// Unregister a component from receiving auth state notifications
     func unsubscribe(_ subscriber: AuthStateSubscriber) {
         subscribers.remove(subscriber)
         logger.debug("Unsubscribed component from auth state changes")
+    }
+    
+    /// Check if a subscriber is already subscribed
+    func isSubscribed(_ subscriber: AuthStateSubscriber) -> Bool {
+        return subscribers.contains(subscriber as AnyObject)
     }
     
     /// Manually trigger a state refresh (e.g., after profile update)
@@ -111,6 +142,23 @@ class AuthStateService: ObservableObject {
                 await processOperations()
             }
         }
+    }
+    
+    /// Generate debug information about the current auth state
+    func dumpStateForDebugging() -> String {
+        let subscriberCount = subscribers.allObjects.count
+        let subscriberTypes = subscribers.allObjects.map { type(of: $0) }
+        
+        return """
+        AuthStateService Debug Info:
+        - Current state: \(currentState.description)
+        - Previous state: \(previousState?.description ?? "nil")
+        - Subscriber count: \(subscriberCount)
+        - Subscriber types: \(subscriberTypes)
+        - Pending operations: \(pendingOperations.count)
+        - Processing operations: \(isProcessingOperations)
+        - Last state change: \(lastStateChangeTime?.description ?? "never")
+        """
     }
     
     // MARK: - Private Methods
@@ -144,13 +192,13 @@ class AuthStateService: ObservableObject {
         if let lastChange = lastStateChangeTime, 
            Date().timeIntervalSince(lastChange) < minimumTimeBetweenStateChanges,
            currentState.userID == newState.userID { // Only debounce if same user
-            logger.debug("Debounced auth state change to \(String(describing: newState)) - too soon after last change")
+            logger.debug("Debounced auth state change to \(newState.description) - too soon after last change")
             return
         }
         
         // Check if this is a no-op state change
         if currentState == newState {
-            logger.debug("Ignored redundant auth state change - state already \(String(describing: newState))")
+            logger.debug("Ignored redundant auth state change - state already \(newState.description)")
             return
         }
         
@@ -161,7 +209,7 @@ class AuthStateService: ObservableObject {
         
         // Log the state change
         if let userID = newState.userID {
-            logger.notice("Auth state changed to \(String(describing: newState)) for user ID: \(userID)")
+            logger.notice("Auth state changed to \(newState.description) for user ID: \(userID)")
         } else {
             logger.notice("Auth state changed to not authenticated")
         }

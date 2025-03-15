@@ -10,7 +10,7 @@ import OSLog
 import SwiftData
 
 @MainActor
-class UserProfileManager: ObservableObject {
+class UserProfileManager: ObservableObject, AuthStateSubscriber {
     static let shared = UserProfileManager()
     
     private let logger = Logger(subsystem: "com.ketchupsoon", category: "UserProfileManager")
@@ -23,27 +23,49 @@ class UserProfileManager: ObservableObject {
     @Published var isLoading = false
     @Published var error: Error?
     
-    private var authStateListener: AuthStateDidChangeListenerHandle?
+    // Current user ID from auth state
+    private var currentUserId: String?
     
     private init() {
-        // Set up Firebase Auth listener to keep profile in sync
-        authStateListener = Auth.auth().addStateDidChangeListener { [weak self] (_, user) in
-            guard let self = self else { return }
-            
-            if let user = user {
-                Task {
-                    await self.fetchUserProfile(userId: user.uid)
-                }
-            } else {
-                // User signed out
-                self.currentUserProfile = nil
-            }
+        // Subscribe to AuthStateService
+        Task {
+            AuthStateService.shared.subscribe(self)
+            logger.debug("UserProfileManager subscribed to AuthStateService")
         }
     }
     
     deinit {
-        if let listener = authStateListener {
-            Auth.auth().removeStateDidChangeListener(listener)
+        // Unsubscribe from AuthStateService
+        Task { @MainActor [weak self] in
+            guard let self = self else { return }
+            AuthStateService.shared.unsubscribe(self)
+            logger.debug("UserProfileManager unsubscribed from AuthStateService")
+        }
+    }
+    
+    // MARK: - AuthStateSubscriber
+    
+    func onAuthStateChanged(newState: AuthState, previousState: AuthState?) {
+        Task { @MainActor in
+            // Update current user ID based on auth state
+            self.currentUserId = newState.userID
+            
+            // Handle sign out
+            if case .notAuthenticated = newState {
+                if previousState?.isAuthenticated == true {
+                    logger.info("User signed out, clearing profile")
+                    currentUserProfile = nil
+                }
+            }
+            
+            // Handle sign in
+            if newState.isAuthenticated && previousState?.isAuthenticated != true {
+                logger.info("User signed in: \(newState.userID ?? "unknown")")
+                // Fetch user profile
+                if let userId = newState.userID {
+                    await fetchUserProfile(userId: userId)
+                }
+            }
         }
     }
     
@@ -51,7 +73,7 @@ class UserProfileManager: ObservableObject {
     
     /// Fetches a user profile from Firestore by user ID
     func fetchUserProfile(userId: String) async {
-        guard Auth.auth().currentUser != nil else {
+        guard currentUserId != nil else {
             self.error = NSError(domain: "UserProfileManager", code: 1, userInfo: [NSLocalizedDescriptionKey: "No authenticated user"])
             return
         }
@@ -70,8 +92,8 @@ class UserProfileManager: ObservableObject {
                 }
             } else {
                 // Profile doesn't exist, create one from Auth data
-                if let user = Auth.auth().currentUser {
-                    let newProfile = UserModel.from(firebaseUser: user)
+                if let firebaseUser = Auth.auth().currentUser, firebaseUser.uid == userId {
+                    let newProfile = UserModel.from(firebaseUser: firebaseUser)
                     try await createUserProfile(profile: newProfile)
                     self.currentUserProfile = newProfile
                     self.logger.info("Created new user profile for \(userId)")
@@ -87,7 +109,7 @@ class UserProfileManager: ObservableObject {
     
     /// Creates a new user profile in Firestore
     func createUserProfile(profile: UserModel) async throws {
-        guard Auth.auth().currentUser != nil else {
+        guard currentUserId != nil else {
             throw NSError(domain: "UserProfileManager", code: 1, userInfo: [NSLocalizedDescriptionKey: "No authenticated user"])
         }
         
@@ -100,7 +122,7 @@ class UserProfileManager: ObservableObject {
     
     /// Updates an existing user profile in Firestore
     func updateUserProfile(updates: [String: Any]) async throws {
-        guard let userId = Auth.auth().currentUser?.uid, 
+        guard let userId = currentUserId, 
                 let currentProfile = currentUserProfile else {
             throw NSError(domain: "UserProfileManager", code: 1, userInfo: [NSLocalizedDescriptionKey: "No authenticated user or profile"])
         }

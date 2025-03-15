@@ -26,12 +26,30 @@ class FirebaseUserRepository: UserRepository {
     // Last refresh time tracking
     private var lastRefreshTime: Date?
     
+    // Current user ID from auth state
+    private var currentUserId: String?
+    
     // MARK: - Initialization
     
     @MainActor
     init(modelContext: ModelContext) {
         self.modelContext = modelContext
         self.operationCoordinator = FirebaseOperationCoordinator.shared
+        
+        // Subscribe to auth state changes
+        Task { @MainActor in
+            AuthStateService.shared.subscribe(self)
+            logger.debug("FirebaseUserRepository subscribed to AuthStateService")
+        }
+    }
+    
+    deinit {
+        // Unsubscribe from auth state changes
+        Task { @MainActor [weak self] in 
+            guard let self = self else { return }
+            AuthStateService.shared.unsubscribe(self)
+            logger.debug("FirebaseUserRepository unsubscribed from AuthStateService")
+        }
     }
     
     // MARK: - User Fetching Methods
@@ -84,20 +102,21 @@ class FirebaseUserRepository: UserRepository {
 
     @MainActor
     func getCurrentUser() async throws -> UserModel? {
+        // Use the cached current user ID from auth state if available
+        let userID = currentUserId ?? Auth.auth().currentUser?.uid
+        
         // Check if there's a logged in user
-        guard let currentUser = Auth.auth().currentUser else {
+        guard let currentUserID = userID else {
             logger.info("No user currently logged in")
             return nil
         }
         
         // Try to get user from local database first
         do {
-            let userID = currentUser.uid // Store the ID in a local variable
-            
             // Create a simpler fetch descriptor to avoid EXC_BAD_ACCESS
             var descriptor = FetchDescriptor<UserModel>()
             descriptor.predicate = #Predicate<UserModel> { user in
-                user.id == userID
+                user.id == currentUserID
             }
             descriptor.fetchLimit = 1
             
@@ -120,11 +139,27 @@ class FirebaseUserRepository: UserRepository {
         
         do {
             // First try to get additional data from Firestore
-            let documentSnapshot = try await db.collection(usersCollection).document(currentUser.uid).getDocument()
+            let documentSnapshot = try await db.collection(usersCollection).document(currentUserID).getDocument()
             
             if documentSnapshot.exists, let data = documentSnapshot.data() {
                 // We have additional data in Firestore
-                let user = UserModel.from(firebaseUser: currentUser, additionalData: data)
+                let user: UserModel
+                
+                if let firebaseUser = Auth.auth().currentUser {
+                    user = UserModel.from(firebaseUser: firebaseUser, additionalData: data)
+                } else {
+                    // Use just the Firestore data
+                    user = createUserModelFromFirebaseData(id: currentUserID, data: data)
+                }
+                
+                // Save to local database
+                modelContext.insert(user)
+                try modelContext.save()
+                
+                return user
+            } else if let firebaseUser = Auth.auth().currentUser {
+                // No additional data in Firestore, just use Auth data
+                let user = UserModel.from(firebaseUser: firebaseUser)
                 
                 // Save to local database
                 modelContext.insert(user)
@@ -132,14 +167,8 @@ class FirebaseUserRepository: UserRepository {
                 
                 return user
             } else {
-                // No additional data in Firestore, just use Auth data
-                let user = UserModel.from(firebaseUser: currentUser)
-                
-                // Save to local database
-                modelContext.insert(user)
-                try modelContext.save()
-                
-                return user
+                throw NSError(domain: "com.ketchupsoon", code: 404, 
+                             userInfo: [NSLocalizedDescriptionKey: "User not found in Firebase"])
             }
         } catch {
             logger.error("Error fetching current user from Firebase: \(error.localizedDescription)")
@@ -501,6 +530,65 @@ class FirebaseUserRepository: UserRepository {
         } catch {
             logger.error("Error checking phone number in Firebase: \(error.localizedDescription)")
             throw error
+        }
+    }
+
+    // MARK: - Cache Management
+    
+    /// Clear local user cache on sign out
+    @MainActor
+    func clearCache() {
+        logger.info("Clearing user repository cache")
+        
+        // Delete all user models from SwiftData
+        do {
+            let descriptor = FetchDescriptor<UserModel>()
+            let allUsers = try modelContext.fetch(descriptor)
+            
+            for user in allUsers {
+                modelContext.delete(user)
+            }
+            
+            try modelContext.save()
+            logger.debug("Successfully cleared user cache")
+        } catch {
+            logger.error("Error clearing user cache: \(error.localizedDescription)")
+        }
+        
+        // Reset state
+        currentUserId = nil
+        lastRefreshTime = nil
+    }
+}
+
+// MARK: - AuthStateSubscriber
+extension FirebaseUserRepository: AuthStateSubscriber {
+    func onAuthStateChanged(newState: AuthState, previousState: AuthState?) {
+        Task { @MainActor in
+            // Update current user ID based on auth state
+            self.currentUserId = newState.userID
+            
+            // Handle sign out
+            if case .notAuthenticated = newState {
+                if previousState?.isAuthenticated == true {
+                    logger.info("User signed out, clearing cache")
+                    clearCache()
+                }
+            }
+            
+            // Handle sign in
+            if newState.isAuthenticated && previousState?.isAuthenticated != true {
+                logger.info("User signed in: \(newState.userID ?? "unknown")")
+                // Prefetch user profile
+                Task {
+                    do {
+                        _ = try await getCurrentUser()
+                        logger.debug("Prefetched current user profile")
+                    } catch {
+                        logger.error("Failed to prefetch user profile: \(error.localizedDescription)")
+                    }
+                }
+            }
         }
     }
 } 

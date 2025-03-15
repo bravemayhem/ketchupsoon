@@ -2,11 +2,12 @@ import SwiftUI
 import SwiftData
 import FirebaseAuth
 import OSLog
+import AuthStateService
 
 private let logger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: "SettingsView")
 
 
-struct SettingsView: View {
+struct SettingsView: View, AuthStateSubscriber {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     @StateObject private var colorSchemeManager = ColorSchemeManager.shared
@@ -21,7 +22,17 @@ struct SettingsView: View {
     @State private var isLoading = false
     @State private var showingSignOutAlert = false
     @State private var showingDeleteAccountAlert = false
-    @StateObject private var authManager = AuthManager.shared
+    
+    // Auth state tracking
+    @State private var currentUserId: String?
+    
+    // MARK: - AuthStateSubscriber Implementation
+    
+    func onAuthStateChanged(newState: AuthState, previousState: AuthState?) {
+        self.currentUserId = newState.userID
+    }
+    
+    // MARK: - View Lifecycle
     
     var body: some View {
         ZStack {
@@ -273,6 +284,14 @@ struct SettingsView: View {
                     .scaleEffect(1.5)
             }
         }
+        .onAppear {
+            // Subscribe to auth state changes
+            AuthStateService.shared.subscribe(self)
+        }
+        .onDisappear {
+            // Unsubscribe from auth state changes
+            AuthStateService.shared.unsubscribe(self)
+        }
     }
     
     // Helper function to create section headers
@@ -405,9 +424,9 @@ struct SettingsView: View {
                         let syncService = firebaseSyncService
                         Task {
                             do {
-                                if let user = Auth.auth().currentUser {
+                                if let userId = currentUserId {
                                     try await syncService.updateUserPreference(
-                                        userID: user.uid,
+                                        userID: userId,
                                         key: "calendarIntegration",
                                         value: isOn.wrappedValue
                                     )
@@ -443,10 +462,10 @@ extension SettingsView {
             try await clearLocalData()
             
             // Then clear remote data if user is authenticated
-            if let user = Auth.auth().currentUser {
+            if let userId = currentUserId {
                 let syncService = firebaseSyncService
-                try await syncService.clearAllUserData(userID: user.uid)
-                logger.info("Successfully cleared all user data from Firebase for user: \(user.uid)")
+                try await syncService.clearAllUserData(userID: userId)
+                logger.info("Successfully cleared all user data from Firebase for user: \(userId)")
             }
             
             isLoading = false
@@ -516,8 +535,17 @@ extension SettingsView {
             isLoading = true
             errorMessage = nil
             
-            // Call the AuthManager to sign out (this can throw errors)
-            try await authManager.signOut()
+            // Use a specific operation name for tracking
+            let operationName = "sign_out"
+            
+            // Notify auth service that an operation is starting
+            AuthStateService.shared.onAuthOperationPending(operation: operationName)
+            
+            // Sign out from Firebase Auth directly
+            try Auth.auth().signOut()
+            
+            // Notify auth service that operation succeeded
+            AuthStateService.shared.onAuthOperationComplete(operation: operationName, success: true, error: nil)
             
             // Close the settings view after signing out
             dismiss()
@@ -527,6 +555,9 @@ extension SettingsView {
             isLoading = false
             errorMessage = "Failed to sign out: \(error.localizedDescription)"
             logger.error("Error signing out: \(error.localizedDescription)")
+            
+            // Notify auth service that operation failed
+            AuthStateService.shared.onAuthOperationComplete(operation: "sign_out", success: false, error: error)
         }
     }
     
@@ -535,27 +566,42 @@ extension SettingsView {
             isLoading = true
             errorMessage = nil
             
+            // Use a specific operation name for tracking
+            let operationName = "delete_account"
+            
+            // Notify auth service that an operation is starting
+            AuthStateService.shared.onAuthOperationPending(operation: operationName)
+            
             // First clear all user data from Firebase
-            if let user = Auth.auth().currentUser {
+            if let userId = currentUserId {
                 let syncService = firebaseSyncService
-                try await syncService.clearAllUserData(userID: user.uid)
-                logger.info("Successfully cleared all user data from Firebase for user: \(user.uid)")
+                try await syncService.clearAllUserData(userID: userId)
+                logger.info("Successfully cleared all user data from Firebase for user: \(userId)")
             }
             
             // Clear local data
             try await clearLocalData()
             
-            // Use AuthManager to delete the Firebase account
-            try await authManager.deleteAccount()
+            // Delete the Firebase account directly
+            if let currentUser = Auth.auth().currentUser {
+                try await currentUser.delete()
+                logger.info("Successfully deleted Firebase account")
+                
+                // Notify auth service that operation succeeded
+                AuthStateService.shared.onAuthOperationComplete(operation: operationName, success: true, error: nil)
+            } else {
+                throw NSError(domain: "com.ketchupsoon", code: 1, userInfo: [NSLocalizedDescriptionKey: "No user is currently signed in"])
+            }
             
             // Close the settings view after deleting account
             dismiss()
-            
-            logger.info("User account successfully deleted")
         } catch {
             isLoading = false
             errorMessage = "Failed to delete account: \(error.localizedDescription)"
             logger.error("Error deleting account: \(error.localizedDescription)")
+            
+            // Notify auth service that operation failed
+            AuthStateService.shared.onAuthOperationComplete(operation: operationName, success: false, error: error)
         }
     }
 }

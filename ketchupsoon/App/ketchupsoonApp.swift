@@ -15,8 +15,7 @@ import WatchConnectivity
 import UIKit
 import Observation
 
-class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate { // Removed MessagingDelegate
-    private var authStateDidChangeListenerHandle: AuthStateDidChangeListenerHandle?
+class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate, AuthStateSubscriber { // Removed MessagingDelegate
     
     func application(_ application: UIApplication,
                     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
@@ -34,14 +33,29 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         // Set UNUserNotificationCenter delegate
         UNUserNotificationCenter.current().delegate = self
         
-        // Only schedule Firebase-dependent operations if/when user is authenticated
-        // This prevents unnecessary resource usage for non-authenticated users
-        authStateDidChangeListenerHandle = Auth.auth().addStateDidChangeListener { [weak self] _, user in
-            if user != nil {
+        // Subscribe to AuthStateService for auth state changes
+        AuthStateService.shared.subscribe(self)
+        
+        return true
+    }
+    
+    deinit {
+        // Unsubscribe from AuthStateService
+        Task { @MainActor in
+            AuthStateService.shared.unsubscribe(self)
+        }
+    }
+    
+    // MARK: - AuthStateSubscriber
+    
+    nonisolated func onAuthStateChanged(newState: AuthState, previousState: AuthState?) {
+        // Handle auth state changes
+        Task { @MainActor in
+            if newState.isAuthenticated && (previousState == nil || !previousState!.isAuthenticated) {
                 // User is authenticated, schedule contacts check
                 DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
                     Task {
-                        await self?.checkForFirebaseUsersInContacts()
+                        await self.checkForFirebaseUsersInContacts()
                     }
                 }
                 
@@ -49,8 +63,6 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
                 // self.setupFirebaseMessaging()
             }
         }
-        
-        return true
     }
     
     // MARK: - Firebase User Lookup
@@ -65,7 +77,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         }
         
         // Only proceed if user is authenticated
-        guard Auth.auth().currentUser != nil else {
+        guard AuthStateService.shared.currentState.isAuthenticated else {
             print("⚠️ Cannot check for Firebase users in contacts - no authenticated user")
             return
         }
@@ -433,7 +445,7 @@ struct ketchupsoonApp: App {
             switch newPhase {
             case .active:
                 // App became active
-                if Auth.auth().currentUser != nil {
+                if AuthStateService.shared.currentState.isAuthenticated {
                     // Initialize log verbosity first
                     FirebaseOperationCoordinator.shared.setLogVerbosity(.important)
                     
@@ -442,7 +454,7 @@ struct ketchupsoonApp: App {
                 }
             case .background:
                 // App entered background, cancel non-critical operations
-                if let userID = Auth.auth().currentUser?.uid {
+                if let userID = AuthStateService.shared.currentState.userID {
                     FirebaseOperationCoordinator.shared.cancelOperations(withKey: "sync_after_listen_\(userID)")
                     FirebaseOperationCoordinator.shared.cancelOperations(withKey: "full_sync_\(userID)")
                 }

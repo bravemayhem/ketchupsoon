@@ -17,6 +17,9 @@ class FirebaseFriendshipRepository: FriendshipRepository {
     private let logger = Logger(subsystem: "com.ketchupsoon", category: "FirebaseFriendshipRepository")
     private let modelContext: ModelContext
     
+    // Current user ID from auth state
+    private var currentUserId: String?
+    
     // UserRepository dependency for fetching user profiles
     private var _userRepository: UserRepository?
     
@@ -34,6 +37,21 @@ class FirebaseFriendshipRepository: FriendshipRepository {
     
     init(modelContext: ModelContext) {
         self.modelContext = modelContext
+        
+        // Subscribe to auth state changes
+        Task { @MainActor in
+            AuthStateService.shared.subscribe(self)
+            logger.debug("FirebaseFriendshipRepository subscribed to AuthStateService")
+        }
+    }
+    
+    deinit {
+        // Unsubscribe from auth state changes
+        Task { @MainActor [weak self] in 
+            guard let self = self else { return }
+            AuthStateService.shared.unsubscribe(self)
+            logger.debug("FirebaseFriendshipRepository unsubscribed from AuthStateService")
+        }
     }
     
     // Helper method to perform Firebase operations on background threads
@@ -172,13 +190,11 @@ class FirebaseFriendshipRepository: FriendshipRepository {
     }
     
     func getFriendshipsForCurrentUser() async throws -> [FriendshipModel] {
-        guard let currentUser = Auth.auth().currentUser else {
+        guard let userID = currentUserId else {
             self.logger.warning("No user currently logged in")
             throw NSError(domain: "com.ketchupsoon", code: 401, 
                          userInfo: [NSLocalizedDescriptionKey: "User not authenticated"])
         }
-        
-        let userID = currentUser.uid
         
         // First check if friendships exist in SwiftData
         let descriptor = FetchDescriptor<FriendshipModel>(predicate: #Predicate { (friendship: FriendshipModel) -> Bool in 
@@ -670,6 +686,59 @@ class FirebaseFriendshipRepository: FriendshipRepository {
         } catch {
             self.logger.error("Error syncing friendships: \(error.localizedDescription)")
             throw error
+        }
+    }
+}
+
+// MARK: - AuthStateSubscriber
+extension FirebaseFriendshipRepository: AuthStateSubscriber {
+    func onAuthStateChanged(newState: AuthState, previousState: AuthState?) {
+        Task { @MainActor in
+            // Update current user ID based on auth state
+            self.currentUserId = newState.userID
+            
+            // Handle sign out
+            if case .notAuthenticated = newState {
+                if previousState?.isAuthenticated == true {
+                    logger.info("User signed out, clearing friendship cache")
+                    clearFriendshipCache()
+                }
+            }
+            
+            // Handle sign in
+            if newState.isAuthenticated && previousState?.isAuthenticated != true {
+                logger.info("User signed in: \(newState.userID ?? "unknown")")
+                // Prefetch friendships
+                Task {
+                    do {
+                        let userID = newState.userID!
+                        try await syncLocalWithRemote(for: userID)
+                        logger.debug("Prefetched friendships for user")
+                    } catch {
+                        logger.error("Failed to prefetch friendships: \(error.localizedDescription)")
+                    }
+                }
+            }
+        }
+    }
+    
+    /// Clears all friendship data from SwiftData
+    private func clearFriendshipCache() {
+        logger.info("Clearing friendship repository cache")
+        
+        // Delete all friendship models from SwiftData
+        do {
+            let descriptor = FetchDescriptor<FriendshipModel>()
+            let allFriendships = try modelContext.fetch(descriptor)
+            
+            for friendship in allFriendships {
+                modelContext.delete(friendship)
+            }
+            
+            try modelContext.save()
+            logger.debug("Successfully cleared friendship cache")
+        } catch {
+            logger.error("Error clearing friendship cache: \(error.localizedDescription)")
         }
     }
 }

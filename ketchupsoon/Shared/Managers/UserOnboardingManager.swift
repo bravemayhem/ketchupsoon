@@ -19,30 +19,19 @@ class OnboardingManager: ObservableObject {
     private init() {
         // Check if onboarding needs to be shown, but only if we are authenticated
         logger.debug("🔍 DEBUG: Initializing OnboardingManager")
-        checkOnboardingStatus()
         
-        // Listen for auth state changes to update onboarding state
-        setupAuthStateListener()
+        // Subscribe to AuthStateService instead of creating a direct listener
+        AuthStateService.shared.subscribe(self)
+        
+        // Initial check
+        checkOnboardingStatus()
     }
     
-    private func setupAuthStateListener() {
-        // Set up auth state listener to update onboarding state when auth changes
-        logger.debug("🔄 DEBUG: Setting up auth state listener")
-        let _ = Auth.auth().addStateDidChangeListener { [weak self] _, user in
-            Task { @MainActor in
-                if let userId = user?.uid {
-                    self?.logger.debug("🔄 DEBUG: Auth state changed, user ID: \(userId)")
-                } else {
-                    self?.logger.debug("🔄 DEBUG: Auth state changed, user signed out")
-                }
-                self?.checkOnboardingStatus()
-            }
-        }
-    }
+    // MARK: - Onboarding Status Management
     
     private func checkOnboardingStatus() {
         // Only show onboarding if user is authenticated but hasn't completed onboarding
-        let isAuthenticated = Auth.auth().currentUser != nil
+        let isAuthenticated = AuthStateService.shared.currentState.isAuthenticated
         let previousOnboardingStatus = self.isShowingOnboarding
         
         // Only change isShowingOnboarding if we're not already in the onboarding process
@@ -105,7 +94,7 @@ class OnboardingManager: ObservableObject {
         logger.debug("✅ DEBUG: Updated UserDefaults: onboardingComplete = true")
         
         // Check user settings
-        if let userId = Auth.auth().currentUser?.uid {
+        if let userId = AuthStateService.shared.currentState.userID {
             logger.debug("🔍 DEBUG: Checking UserSettings for user \(userId)")
             logger.debug("🔍 DEBUG: UserSettings.name: \(UserSettings.shared.name ?? "nil")")
             logger.debug("🔍 DEBUG: UserSettings.email: \(UserSettings.shared.email ?? "nil")")
@@ -119,7 +108,7 @@ class OnboardingManager: ObservableObject {
         isOnboardingComplete = false
         
         // Only show onboarding if user is authenticated
-        if Auth.auth().currentUser != nil {
+        if AuthStateService.shared.currentState.isAuthenticated {
             isShowingOnboarding = true
         }
     }
@@ -135,7 +124,7 @@ class OnboardingManager: ObservableObject {
         logger.debug("🔄 DEBUG: Updated UserDefaults: onboardingComplete = false")
         
         // Ensure isShowingOnboarding is set to true only if authenticated
-        if Auth.auth().currentUser != nil {
+        if AuthStateService.shared.currentState.isAuthenticated {
             isShowingOnboarding = true
             logger.debug("🔄 DEBUG: Set isShowingOnboarding = true (user is authenticated)")
         } else {
@@ -148,5 +137,19 @@ class OnboardingManager: ObservableObject {
         
         // Force UI update by setting objectWillChange
         self.objectWillChange.send()
+    }
+}
+
+// MARK: - AuthStateSubscriber Implementation
+extension OnboardingManager: AuthStateSubscriber {
+    nonisolated func onAuthStateChanged(newState: AuthState, previousState: AuthState?) {
+        // Handle auth state changes
+        // Since this method is now nonisolated, we need to dispatch to the main actor for UI updates
+        Task { @MainActor in
+            logger.debug("🔄 DEBUG: Auth state changed via AuthStateService: \(newState.description)")
+            
+            // Update onboarding status based on new auth state
+            checkOnboardingStatus()
+        }
     }
 } 

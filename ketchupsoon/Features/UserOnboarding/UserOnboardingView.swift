@@ -86,17 +86,17 @@ struct UserOnboardingView: View {
                 viewModel.profileData.email = email
             }
             
-            // Check if user is already authenticated
-            if let currentUser = Auth.auth().currentUser {
+            // Check if user is already authenticated using AuthStateService
+            if AuthStateService.shared.currentState.isAuthenticated, 
+               let phoneNumber = Auth.auth().currentUser?.phoneNumber {
                 // User is already signed in
                 viewModel.isVerified = true
-                if let phoneNumber = currentUser.phoneNumber {
-                    // Format and store the phone number
-                    let digits = phoneNumber.filter { $0.isNumber }
-                    let usDigits = digits.hasPrefix("1") ? String(digits.dropFirst()) : digits
-                    viewModel.phoneNumber = String(usDigits.suffix(10))
-                    viewModel.formattedPhoneNumber = viewModel.formatPhoneNumber(viewModel.phoneNumber)
-                }
+                
+                // Format and store the phone number
+                let digits = phoneNumber.filter { $0.isNumber }
+                let usDigits = digits.hasPrefix("1") ? String(digits.dropFirst()) : digits
+                viewModel.phoneNumber = String(usDigits.suffix(10))
+                viewModel.formattedPhoneNumber = viewModel.formatPhoneNumber(viewModel.phoneNumber)
             }
         }
         .onDisappear {

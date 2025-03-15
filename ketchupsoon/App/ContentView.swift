@@ -23,6 +23,9 @@ struct ContentView: View {
     // Track if initial auth check has completed
     @State private var hasCheckedAuth = false
     
+    // Auth delegate to handle the AuthStateSubscriber protocol
+    @State private var authDelegate: ContentViewAuthDelegate?
+    
     // IMPORTANT: Cache the profile view to prevent repeated recreation
     // This prevents the infinite loading loop by ensuring we only create it once
     @State private var cachedProfileView: AnyView? = nil
@@ -33,45 +36,20 @@ struct ContentView: View {
     
     // MARK: - Auth State Management
     
-    private func setupAuthStateListener() {
-        // Set up auth state listener once at initialization
-        // This runs before views are loaded
-        let _ = Auth.auth().addStateDidChangeListener { _, user in
-            // Update on main thread
-            Task<Void, Never>(priority: .userInitiated) { @MainActor in
-                self.isAuthenticated = user != nil
-                self.hasCheckedAuth = true
-                
-                // Reset auth choice screens when auth state changes
-                if user == nil {
-                    // If user becomes unauthenticated, show the auth choice screen again
-                    withAnimation {
-                        showingAuthChoiceScreen = true
-                        showingCreateAccount = false
-                    }
-                } else {
-                    // If user becomes authenticated, hide auth choice screens
-                    withAnimation {
-                        showingAuthChoiceScreen = false
-                        showingCreateAccount = false
-                    }
-                    
-                    // Check if the user profile is incomplete
-                    let userSettings = UserSettings.shared
-                    // Update the incomplete profile check to be more comprehensive
-                    // Consider more required fields, not just the name
-                    let hasIncompleteProfile = userSettings.name.isNilOrEmpty || 
-                        !onboardingManager.isOnboardingComplete // Use the public property instead of private hasCompletedOnboarding
-                    
-                    // If user profile is incomplete and we're not already in onboarding, force onboarding
-                    if hasIncompleteProfile && !onboardingManager.isCurrentlyOnboarding {
-                        onboardingManager.resetOnboarding()
-                    }
-                    
-                    // Only sync data when authenticated
-                    self.syncAndCacheProfileOnAppear()
-                }
-            }
+    private func setupAuthStateSubscription() {
+        // Initialize the auth delegate if it doesn't exist
+        if authDelegate == nil {
+            authDelegate = ContentViewAuthDelegate(contentView: self)
+        }
+        
+        // Subscribe to auth state changes using guard to avoid force unwrapping
+        guard let delegate = authDelegate else {
+            print("ERROR: Failed to create auth delegate")
+            return
+        }
+        
+        Task { @MainActor in
+            AuthStateService.shared.subscribe(delegate)
         }
     }
     
@@ -449,14 +427,84 @@ struct ContentView: View {
             }
         }
         .onAppear {
-            // Set up auth state listener when ContentView appears
-            setupAuthStateListener()
+            // Set up auth state subscription when ContentView appears
+            setupAuthStateSubscription()
             
             // If not authenticated, show the auth choice screen
             if !isAuthenticated && hasCheckedAuth {
                 withAnimation {
                     showingAuthChoiceScreen = true
                 }
+            }
+        }
+        .onDisappear {
+            // Unsubscribe when view disappears
+            if let authDelegate = authDelegate {
+                AuthStateService.shared.unsubscribe(authDelegate)
+            }
+        }
+    }
+}
+
+// MARK: - AuthStateSubscriber Implementation
+// Create a class-based helper to handle AuthStateSubscriber conformance
+final class ContentViewAuthDelegate: AuthStateSubscriber {
+    // Use a regular (non-weak) property since ContentView is a struct
+    var contentView: ContentView?
+    
+    init(contentView: ContentView) {
+        self.contentView = contentView
+    }
+    
+    func onAuthStateChanged(newState: AuthState, previousState: AuthState?) {
+        // Forward the call to ContentView using a Task
+        contentView?.handleAuthStateChanged(newState: newState, previousState: previousState)
+    }
+    
+    func onAuthOperationPending(operation: String) {
+        // Optional implementation
+    }
+    
+    func onAuthOperationComplete(operation: String, success: Bool, error: Error?) {
+        // Optional implementation
+    }
+}
+
+extension ContentView {
+    // This replaces the previous direct conformance
+    func handleAuthStateChanged(newState: AuthState, previousState: AuthState?) {
+        // Update on main thread
+        Task<Void, Never>(priority: .userInitiated) { @MainActor in
+            self.isAuthenticated = newState.isAuthenticated
+            self.hasCheckedAuth = true
+            
+            // Reset auth choice screens when auth state changes
+            if !newState.isAuthenticated {
+                // If user becomes unauthenticated, show the auth choice screen again
+                withAnimation {
+                    showingAuthChoiceScreen = true
+                    showingCreateAccount = false
+                }
+            } else {
+                // If user becomes authenticated, hide auth choice screens
+                withAnimation {
+                    showingAuthChoiceScreen = false
+                    showingCreateAccount = false
+                }
+                
+                // Check if the user profile is incomplete
+                let userSettings = UserSettings.shared
+                // Use the accessor property from OnboardingManager instead of the private property
+                let hasIncompleteProfile = userSettings.name.isNilOrEmpty || 
+                    !onboardingManager.isOnboardingComplete
+                
+                // If user profile is incomplete and we're not already in onboarding, force onboarding
+                if hasIncompleteProfile && !onboardingManager.isCurrentlyOnboarding {
+                    onboardingManager.resetOnboarding()
+                }
+                
+                // Only sync data when authenticated
+                self.syncAndCacheProfileOnAppear()
             }
         }
     }

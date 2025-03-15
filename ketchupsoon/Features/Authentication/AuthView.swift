@@ -21,6 +21,10 @@ struct AuthView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var onboardingManager: OnboardingManager
     @EnvironmentObject private var firebaseSyncService: FirebaseSyncService
+    
+    // Add our new property wrapper for auth state monitoring
+    @AuthStateServiceObservable private var authState
+    
     @State private var phoneNumber = ""
     @State private var formattedPhoneNumber = ""
     @State private var verificationID: String?
@@ -132,22 +136,29 @@ struct AuthView: View {
                     .offset(y: animateContent ? 0 : -20)
                     .opacity(animateContent ? 1 : 0)
                     
-                    // DEBUG MODE BUTTON
+                    // DEBUG MODE - Show current auth state
                     #if DEBUG
-                    Button(action: {
-                        showDebugOptions = true
-                    }) {
-                        HStack {
-                            Image(systemName: "ladybug.fill")
-                                .foregroundColor(.white)
-                            Text("Debug Options")
-                                .font(.custom("SpaceGrotesk-Regular", size: 14))
-                                .foregroundColor(.white)
+                    VStack(spacing: 8) {
+                        Button(action: {
+                            showDebugOptions = true
+                        }) {
+                            HStack {
+                                Image(systemName: "ladybug.fill")
+                                    .foregroundColor(.white)
+                                Text("Debug Options")
+                                    .font(.custom("SpaceGrotesk-Regular", size: 14))
+                                    .foregroundColor(.white)
+                            }
+                            .padding(.vertical, 8)
+                            .padding(.horizontal, 16)
+                            .background(Color.red.opacity(0.7))
+                            .cornerRadius(20)
                         }
-                        .padding(.vertical, 8)
-                        .padding(.horizontal, 16)
-                        .background(Color.red.opacity(0.7))
-                        .cornerRadius(20)
+                        
+                        // Display current auth state
+                        Text("Auth State: \(authState.description)")
+                            .font(.caption2)
+                            .foregroundColor(.white.opacity(0.6))
                     }
                     .padding(.bottom, 10)
                     .transition(.opacity)

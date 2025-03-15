@@ -543,7 +543,7 @@ protocol MeetupRepository {
 }
 
 /// Implementation of MeetupRepository using Firebase
-class FirestoreMeetupRepository: MeetupRepository {
+class FirestoreMeetupRepository: MeetupRepository, AuthStateSubscriber {
     private let logger = Logger(subsystem: "com.ketchupsoon", category: "MeetupRepository")
     private let modelContext: ModelContext
     private let friendshipRepository: FriendshipRepository
@@ -552,12 +552,78 @@ class FirestoreMeetupRepository: MeetupRepository {
         return Firestore.firestore()
     }()
     
+    // Current user ID from auth state
+    private var currentUserId: String?
+    
     init(modelContext: ModelContext, friendshipRepository: FriendshipRepository, firestoreService: FirestoreListenerService) {
         self.modelContext = modelContext
         self.friendshipRepository = friendshipRepository
         self.firestoreService = firestoreService
+        
+        // Subscribe to auth state changes
+        Task { @MainActor in
+            AuthStateService.shared.subscribe(self)
+            logger.debug("FirestoreMeetupRepository subscribed to AuthStateService")
+        }
     }
     
+    deinit {
+        if let listener = listener {
+            listener.remove()
+        }
+        
+        // Unsubscribe from auth state changes
+        Task { @MainActor [weak self] in 
+            guard let self = self else { return }
+            AuthStateService.shared.unsubscribe(self)
+            logger.debug("FirestoreMeetupRepository unsubscribed from AuthStateService")
+        }
+    }
+    
+    // MARK: - AuthStateSubscriber
+    
+    func onAuthStateChanged(newState: AuthState, previousState: AuthState?) {
+        Task { @MainActor in
+            // Update current user ID based on auth state
+            self.currentUserId = newState.userID
+            
+            // Handle sign out
+            if case .notAuthenticated = newState {
+                if previousState?.isAuthenticated == true {
+                    logger.info("User signed out, clearing meetup cache")
+                    clearMeetupCache()
+                    
+                    // Remove any listeners
+                    if let listener = listener {
+                        listener.remove()
+                        self.listener = nil
+                    }
+                }
+            }
+            
+            // Handle sign in
+            if newState.isAuthenticated && previousState?.isAuthenticated != true {
+                let userID = newState.userID!
+                logger.info("User signed in: \(userID)")
+                
+                // Start listeners
+                startListeningToFriendRequests()
+                
+                // Prefetch meetups
+                Task {
+                    do {
+                        try await syncLocalWithRemote(for: userID)
+                        logger.debug("Prefetched meetups for user")
+                    } catch {
+                        logger.error("Failed to prefetch meetups: \(error.localizedDescription)")
+                    }
+                }
+            }
+        }
+    }
+    
+    // MARK: - Repository methods
+
     func saveMeetup(meetup: MeetupModel) async throws {
         // Set timestamps and ID if needed
         meetup.updatedAt = Date()
@@ -608,12 +674,12 @@ class FirestoreMeetupRepository: MeetupRepository {
     
     private func syncUserFriendships() async {
         do {
-            guard let currentUser = Auth.auth().currentUser else {
+            guard let userID = currentUserId else {
                 logger.warning("Cannot sync friendships - no current user")
                 return
             }
             // Use the repository's syncLocalWithRemote method instead
-            try await friendshipRepository.syncLocalWithRemote(for: currentUser.uid)
+            try await friendshipRepository.syncLocalWithRemote(for: userID)
         } catch {
             logger.error("Error syncing user friendships: \(error.localizedDescription)")
         }
@@ -666,12 +732,12 @@ class FirestoreMeetupRepository: MeetupRepository {
     var listener: ListenerRegistration?
     
     func startListeningToFriendRequests() {
-        guard let currentUser = Auth.auth().currentUser else { return }
+        guard let userID = currentUserId else { return }
         
         // Create a Firestore listener to observe friend requests
         let db = Firestore.firestore()
         listener = db.collection("friendships")
-            .whereField("friendID", isEqualTo: currentUser.uid)
+            .whereField("friendID", isEqualTo: userID)
             .whereField("relationshipType", isEqualTo: "pending")
             .addSnapshotListener { [weak self] (snapshot, error) in
                 if let error = error {
@@ -684,6 +750,26 @@ class FirestoreMeetupRepository: MeetupRepository {
                     await self?.syncUserFriendships()
                 }
             }
+    }
+    
+    /// Clears all meetup data from SwiftData
+    private func clearMeetupCache() {
+        logger.info("Clearing meetup repository cache")
+        
+        // Delete all meetup models from SwiftData
+        do {
+            let descriptor = FetchDescriptor<MeetupModel>()
+            let allMeetups = try modelContext.fetch(descriptor)
+            
+            for meetup in allMeetups {
+                modelContext.delete(meetup)
+            }
+            
+            try modelContext.save()
+            logger.debug("Successfully cleared meetup cache")
+        } catch {
+            logger.error("Error clearing meetup cache: \(error.localizedDescription)")
+        }
     }
 }
 
