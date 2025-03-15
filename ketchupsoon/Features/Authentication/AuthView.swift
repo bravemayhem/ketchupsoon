@@ -292,9 +292,15 @@ struct AuthView: View {
             
             Button("Clear All UserDefaults", role: .destructive) {
                 let domain = Bundle.main.bundleIdentifier!
+                
+                // Clear UserDefaults
                 UserDefaults.standard.removePersistentDomain(forName: domain)
                 UserDefaults.standard.synchronize()
-                print("DEBUG: Cleared all UserDefaults")
+                
+                // Also clear UserSettings keychain data
+                UserSettings.shared.clearAll()
+                
+                print("DEBUG: Cleared all UserDefaults and UserSettings data")
             }
             
             Button("Cancel", role: .cancel) {}

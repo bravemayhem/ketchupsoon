@@ -60,8 +60,8 @@ struct ContentView: View {
                     let userSettings = UserSettings.shared
                     let hasIncompleteProfile = userSettings.name.isNilOrEmpty
                     
-                    // If user profile is incomplete, force onboarding
-                    if hasIncompleteProfile {
+                    // If user profile is incomplete and we're not already in onboarding, force onboarding
+                    if hasIncompleteProfile && !onboardingManager.isCurrentlyOnboarding {
                         onboardingManager.resetOnboarding()
                     }
                     
@@ -419,9 +419,15 @@ struct ContentView: View {
                     
                     Button("Clear All UserDefaults", role: .destructive) {
                         let domain = Bundle.main.bundleIdentifier!
+                        
+                        // Clear UserDefaults
                         UserDefaults.standard.removePersistentDomain(forName: domain)
                         UserDefaults.standard.synchronize()
-                        print("DEBUG: Cleared all UserDefaults")
+                        
+                        // Also clear UserSettings keychain data
+                        UserSettings.shared.clearAll()
+                        
+                        print("DEBUG: Cleared all UserDefaults and UserSettings data")
                     }
                     
                     Button("Cancel", role: .cancel) {}
